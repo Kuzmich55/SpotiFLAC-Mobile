@@ -5,10 +5,6 @@
   "@appName": {
     "description": "App name - DO NOT TRANSLATE"
   },
-  "appDescription": "Spotify 트랙을 Tidal, Qobuz, Amazon Music에서 무손실 음질로 다운로드하세요.",
-  "@appDescription": {
-    "description": "App description shown in about page"
-  },
   "navHome": "Home",
   "@navHome": {
     "description": "Bottom navigation - Home tab"
@@ -16,10 +12,6 @@
   "navLibrary": "Library",
   "@navLibrary": {
     "description": "Bottom navigation - Library tab"
-  },
-  "navHistory": "History",
-  "@navHistory": {
-    "description": "Bottom navigation - History tab (legacy)"
   },
   "navSettings": "Settings",
   "@navSettings": {
@@ -33,20 +25,6 @@
   "@homeTitle": {
     "description": "Home screen title"
   },
-  "homeSearchHint": "Spotify URL을 붙여 넣거나 검색",
-  "@homeSearchHint": {
-    "description": "Placeholder text in search box"
-  },
-  "homeSearchHintExtension": "{extensionName}에서 검색",
-  "@homeSearchHintExtension": {
-    "description": "Placeholder when extension search is active",
-    "placeholders": {
-      "extensionName": {
-        "type": "String",
-        "description": "Name of the active extension"
-      }
-    }
-  },
   "homeSubtitle": "Spotify URL을 붙여 넣거나 검색",
   "@homeSubtitle": {
     "description": "Subtitle shown below search box"
@@ -59,24 +37,6 @@
   "@homeRecent": {
     "description": "Section header for recent searches"
   },
-  "historyTitle": "기록",
-  "@historyTitle": {
-    "description": "History screen title"
-  },
-  "historyDownloading": "다운로드 중... {count}",
-  "@historyDownloading": {
-    "description": "Tab showing active downloads count",
-    "placeholders": {
-      "count": {
-        "type": "int",
-        "description": "Number of active downloads"
-      }
-    }
-  },
-  "historyDownloaded": "다운로드 목록",
-  "@historyDownloaded": {
-    "description": "Tab showing completed downloads"
-  },
   "historyFilterAll": "All",
   "@historyFilterAll": {
     "description": "Filter chip - show all items"
@@ -88,48 +48,6 @@
   "historyFilterSingles": "Singles",
   "@historyFilterSingles": {
     "description": "Filter chip - show singles only"
-  },
-  "historyTracksCount": "{count, plural,=1{1 track}other{{count}tracks}}",
-  "@historyTracksCount": {
-    "description": "Track count with plural form",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "historyAlbumsCount": "{count, plural,=1{1 album}other{{count} albums}}",
-  "@historyAlbumsCount": {
-    "description": "Album count with plural form",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "historyNoDownloads": "다운로드 기록 없음",
-  "@historyNoDownloads": {
-    "description": "Empty state title"
-  },
-  "historyNoDownloadsSubtitle": "다운로드한 음반은 여기에 표시됩니다",
-  "@historyNoDownloadsSubtitle": {
-    "description": "Empty state subtitle"
-  },
-  "historyNoAlbums": "다운로드한 앨범 없음",
-  "@historyNoAlbums": {
-    "description": "Empty state when filtering albums"
-  },
-  "historyNoAlbumsSubtitle": "다운로드한 앨범의 수록곡은 여기에 표시됩니다",
-  "@historyNoAlbumsSubtitle": {
-    "description": "Empty state subtitle for albums filter"
-  },
-  "historyNoSingles": "다운로드한 싱글 음반 없음",
-  "@historyNoSingles": {
-    "description": "Empty state when filtering singles"
-  },
-  "historyNoSinglesSubtitle": "다운로드한 싱글 음반은 여기에 표시됩니다",
-  "@historyNoSinglesSubtitle": {
-    "description": "Empty state subtitle for singles filter"
   },
   "historySearchHint": "검색 기록...",
   "@historySearchHint": {
@@ -163,34 +81,6 @@
   "@downloadTitle": {
     "description": "Download settings page title"
   },
-  "downloadLocation": "저장 경로",
-  "@downloadLocation": {
-    "description": "Setting for download folder"
-  },
-  "downloadLocationSubtitle": "파일을 어떤 경로에 저장할까요?",
-  "@downloadLocationSubtitle": {
-    "description": "Subtitle for download location"
-  },
-  "downloadLocationDefault": "기본 경로",
-  "@downloadLocationDefault": {
-    "description": "Shown when using default folder"
-  },
-  "downloadDefaultService": "기본 서비스",
-  "@downloadDefaultService": {
-    "description": "Setting for preferred download service (Tidal/Qobuz/Amazon)"
-  },
-  "downloadDefaultServiceSubtitle": "다운로드에 사용할 서비스",
-  "@downloadDefaultServiceSubtitle": {
-    "description": "Subtitle for default service"
-  },
-  "downloadDefaultQuality": "기본 품질",
-  "@downloadDefaultQuality": {
-    "description": "Setting for audio quality"
-  },
-  "downloadAskQuality": "다운로드할 때 품질 선택",
-  "@downloadAskQuality": {
-    "description": "Toggle to show quality picker"
-  },
   "downloadAskQualitySubtitle": "다운로드를 할 때마다 품질을 선택하도록 합니다",
   "@downloadAskQualitySubtitle": {
     "description": "Subtitle for ask quality toggle"
@@ -203,37 +93,9 @@
   "@downloadFolderOrganization": {
     "description": "Setting for folder structure"
   },
-  "downloadSeparateSingles": "싱글 음반으로 분리",
-  "@downloadSeparateSingles": {
-    "description": "Toggle to separate single tracks"
-  },
-  "downloadSeparateSinglesSubtitle": "싱글 음반을 별도의 폴더로 분리합니다.",
-  "@downloadSeparateSinglesSubtitle": {
-    "description": "Subtitle for separate singles toggle"
-  },
-  "qualityBest": "최상의 품질",
-  "@qualityBest": {
-    "description": "Audio quality option - highest available"
-  },
-  "qualityFlac": "FLAC",
-  "@qualityFlac": {
-    "description": "Audio quality option - FLAC lossless"
-  },
-  "quality320": "320 kbps",
-  "@quality320": {
-    "description": "Audio quality option - 320kbps MP3"
-  },
-  "quality128": "128 kbps",
-  "@quality128": {
-    "description": "Audio quality option - 128kbps MP3"
-  },
   "appearanceTitle": "외관",
   "@appearanceTitle": {
     "description": "Appearance settings page title"
-  },
-  "appearanceTheme": "테마",
-  "@appearanceTheme": {
-    "description": "Theme mode setting"
   },
   "appearanceThemeSystem": "System",
   "@appearanceThemeSystem": {
@@ -255,10 +117,6 @@
   "@appearanceDynamicColorSubtitle": {
     "description": "Subtitle for dynamic color"
   },
-  "appearanceAccentColor": "강조 색상",
-  "@appearanceAccentColor": {
-    "description": "Custom accent color picker"
-  },
   "appearanceHistoryView": "기록 정렬 방식",
   "@appearanceHistoryView": {
     "description": "Layout style for history"
@@ -274,10 +132,6 @@
   "optionsTitle": "옵션",
   "@optionsTitle": {
     "description": "Options settings page title"
-  },
-  "optionsSearchSource": "검색 출처",
-  "@optionsSearchSource": {
-    "description": "Section for search provider settings"
   },
   "optionsPrimaryProvider": "기본 제공자",
   "@optionsPrimaryProvider": {
@@ -307,38 +161,6 @@
   "optionsAutoFallbackSubtitle": "다운로드가 실패한 경우, 다른 서비스로 재시도",
   "@optionsAutoFallbackSubtitle": {
     "description": "Subtitle for auto fallback"
-  },
-  "optionsAutoSkipUnavailableTracks": "Auto Skip Unavailable Tracks",
-  "@optionsAutoSkipUnavailableTracks": {
-    "description": "Toggle to skip to the next queue track when current track stream resolution fails"
-  },
-  "optionsAutoSkipUnavailableTracksSubtitleOn": "Automatically skip to the next queue track when a stream cannot be resolved.",
-  "@optionsAutoSkipUnavailableTracksSubtitleOn": {
-    "description": "Subtitle when auto skip on resolve failure is enabled"
-  },
-  "optionsAutoSkipUnavailableTracksSubtitleOff": "Stop on failed track resolution and show an error.",
-  "@optionsAutoSkipUnavailableTracksSubtitleOff": {
-    "description": "Subtitle when auto skip on resolve failure is disabled"
-  },
-  "optionsInteractionMode": "Interaction Mode",
-  "@optionsInteractionMode": {
-    "description": "Tap behavior mode for track lists"
-  },
-  "modeDownloader": "Downloader Mode",
-  "@modeDownloader": {
-    "description": "Interaction mode where taps queue downloads"
-  },
-  "modeDownloaderSubtitle": "Tap tracks to add them to download queue",
-  "@modeDownloaderSubtitle": {
-    "description": "Subtitle for downloader interaction mode"
-  },
-  "modeStreaming": "Streaming Mode",
-  "@modeStreaming": {
-    "description": "Interaction mode where taps start playback"
-  },
-  "modeStreamingSubtitle": "Tap tracks to play instantly",
-  "@modeStreamingSubtitle": {
-    "description": "Subtitle for streaming interaction mode"
   },
   "optionsUseExtensionProviders": "확장 기능 사용",
   "@optionsUseExtensionProviders": {
@@ -470,22 +292,6 @@
   "@extensionsTitle": {
     "description": "Extensions page title"
   },
-  "extensionsInstalled": "확장 기능 설치",
-  "@extensionsInstalled": {
-    "description": "Section header for installed extensions"
-  },
-  "extensionsNone": "설치된 확장 기능 없음",
-  "@extensionsNone": {
-    "description": "Empty state title"
-  },
-  "extensionsNoneSubtitle": "스토어 탭에서 확장 프로그램을 설치하세요",
-  "@extensionsNoneSubtitle": {
-    "description": "Empty state subtitle"
-  },
-  "extensionsEnabled": "활성화",
-  "@extensionsEnabled": {
-    "description": "Extension status - active"
-  },
   "extensionsDisabled": "비활성화",
   "@extensionsDisabled": {
     "description": "Extension status - inactive"
@@ -511,10 +317,6 @@
   "extensionsUninstall": "삭제",
   "@extensionsUninstall": {
     "description": "Uninstall extension button"
-  },
-  "extensionsSetAsSearch": "검색 제공자",
-  "@extensionsSetAsSearch": {
-    "description": "Use extension for search"
   },
   "storeTitle": "확장 기능 스토어",
   "@storeTitle": {
@@ -612,10 +414,6 @@
   "@aboutSocial": {
     "description": "Section for social links"
   },
-  "aboutSupport": "지원",
-  "@aboutSupport": {
-    "description": "Section for support/donation links"
-  },
   "aboutApp": "App",
   "@aboutApp": {
     "description": "Section for app info"
@@ -635,14 +433,6 @@
   "aboutSjdonadoDesc": "I Don't Have Spotify(IDHS) 개발자입니다. 위급 상황 발생 시 해결해 주는 대체 링크 해결 도구를 만들었습니다!",
   "@aboutSjdonadoDesc": {
     "description": "Credit description for sjdonado"
-  },
-  "aboutDoubleDouble": "DoubleDouble",
-  "@aboutDoubleDouble": {
-    "description": "Name of Amazon API service - DO NOT TRANSLATE"
-  },
-  "aboutDoubleDoubleDesc": "아마존 뮤직 다운로드를 위한 훌륭한 API네요. 무료로 제공해주셔서 감사합니다!",
-  "@aboutDoubleDoubleDesc": {
-    "description": "Credit for DoubleDouble API"
   },
   "aboutDabMusic": "DAB Music",
   "@aboutDabMusic": {
@@ -664,35 +454,6 @@
   "@aboutAppDescription": {
     "description": "App description in header card"
   },
-  "albumTitle": "앨범",
-  "@albumTitle": {
-    "description": "Album screen title"
-  },
-  "albumTracks": "{count, plural,=1{1 track}other{{count} tracks}}",
-  "@albumTracks": {
-    "description": "Album track count",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "albumDownloadAll": "모두 다운로드",
-  "@albumDownloadAll": {
-    "description": "Button to download all tracks"
-  },
-  "albumDownloadRemaining": "이어서 다운로드",
-  "@albumDownloadRemaining": {
-    "description": "Button to download remaining tracks"
-  },
-  "playlistTitle": "재생 목록",
-  "@playlistTitle": {
-    "description": "Playlist screen title"
-  },
-  "artistTitle": "아티스트",
-  "@artistTitle": {
-    "description": "Artist screen title"
-  },
   "artistAlbums": "앨범",
   "@artistAlbums": {
     "description": "Section header for artist albums"
@@ -704,15 +465,6 @@
   "artistCompilations": "편집",
   "@artistCompilations": {
     "description": "Section header for compilations"
-  },
-  "artistReleases": "{count, plural,=1{1 release}other{{count} releases}}",
-  "@artistReleases": {
-    "description": "Artist release count",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "artistPopular": "인기순",
   "@artistPopular": {
@@ -727,34 +479,6 @@
         "description": "Formatted listener count"
       }
     }
-  },
-  "trackMetadataTitle": "트랙 정보",
-  "@trackMetadataTitle": {
-    "description": "Track metadata screen title"
-  },
-  "trackMetadataArtist": "아티스트",
-  "@trackMetadataArtist": {
-    "description": "Metadata field - artist name"
-  },
-  "trackMetadataAlbum": "앨범",
-  "@trackMetadataAlbum": {
-    "description": "Metadata field - album name"
-  },
-  "trackMetadataDuration": "길이",
-  "@trackMetadataDuration": {
-    "description": "Metadata field - track length"
-  },
-  "trackMetadataQuality": "품질",
-  "@trackMetadataQuality": {
-    "description": "Metadata field - audio quality"
-  },
-  "trackMetadataPath": "파일 경로",
-  "@trackMetadataPath": {
-    "description": "Metadata field - file location"
-  },
-  "trackMetadataDownloadedAt": "다운로드 일자",
-  "@trackMetadataDownloadedAt": {
-    "description": "Metadata field - download date"
   },
   "trackMetadataService": "제공업체",
   "@trackMetadataService": {
@@ -772,53 +496,9 @@
   "@trackMetadataDelete": {
     "description": "Action button - delete track"
   },
-  "trackMetadataRedownload": "다시 다운로드",
-  "@trackMetadataRedownload": {
-    "description": "Action button - download again"
-  },
-  "trackMetadataOpenFolder": "경로 열기",
-  "@trackMetadataOpenFolder": {
-    "description": "Action button - open containing folder"
-  },
-  "setupTitle": "Welcome to SpotiFLAC",
-  "@setupTitle": {
-    "description": "Setup wizard title"
-  },
-  "setupSubtitle": "시작해 볼까요?",
-  "@setupSubtitle": {
-    "description": "Setup wizard subtitle"
-  },
-  "setupStoragePermission": "스토리지 접근 권한",
-  "@setupStoragePermission": {
-    "description": "Storage permission step title"
-  },
-  "setupStoragePermissionSubtitle": "다운로드한 파일을 저장하려면 필요합니다.",
-  "@setupStoragePermissionSubtitle": {
-    "description": "Explanation for storage permission"
-  },
-  "setupStoragePermissionGranted": "권한이 부여됨",
-  "@setupStoragePermissionGranted": {
-    "description": "Status when permission granted"
-  },
-  "setupStoragePermissionDenied": "권한이 거부됨",
-  "@setupStoragePermissionDenied": {
-    "description": "Status when permission denied"
-  },
   "setupGrantPermission": "권한을 제공해 주세요.",
   "@setupGrantPermission": {
     "description": "Button to request permission"
-  },
-  "setupDownloadLocation": "다운로드 경로",
-  "@setupDownloadLocation": {
-    "description": "Download folder step title"
-  },
-  "setupChooseFolder": "폴더 선택",
-  "@setupChooseFolder": {
-    "description": "Button to pick folder"
-  },
-  "setupContinue": "계속",
-  "@setupContinue": {
-    "description": "Continue to next step button"
   },
   "setupSkip": "다음에 할래요",
   "@setupSkip": {
@@ -827,10 +507,6 @@
   "setupStorageAccessRequired": "스토리지 접근 권한 필요",
   "@setupStorageAccessRequired": {
     "description": "Title when storage access needed"
-  },
-  "setupStorageAccessMessage": "SpotiFLAC이 선택한 폴더에 음악 파일을 저장하려면 \"모든 파일 접근\" 권한이 필요합니다.",
-  "@setupStorageAccessMessage": {
-    "description": "Explanation for storage access"
   },
   "setupStorageAccessMessageAndroid11": "Android 11 이상 버전에서는 선택한 다운로드 폴더에 파일을 저장하려면 \"모든 파일 접근\" 권한이 필요합니다.",
   "@setupStorageAccessMessageAndroid11": {
@@ -862,10 +538,6 @@
         "type": "String"
       }
     }
-  },
-  "setupSelectDownloadFolder": "다운로드 경로 선택",
-  "@setupSelectDownloadFolder": {
-    "description": "Folder selection step title"
   },
   "setupUseDefaultFolder": "기본 폴더를 사용하시겠습니까?",
   "@setupUseDefaultFolder": {
@@ -915,26 +587,6 @@
   "@setupDownloadInFlac": {
     "description": "App tagline in setup"
   },
-  "setupStepStorage": "저장소",
-  "@setupStepStorage": {
-    "description": "Setup step indicator - storage"
-  },
-  "setupStepNotification": "알림",
-  "@setupStepNotification": {
-    "description": "Setup step indicator - notification"
-  },
-  "setupStepFolder": "폴더",
-  "@setupStepFolder": {
-    "description": "Setup step indicator - folder"
-  },
-  "setupStepSpotify": "Spotify",
-  "@setupStepSpotify": {
-    "description": "Setup step indicator - Spotify API"
-  },
-  "setupStepPermission": "권한",
-  "@setupStepPermission": {
-    "description": "Setup step indicator - permission"
-  },
   "setupStorageGranted": "저장소 접근 권한이 부여되었습니다!",
   "@setupStorageGranted": {
     "description": "Success message for storage permission"
@@ -955,14 +607,6 @@
   "@setupNotificationEnable": {
     "description": "Button to enable notifications"
   },
-  "setupNotificationDescription": "다운로드가 완료되거나 주의가 필요할 때 알림을 받으세요.",
-  "@setupNotificationDescription": {
-    "description": "Explanation for notifications"
-  },
-  "setupFolderSelected": "다운로드 폴더가 선택되었습니다!",
-  "@setupFolderSelected": {
-    "description": "Success message for folder selection"
-  },
   "setupFolderChoose": "다운로드 폴더를 선택하세요",
   "@setupFolderChoose": {
     "description": "Button to choose folder"
@@ -971,57 +615,13 @@
   "@setupFolderDescription": {
     "description": "Explanation for folder selection"
   },
-  "setupChangeFolder": "폴더 변경",
-  "@setupChangeFolder": {
-    "description": "Button to change selected folder"
-  },
   "setupSelectFolder": "폴더 선택",
   "@setupSelectFolder": {
     "description": "Button to select folder"
   },
-  "setupSpotifyApiOptional": "Spotify API (선택 사항)",
-  "@setupSpotifyApiOptional": {
-    "description": "Spotify API step title"
-  },
-  "setupSpotifyApiDescription": "Spotify API 자격 증명을 추가하면 검색 결과가 향상되고 Spotify 독점 콘텐츠에 액세스할 수 있습니다.",
-  "@setupSpotifyApiDescription": {
-    "description": "Explanation for Spotify API"
-  },
-  "setupUseSpotifyApi": "Spotify API 사용",
-  "@setupUseSpotifyApi": {
-    "description": "Toggle to enable Spotify API"
-  },
-  "setupEnterCredentialsBelow": "아래에 자격 증명을 입력하세요",
-  "@setupEnterCredentialsBelow": {
-    "description": "Prompt to enter credentials"
-  },
-  "setupUsingDeezer": "Deezer 사용 (계정 필요 없음)",
-  "@setupUsingDeezer": {
-    "description": "Status when using Deezer"
-  },
-  "setupEnterClientId": "Spotify 클라이언트 ID를 입력하세요",
-  "@setupEnterClientId": {
-    "description": "Placeholder for client ID field"
-  },
-  "setupEnterClientSecret": "Spotify 클라이언트 비밀번호를 입력하세요",
-  "@setupEnterClientSecret": {
-    "description": "Placeholder for client secret field"
-  },
-  "setupGetFreeCredentials": "Spotify 개발자 대시보드에서 무료 API 자격 증명을 받으세요.",
-  "@setupGetFreeCredentials": {
-    "description": "Info about getting Spotify credentials"
-  },
   "setupEnableNotifications": "알림 활성화",
   "@setupEnableNotifications": {
     "description": "Button to enable notifications"
-  },
-  "setupProceedToNextStep": "이제 다음 단계로 진행하실 수 있습니다.",
-  "@setupProceedToNextStep": {
-    "description": "Message after completing a step"
-  },
-  "setupNotificationProgressDescription": "다운로드 진행 상황 알림을 받게 됩니다.",
-  "@setupNotificationProgressDescription": {
-    "description": "Info about notification usage"
   },
   "setupNotificationBackgroundDescription": "알림으로 다운로드 진행 상황을 확인하세요. 앱이 백그라운드에서 실행 중일 때 다운로드 상태와 완료 여부를 확인할 수 있습니다.",
   "@setupNotificationBackgroundDescription": {
@@ -1031,10 +631,6 @@
   "@setupSkipForNow": {
     "description": "Skip button text"
   },
-  "setupBack": "이전",
-  "@setupBack": {
-    "description": "Back button text"
-  },
   "setupNext": "다음",
   "@setupNext": {
     "description": "Next button text"
@@ -1043,25 +639,13 @@
   "@setupGetStarted": {
     "description": "Final setup button"
   },
-  "setupSkipAndStart": "건너뛰고 시작",
-  "@setupSkipAndStart": {
-    "description": "Skip setup and start app"
-  },
   "setupAllowAccessToManageFiles": "다음 화면에서 \"모든 파일 관리 권한 허용\"을 활성화해 주세요.",
   "@setupAllowAccessToManageFiles": {
     "description": "Instruction for file access permission"
   },
-  "setupGetCredentialsFromSpotify": "developer.spotify.com에서 자격 증명을 받으세요.",
-  "@setupGetCredentialsFromSpotify": {
-    "description": "Link text for Spotify developer portal"
-  },
   "dialogCancel": "취소",
   "@dialogCancel": {
     "description": "Dialog button - cancel action"
-  },
-  "dialogOk": "확인",
-  "@dialogOk": {
-    "description": "Dialog button - confirm/acknowledge"
   },
   "dialogSave": "저장",
   "@dialogSave": {
@@ -1075,25 +659,9 @@
   "@dialogRetry": {
     "description": "Dialog button - retry action"
   },
-  "dialogClose": "닫기",
-  "@dialogClose": {
-    "description": "Dialog button - close dialog"
-  },
-  "dialogYes": "확인",
-  "@dialogYes": {
-    "description": "Dialog button - confirm yes"
-  },
-  "dialogNo": "거절",
-  "@dialogNo": {
-    "description": "Dialog button - confirm no"
-  },
   "dialogClear": "지우기",
   "@dialogClear": {
     "description": "Dialog button - clear items"
-  },
-  "dialogConfirm": "확정",
-  "@dialogConfirm": {
-    "description": "Dialog button - confirm action"
   },
   "dialogDone": "완료",
   "@dialogDone": {
@@ -1123,33 +691,9 @@
   "@dialogUnsavedChanges": {
     "description": "Dialog message - unsaved changes"
   },
-  "dialogDownloadFailed": "다운로드 실패",
-  "@dialogDownloadFailed": {
-    "description": "Dialog title - download error"
-  },
-  "dialogTrackLabel": "트랙:",
-  "@dialogTrackLabel": {
-    "description": "Label for track name in error dialog"
-  },
-  "dialogArtistLabel": "아티스트:",
-  "@dialogArtistLabel": {
-    "description": "Label for artist name in error dialog"
-  },
-  "dialogErrorLabel": "오류:",
-  "@dialogErrorLabel": {
-    "description": "Label for error message"
-  },
   "dialogClearAll": "모두 제거:",
   "@dialogClearAll": {
     "description": "Dialog title - clear all items"
-  },
-  "dialogClearAllDownloads": "다운로드한 파일을 모두 삭제하시겠습니까?",
-  "@dialogClearAllDownloads": {
-    "description": "Dialog message - clear downloads confirmation"
-  },
-  "dialogRemoveFromDevice": "기기에서 삭제하시겠습니까?",
-  "@dialogRemoveFromDevice": {
-    "description": "Dialog title - delete file confirmation"
   },
   "dialogRemoveExtension": "확장 프로그램 제거",
   "@dialogRemoveExtension": {
@@ -1289,15 +833,6 @@
   "@snackbarViewQueue": {
     "description": "Snackbar action - view download queue"
   },
-  "snackbarFailedToLoad": "불러오기 실패: {error}",
-  "@snackbarFailedToLoad": {
-    "description": "Snackbar - loading error",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "snackbarUrlCopied": "{platform} 링크가 클립보드에 저장됨",
   "@snackbarUrlCopied": {
     "description": "Snackbar - URL copied",
@@ -1358,23 +893,9 @@
   "@errorRateLimitedMessage": {
     "description": "Error message - rate limit explanation"
   },
-  "errorFailedToLoad": "{item} 로드 실패",
-  "@errorFailedToLoad": {
-    "description": "Error message - loading failed",
-    "placeholders": {
-      "item": {
-        "type": "String",
-        "description": "Item that failed to load (album/playlist/etc)"
-      }
-    }
-  },
   "errorNoTracksFound": "트랙을 찾을 수 없습니다",
   "@errorNoTracksFound": {
     "description": "Error - search returned no results"
-  },
-  "errorSeekNotSupported": "Seeking is not supported for this live stream",
-  "@errorSeekNotSupported": {
-    "description": "Error - seek disabled for live decrypted stream"
   },
   "errorMissingExtensionSource": "확장 소스가 누락되어, {item}(을)를 로드할 수 없습니다",
   "@errorMissingExtensionSource": {
@@ -1384,34 +905,6 @@
         "type": "String"
       }
     }
-  },
-  "statusQueued": "대기열에 추가됨",
-  "@statusQueued": {
-    "description": "Download status - waiting in queue"
-  },
-  "statusDownloading": "다운로드 중",
-  "@statusDownloading": {
-    "description": "Download status - in progress"
-  },
-  "statusFinalizing": "마무리 중",
-  "@statusFinalizing": {
-    "description": "Download status - writing metadata"
-  },
-  "statusCompleted": "완료됨",
-  "@statusCompleted": {
-    "description": "Download status - finished"
-  },
-  "statusFailed": "실패",
-  "@statusFailed": {
-    "description": "Download status - error occurred"
-  },
-  "statusSkipped": "생략됨",
-  "@statusSkipped": {
-    "description": "Download status - already exists"
-  },
-  "statusPaused": "중단됨",
-  "@statusPaused": {
-    "description": "Download status - paused"
   },
   "actionPause": "멈추기",
   "@actionPause": {
@@ -1425,14 +918,6 @@
   "@actionCancel": {
     "description": "Action button - cancel operation"
   },
-  "actionStop": "정지",
-  "@actionStop": {
-    "description": "Action button - stop operation"
-  },
-  "actionSelect": "선택",
-  "@actionSelect": {
-    "description": "Action button - enter selection mode"
-  },
   "actionSelectAll": "모두 선택",
   "@actionSelectAll": {
     "description": "Action button - select all items"
@@ -1440,14 +925,6 @@
   "actionDeselect": "선택 해제",
   "@actionDeselect": {
     "description": "Action button - deselect all"
-  },
-  "actionPaste": "붙여넣기",
-  "@actionPaste": {
-    "description": "Action button - paste from clipboard"
-  },
-  "actionImportCsv": "CSV 불러오기",
-  "@actionImportCsv": {
-    "description": "Action button - import CSV file"
   },
   "actionRemoveCredentials": "자격 증명 제거",
   "@actionRemoveCredentials": {
@@ -1469,19 +946,6 @@
   "selectionAllSelected": "모든 트랙 선택됨",
   "@selectionAllSelected": {
     "description": "Status - all items selected"
-  },
-  "selectionTapToSelect": "트랙을 탭하여 선택하세요",
-  "@selectionTapToSelect": {
-    "description": "Hint - how to select items"
-  },
-  "selectionDeleteTracks": "{count} {count, plural, =1{track} other{tracks}}개 제거됨",
-  "@selectionDeleteTracks": {
-    "description": "Delete button with count",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "selectionSelectToDelete": "삭제할 트랙을 선택",
   "@selectionSelectToDelete": {
@@ -1523,50 +987,9 @@
   "@tooltipPlay": {
     "description": "Tooltip - play button"
   },
-  "tooltipCancel": "취소",
-  "@tooltipCancel": {
-    "description": "Tooltip - cancel button"
-  },
-  "tooltipStop": "정지",
-  "@tooltipStop": {
-    "description": "Tooltip - stop button"
-  },
-  "tooltipRetry": "재시도",
-  "@tooltipRetry": {
-    "description": "Tooltip - retry button"
-  },
-  "tooltipRemove": "제거",
-  "@tooltipRemove": {
-    "description": "Tooltip - remove button"
-  },
-  "tooltipClear": "지우기",
-  "@tooltipClear": {
-    "description": "Tooltip - clear button"
-  },
-  "tooltipPaste": "",
-  "@tooltipPaste": {
-    "description": "Tooltip - paste button"
-  },
   "filenameFormat": "",
   "@filenameFormat": {
     "description": "Setting title - filename pattern"
-  },
-  "filenameFormatPreview": "",
-  "@filenameFormatPreview": {
-    "description": "Preview of filename pattern",
-    "placeholders": {
-      "preview": {
-        "type": "String"
-      }
-    }
-  },
-  "filenameAvailablePlaceholders": "사용 가능한 표현: ",
-  "@filenameAvailablePlaceholders": {
-    "description": "Label for placeholder list"
-  },
-  "filenameHint": "{artist} - {title}",
-  "@filenameHint": {
-    "description": "Default filename format hint"
   },
   "filenameShowAdvancedTags": "고급 태그 표시",
   "@filenameShowAdvancedTags": {
@@ -1575,10 +998,6 @@
   "filenameShowAdvancedTagsDescription": "트랙 패딩 및 날짜 패턴에 대한 서식 있는 태그를 활성화합니다.",
   "@filenameShowAdvancedTagsDescription": {
     "description": "Description for advanced filename tag toggle"
-  },
-  "folderOrganization": "폴더 정리",
-  "@folderOrganization": {
-    "description": "Setting title - folder structure"
   },
   "folderOrganizationNone": "정리하지 않음",
   "@folderOrganizationNone": {
@@ -1620,26 +1039,9 @@
   "@updateAvailable": {
     "description": "Update dialog title"
   },
-  "updateNewVersion": "Version {version} is available",
-  "@updateNewVersion": {
-    "description": "Update available message",
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
-  "updateDownload": "Download",
-  "@updateDownload": {
-    "description": "Update button - download update"
-  },
   "updateLater": "Later",
   "@updateLater": {
     "description": "Update button - dismiss"
-  },
-  "updateChangelog": "Changelog",
-  "@updateChangelog": {
-    "description": "Link to changelog"
   },
   "updateStartingDownload": "Starting download...",
   "@updateStartingDownload": {
@@ -1681,14 +1083,6 @@
   "@updateDontRemind": {
     "description": "Update button - skip this version"
   },
-  "providerPriority": "Provider Priority",
-  "@providerPriority": {
-    "description": "Setting title - download provider order"
-  },
-  "providerPrioritySubtitle": "Drag to reorder download providers",
-  "@providerPrioritySubtitle": {
-    "description": "Subtitle for provider priority"
-  },
   "providerPriorityTitle": "Provider Priority",
   "@providerPriorityTitle": {
     "description": "Provider priority page title"
@@ -1708,14 +1102,6 @@
   "providerExtension": "Extension",
   "@providerExtension": {
     "description": "Label for extension-provided providers"
-  },
-  "metadataProviderPriority": "Metadata Provider Priority",
-  "@metadataProviderPriority": {
-    "description": "Setting title - metadata provider order"
-  },
-  "metadataProviderPrioritySubtitle": "Order used when fetching track metadata",
-  "@metadataProviderPrioritySubtitle": {
-    "description": "Subtitle for metadata priority"
   },
   "metadataProviderPriorityTitle": "Metadata Priority",
   "@metadataProviderPriorityTitle": {
@@ -1740,22 +1126,6 @@
   "logTitle": "Logs",
   "@logTitle": {
     "description": "Logs screen title"
-  },
-  "logCopy": "Copy Logs",
-  "@logCopy": {
-    "description": "Action - copy logs to clipboard"
-  },
-  "logClear": "Clear Logs",
-  "@logClear": {
-    "description": "Action - delete all logs"
-  },
-  "logShare": "Share Logs",
-  "@logShare": {
-    "description": "Action - share logs file"
-  },
-  "logEmpty": "No logs yet",
-  "@logEmpty": {
-    "description": "Empty state title"
   },
   "logCopied": "Logs copied to clipboard",
   "@logCopied": {
@@ -1789,22 +1159,6 @@
   "@logClearLogsMessage": {
     "description": "Clear logs confirmation message"
   },
-  "logIspBlocking": "ISP 차단이 감지되었습니다",
-  "@logIspBlocking": {
-    "description": "Error category - ISP blocking"
-  },
-  "logRateLimited": "요금 제한",
-  "@logRateLimited": {
-    "description": "Error category - rate limiting"
-  },
-  "logNetworkError": "네트워크 오류",
-  "@logNetworkError": {
-    "description": "Error category - network issues"
-  },
-  "logTrackNotFound": "트랙을 찾을 수 없습니다",
-  "@logTrackNotFound": {
-    "description": "Error category - missing tracks"
-  },
   "logFilterBySeverity": "심각성에 따라 로그 분류",
   "@logFilterBySeverity": {
     "description": "Filter dialog title"
@@ -1816,60 +1170,6 @@
   "logNoLogsYetSubtitle": "앱을 사용하는 동안 로그가 여기에 표시됩니다.",
   "@logNoLogsYetSubtitle": {
     "description": "Empty state subtitle"
-  },
-  "logIssueSummary": "문제 요약",
-  "@logIssueSummary": {
-    "description": "Section header for error summary"
-  },
-  "logIspBlockingDescription": "인터넷 서비스 제공업체(ISP)에서 다운로드 서비스 접속을 차단했을 수 있습니다.",
-  "@logIspBlockingDescription": {
-    "description": "ISP blocking explanation"
-  },
-  "logIspBlockingSuggestion": "VPN을 사용하거나 DNS를 1.1.1.1 또는 8.8.8.8로 변경해 보세요.",
-  "@logIspBlockingSuggestion": {
-    "description": "ISP blocking fix suggestion"
-  },
-  "logRateLimitedDescription": "서비스에 대한 요청이 너무 많습니다",
-  "@logRateLimitedDescription": {
-    "description": "Rate limit explanation"
-  },
-  "logRateLimitedSuggestion": "몇 분 정도 기다렸다가 다시 시도해 보세요.",
-  "@logRateLimitedSuggestion": {
-    "description": "Rate limit fix suggestion"
-  },
-  "logNetworkErrorDescription": "연결 문제가 감지되었습니다.",
-  "@logNetworkErrorDescription": {
-    "description": "Network error explanation"
-  },
-  "logNetworkErrorSuggestion": "인터넷 연결 상태를 확인하세요.",
-  "@logNetworkErrorSuggestion": {
-    "description": "Network error fix suggestion"
-  },
-  "logTrackNotFoundDescription": "일부 트랙은 다운로드 서비스 제공자에서 찾을 수 없었습니다.",
-  "@logTrackNotFoundDescription": {
-    "description": "Track not found explanation"
-  },
-  "logTrackNotFoundSuggestion": "해당 트랙은 무손실 음질로 제공되지 않을 수 있습니다.",
-  "@logTrackNotFoundSuggestion": {
-    "description": "Track not found explanation"
-  },
-  "logTotalErrors": "총 오류 수: {count}",
-  "@logTotalErrors": {
-    "description": "Error count display",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "logAffected": "영향을 받는 도메인: {domains}",
-  "@logAffected": {
-    "description": "Affected domains display",
-    "placeholders": {
-      "domains": {
-        "type": "String"
-      }
-    }
   },
   "logEntriesFiltered": "({count} filtered)개 항목 필터링",
   "@logEntriesFiltered": {
@@ -2013,10 +1313,6 @@
   "@appearanceLanguage": {
     "description": "Language setting title"
   },
-  "appearanceLanguageSubtitle": "Choose your preferred language",
-  "@appearanceLanguageSubtitle": {
-    "description": "Language setting subtitle"
-  },
   "settingsAppearanceSubtitle": "Theme, colors, display",
   "@settingsAppearanceSubtitle": {
     "description": "Appearance settings description"
@@ -2045,22 +1341,9 @@
   "@pressBackAgainToExit": {
     "description": "Exit confirmation message"
   },
-  "tracksHeader": "Tracks",
-  "@tracksHeader": {
-    "description": "Section header for track list"
-  },
   "downloadAllCount": "Download All ({count})",
   "@downloadAllCount": {
     "description": "Download all button with count",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "playAllCount": "Play All ({count})",
-  "@playAllCount": {
-    "description": "Play all button with count",
     "placeholders": {
       "count": {
         "type": "int"
@@ -2204,15 +1487,6 @@
   "@trackDeleteConfirmMessage": {
     "description": "Delete confirmation message"
   },
-  "trackCannotOpen": "Cannot open: {message}",
-  "@trackCannotOpen": {
-    "description": "Error opening file",
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
-  },
   "dateToday": "Today",
   "@dateToday": {
     "description": "Relative date - today"
@@ -2248,22 +1522,6 @@
       }
     }
   },
-  "concurrentSequential": "Sequential",
-  "@concurrentSequential": {
-    "description": "Download mode - one at a time"
-  },
-  "concurrentParallel2": "2 Parallel",
-  "@concurrentParallel2": {
-    "description": "Download mode - 2 simultaneous"
-  },
-  "concurrentParallel3": "3 Parallel",
-  "@concurrentParallel3": {
-    "description": "Download mode - 3 simultaneous"
-  },
-  "tapToSeeError": "Tap to see error details",
-  "@tapToSeeError": {
-    "description": "Tooltip for failed download"
-  },
   "storeFilterAll": "All",
   "@storeFilterAll": {
     "description": "Store filter - all extensions"
@@ -2291,18 +1549,6 @@
   "storeClearFilters": "Clear filters",
   "@storeClearFilters": {
     "description": "Button to clear all filters"
-  },
-  "storeNoResults": "No extensions found",
-  "@storeNoResults": {
-    "description": "Empty state when no extensions match filters"
-  },
-  "extensionProviderPriority": "Provider Priority",
-  "@extensionProviderPriority": {
-    "description": "Extension capability - provider priority"
-  },
-  "extensionInstallButton": "Install Extension",
-  "@extensionInstallButton": {
-    "description": "Button to install extension"
   },
   "extensionDefaultProvider": "Default (Deezer/Spotify)",
   "@extensionDefaultProvider": {
@@ -2503,46 +1749,6 @@
   "@qualityHiResFlacMaxSubtitle": {
     "description": "Technical spec for hi-res max"
   },
-  "qualityLossy": "Lossy",
-  "@qualityLossy": {
-    "description": "Quality option - lossy format (MP3/Opus)"
-  },
-  "qualityLossyMp3Subtitle": "MP3 320kbps (converted from FLAC)",
-  "@qualityLossyMp3Subtitle": {
-    "description": "Technical spec for lossy MP3"
-  },
-  "qualityLossyOpusSubtitle": "Opus 128kbps (converted from FLAC)",
-  "@qualityLossyOpusSubtitle": {
-    "description": "Technical spec for lossy Opus"
-  },
-  "enableLossyOption": "Enable Lossy Option",
-  "@enableLossyOption": {
-    "description": "Setting - enable lossy quality option"
-  },
-  "enableLossyOptionSubtitleOn": "Lossy quality option is available",
-  "@enableLossyOptionSubtitleOn": {
-    "description": "Subtitle when lossy is enabled"
-  },
-  "enableLossyOptionSubtitleOff": "Downloads FLAC then converts to lossy format",
-  "@enableLossyOptionSubtitleOff": {
-    "description": "Subtitle when lossy is disabled"
-  },
-  "lossyFormat": "Lossy Format",
-  "@lossyFormat": {
-    "description": "Setting - choose lossy format"
-  },
-  "lossyFormatDescription": "Choose the lossy format for conversion",
-  "@lossyFormatDescription": {
-    "description": "Description for lossy format picker"
-  },
-  "lossyFormatMp3Subtitle": "320kbps, best compatibility",
-  "@lossyFormatMp3Subtitle": {
-    "description": "MP3 format description"
-  },
-  "lossyFormatOpusSubtitle": "128kbps, better quality at smaller size",
-  "@lossyFormatOpusSubtitle": {
-    "description": "Opus format description"
-  },
   "qualityNote": "Actual quality depends on track availability from the service",
   "@qualityNote": {
     "description": "Note about quality availability"
@@ -2558,49 +1764,6 @@
   "youtubeMp3BitrateTitle": "YouTube MP3 Bitrate",
   "@youtubeMp3BitrateTitle": {
     "description": "Title for YouTube MP3 bitrate setting"
-  },
-  "youtubeBitrateSubtitle": "{bitrate}kbps ({min}-{max})",
-  "@youtubeBitrateSubtitle": {
-    "description": "Subtitle showing current bitrate and valid range",
-    "placeholders": {
-      "bitrate": {
-        "type": "int"
-      },
-      "min": {
-        "type": "int"
-      },
-      "max": {
-        "type": "int"
-      }
-    }
-  },
-  "youtubeBitrateInputHelp": "Enter custom bitrate ({min}-{max} kbps)",
-  "@youtubeBitrateInputHelp": {
-    "description": "Helper text for manual YouTube bitrate input",
-    "placeholders": {
-      "min": {
-        "type": "int"
-      },
-      "max": {
-        "type": "int"
-      }
-    }
-  },
-  "youtubeBitrateFieldLabel": "Bitrate (kbps)",
-  "@youtubeBitrateFieldLabel": {
-    "description": "Label for YouTube bitrate input field"
-  },
-  "youtubeBitrateValidationError": "Bitrate must be between {min} and {max} kbps",
-  "@youtubeBitrateValidationError": {
-    "description": "Validation error for invalid YouTube bitrate input",
-    "placeholders": {
-      "min": {
-        "type": "int"
-      },
-      "max": {
-        "type": "int"
-      }
-    }
   },
   "downloadAskBeforeDownload": "Ask Before Download",
   "@downloadAskBeforeDownload": {
@@ -2622,14 +1785,6 @@
   "@downloadUseAlbumArtistForFolders": {
     "description": "Setting - choose whether artist folders use Album Artist or Track Artist"
   },
-  "downloadUseAlbumArtistForFoldersAlbumSubtitle": "Artist folders use Album Artist when available",
-  "@downloadUseAlbumArtistForFoldersAlbumSubtitle": {
-    "description": "Subtitle when Album Artist is used for folder naming"
-  },
-  "downloadUseAlbumArtistForFoldersTrackSubtitle": "Artist folders use Track Artist only",
-  "@downloadUseAlbumArtistForFoldersTrackSubtitle": {
-    "description": "Subtitle when Track Artist is used for folder naming"
-  },
   "downloadUsePrimaryArtistOnly": "Primary artist only for folders",
   "@downloadUsePrimaryArtistOnly": {
     "description": "Setting - strip featured artists from folder name"
@@ -2642,14 +1797,6 @@
   "@downloadUsePrimaryArtistOnlyDisabled": {
     "description": "Subtitle when primary artist only is disabled"
   },
-  "downloadSaveFormat": "Save Format",
-  "@downloadSaveFormat": {
-    "description": "Setting - output file format"
-  },
-  "downloadSelectService": "Select Service",
-  "@downloadSelectService": {
-    "description": "Dialog title - choose download service"
-  },
   "downloadSelectQuality": "Select Quality",
   "@downloadSelectQuality": {
     "description": "Dialog title - choose audio quality"
@@ -2657,66 +1804,6 @@
   "downloadFrom": "Download From",
   "@downloadFrom": {
     "description": "Label - download source"
-  },
-  "downloadDefaultQualityLabel": "Default Quality",
-  "@downloadDefaultQualityLabel": {
-    "description": "Label - default quality setting"
-  },
-  "downloadBestAvailable": "Best available",
-  "@downloadBestAvailable": {
-    "description": "Quality option - highest available"
-  },
-  "folderNone": "None",
-  "@folderNone": {
-    "description": "Folder option - no organization"
-  },
-  "folderNoneSubtitle": "Save all files directly to download folder",
-  "@folderNoneSubtitle": {
-    "description": "Subtitle for no folder organization"
-  },
-  "folderArtist": "Artist",
-  "@folderArtist": {
-    "description": "Folder option - by artist"
-  },
-  "folderArtistSubtitle": "Artist Name/filename",
-  "@folderArtistSubtitle": {
-    "description": "Folder structure example"
-  },
-  "folderAlbum": "Album",
-  "@folderAlbum": {
-    "description": "Folder option - by album"
-  },
-  "folderAlbumSubtitle": "Album Name/filename",
-  "@folderAlbumSubtitle": {
-    "description": "Folder structure example"
-  },
-  "folderArtistAlbum": "Artist/Album",
-  "@folderArtistAlbum": {
-    "description": "Folder option - nested"
-  },
-  "folderArtistAlbumSubtitle": "Artist Name/Album Name/filename",
-  "@folderArtistAlbumSubtitle": {
-    "description": "Folder structure example"
-  },
-  "serviceTidal": "Tidal",
-  "@serviceTidal": {
-    "description": "Service name - DO NOT TRANSLATE"
-  },
-  "serviceQobuz": "Qobuz",
-  "@serviceQobuz": {
-    "description": "Service name - DO NOT TRANSLATE"
-  },
-  "serviceAmazon": "Amazon",
-  "@serviceAmazon": {
-    "description": "Service name - DO NOT TRANSLATE"
-  },
-  "serviceDeezer": "Deezer",
-  "@serviceDeezer": {
-    "description": "Service name - DO NOT TRANSLATE"
-  },
-  "serviceSpotify": "Spotify",
-  "@serviceSpotify": {
-    "description": "Service name - DO NOT TRANSLATE"
   },
   "appearanceAmoledDark": "AMOLED Dark",
   "@appearanceAmoledDark": {
@@ -2726,18 +1813,6 @@
   "@appearanceAmoledDarkSubtitle": {
     "description": "Subtitle for AMOLED dark"
   },
-  "appearanceChooseAccentColor": "Choose Accent Color",
-  "@appearanceChooseAccentColor": {
-    "description": "Color picker dialog title"
-  },
-  "appearanceChooseTheme": "Theme Mode",
-  "@appearanceChooseTheme": {
-    "description": "Theme picker dialog title"
-  },
-  "queueTitle": "Download Queue",
-  "@queueTitle": {
-    "description": "Queue screen title"
-  },
   "queueClearAll": "Clear All",
   "@queueClearAll": {
     "description": "Button - clear all queue items"
@@ -2745,22 +1820,6 @@
   "queueClearAllMessage": "Are you sure you want to clear all downloads?",
   "@queueClearAllMessage": {
     "description": "Clear queue confirmation"
-  },
-  "queueExportFailed": "Export",
-  "@queueExportFailed": {
-    "description": "Button - export failed downloads to TXT"
-  },
-  "queueExportFailedSuccess": "Failed downloads exported to TXT file",
-  "@queueExportFailedSuccess": {
-    "description": "Success message after exporting failed downloads"
-  },
-  "queueExportFailedClear": "Clear Failed",
-  "@queueExportFailedClear": {
-    "description": "Action to clear failed downloads after export"
-  },
-  "queueExportFailedError": "Failed to export downloads",
-  "@queueExportFailedError": {
-    "description": "Error message when export fails"
   },
   "settingsAutoExportFailed": "Auto-export failed downloads",
   "@settingsAutoExportFailed": {
@@ -2785,38 +1844,6 @@
   "settingsDownloadNetworkSubtitle": "Choose which network to use for downloads. When set to WiFi Only, downloads will pause on mobile data.",
   "@settingsDownloadNetworkSubtitle": {
     "description": "Subtitle explaining network preference"
-  },
-  "queueEmpty": "No downloads in queue",
-  "@queueEmpty": {
-    "description": "Empty queue state title"
-  },
-  "queueEmptySubtitle": "Add tracks from the home screen",
-  "@queueEmptySubtitle": {
-    "description": "Empty queue state subtitle"
-  },
-  "queueClearCompleted": "Clear completed",
-  "@queueClearCompleted": {
-    "description": "Button - clear finished downloads"
-  },
-  "queueDownloadFailed": "Download Failed",
-  "@queueDownloadFailed": {
-    "description": "Error dialog title"
-  },
-  "queueTrackLabel": "Track:",
-  "@queueTrackLabel": {
-    "description": "Label in error dialog"
-  },
-  "queueArtistLabel": "Artist:",
-  "@queueArtistLabel": {
-    "description": "Label in error dialog"
-  },
-  "queueErrorLabel": "Error:",
-  "@queueErrorLabel": {
-    "description": "Label in error dialog"
-  },
-  "queueUnknownError": "Unknown error",
-  "@queueUnknownError": {
-    "description": "Fallback error message"
   },
   "albumFolderArtistAlbum": "Artist / Album",
   "@albumFolderArtistAlbum": {
@@ -2871,19 +1898,6 @@
       }
     }
   },
-  "downloadedAlbumTracksHeader": "Tracks",
-  "@downloadedAlbumTracksHeader": {
-    "description": "Section header for tracks"
-  },
-  "downloadedAlbumDownloadedCount": "{count} downloaded",
-  "@downloadedAlbumDownloadedCount": {
-    "description": "Downloaded tracks count badge",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "downloadedAlbumSelectedCount": "{count} selected",
   "@downloadedAlbumSelectedCount": {
     "description": "Selection count indicator",
@@ -2924,10 +1938,6 @@
       }
     }
   },
-  "utilityFunctions": "Utility Functions",
-  "@utilityFunctions": {
-    "description": "Extension capability - utility functions"
-  },
   "recentTypeArtist": "Artist",
   "@recentTypeArtist": {
     "description": "Recent access item type - artist"
@@ -2962,31 +1972,13 @@
       }
     }
   },
-  "errorGeneric": "Error: {message}",
-  "@errorGeneric": {
-    "description": "Generic error message format",
-    "placeholders": {
-      "message": {
-        "type": "String",
-        "description": "Error message"
-      }
-    }
-  },
   "discographyDownload": "Download Discography",
   "@discographyDownload": {
     "description": "Button - download artist discography"
   },
-  "discographyPlay": "Play Discography",
-  "@discographyPlay": {
-    "description": "Button - play artist discography"
-  },
   "discographyDownloadAll": "Download All",
   "@discographyDownloadAll": {
     "description": "Option - download entire discography"
-  },
-  "discographyPlayAll": "Play All",
-  "@discographyPlayAll": {
-    "description": "Option - play entire discography"
   },
   "discographyDownloadAllSubtitle": "{count} tracks from {albumCount} releases",
   "@discographyDownloadAllSubtitle": {
@@ -3069,10 +2061,6 @@
   "@discographyDownloadSelected": {
     "description": "Button - download selected albums"
   },
-  "discographyPlaySelected": "Play Selected",
-  "@discographyPlaySelected": {
-    "description": "Button - play selected albums"
-  },
   "discographyAddedToQueue": "Added {count} tracks to queue",
   "@discographyAddedToQueue": {
     "description": "Snackbar - tracks added from discography",
@@ -3150,10 +2138,6 @@
   "@libraryTitle": {
     "description": "Library settings page title"
   },
-  "libraryStatus": "Library Status",
-  "@libraryStatus": {
-    "description": "Section header for library status"
-  },
   "libraryScanSettings": "Scan Settings",
   "@libraryScanSettings": {
     "description": "Section header for scan settings"
@@ -3229,15 +2213,6 @@
   "libraryAboutDescription": "Scans your existing music collection to detect duplicates when downloading. Supports FLAC, M4A, MP3, Opus, and OGG formats. Metadata is read from file tags when available.",
   "@libraryAboutDescription": {
     "description": "Description of local library feature"
-  },
-  "libraryTracksCount": "{count} tracks",
-  "@libraryTracksCount": {
-    "description": "Track count in library",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "libraryTracksUnit": "{count, plural, =1{track} other{tracks}}",
   "@libraryTracksUnit": {
@@ -3362,26 +2337,6 @@
   "@libraryFilterFormat": {
     "description": "Filter section - file format"
   },
-  "libraryFilterDate": "Date Added",
-  "@libraryFilterDate": {
-    "description": "Filter section - date range"
-  },
-  "libraryFilterDateToday": "Today",
-  "@libraryFilterDateToday": {
-    "description": "Filter option - today only"
-  },
-  "libraryFilterDateWeek": "This Week",
-  "@libraryFilterDateWeek": {
-    "description": "Filter option - this week"
-  },
-  "libraryFilterDateMonth": "This Month",
-  "@libraryFilterDateMonth": {
-    "description": "Filter option - this month"
-  },
-  "libraryFilterDateYear": "This Year",
-  "@libraryFilterDateYear": {
-    "description": "Filter option - this year"
-  },
   "libraryFilterSort": "Sort",
   "@libraryFilterSort": {
     "description": "Filter section - sort order"
@@ -3393,15 +2348,6 @@
   "libraryFilterSortOldest": "Oldest",
   "@libraryFilterSortOldest": {
     "description": "Sort option - oldest first"
-  },
-  "libraryFilterActive": "{count} filter(s) active",
-  "@libraryFilterActive": {
-    "description": "Badge showing number of active filters",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "timeJustNow": "Just now",
   "@timeJustNow": {
@@ -3424,106 +2370,6 @@
         "type": "int"
       }
     }
-  },
-  "storageSwitchTitle": "Switch Storage Mode",
-  "@storageSwitchTitle": {
-    "description": "Dialog title when switching storage mode"
-  },
-  "storageSwitchToSafTitle": "Switch to SAF Storage?",
-  "@storageSwitchToSafTitle": {
-    "description": "Dialog title when switching to SAF"
-  },
-  "storageSwitchToAppTitle": "Switch to App Storage?",
-  "@storageSwitchToAppTitle": {
-    "description": "Dialog title when switching to app storage"
-  },
-  "storageSwitchToSafMessage": "Your existing downloads will remain in the current location and stay accessible.\n\nNew downloads will be saved to your selected SAF folder.",
-  "@storageSwitchToSafMessage": {
-    "description": "Explanation when switching to SAF"
-  },
-  "storageSwitchToAppMessage": "Your existing downloads will remain in the current SAF location and stay accessible.\n\nNew downloads will be saved to Music/SpotiFLAC folder.",
-  "@storageSwitchToAppMessage": {
-    "description": "Explanation when switching to app storage"
-  },
-  "storageSwitchExistingDownloads": "Existing Downloads",
-  "@storageSwitchExistingDownloads": {
-    "description": "Section header for existing downloads info"
-  },
-  "storageSwitchExistingDownloadsInfo": "{count} tracks in {mode} storage",
-  "@storageSwitchExistingDownloadsInfo": {
-    "description": "Info about existing downloads count",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "mode": {
-        "type": "String"
-      }
-    }
-  },
-  "storageSwitchNewDownloads": "New Downloads",
-  "@storageSwitchNewDownloads": {
-    "description": "Section header for new downloads info"
-  },
-  "storageSwitchNewDownloadsLocation": "Will be saved to: {location}",
-  "@storageSwitchNewDownloadsLocation": {
-    "description": "Shows where new downloads will go",
-    "placeholders": {
-      "location": {
-        "type": "String"
-      }
-    }
-  },
-  "storageSwitchContinue": "Continue",
-  "@storageSwitchContinue": {
-    "description": "Button to proceed with storage switch"
-  },
-  "storageSwitchSelectFolder": "Select SAF Folder",
-  "@storageSwitchSelectFolder": {
-    "description": "Button to select SAF folder"
-  },
-  "storageAppStorage": "App Storage",
-  "@storageAppStorage": {
-    "description": "Label for app storage mode"
-  },
-  "storageSafStorage": "SAF Storage",
-  "@storageSafStorage": {
-    "description": "Label for SAF storage mode"
-  },
-  "storageModeBadge": "Storage: {mode}",
-  "@storageModeBadge": {
-    "description": "Badge showing storage mode for a track",
-    "placeholders": {
-      "mode": {
-        "type": "String"
-      }
-    }
-  },
-  "storageStatsTitle": "Storage Statistics",
-  "@storageStatsTitle": {
-    "description": "Section title for storage stats"
-  },
-  "storageStatsAppCount": "{count} tracks in App Storage",
-  "@storageStatsAppCount": {
-    "description": "Count of tracks in app storage",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "storageStatsSafCount": "{count} tracks in SAF Storage",
-  "@storageStatsSafCount": {
-    "description": "Count of tracks in SAF storage",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "storageModeInfo": "Your files are stored in multiple locations",
-  "@storageModeInfo": {
-    "description": "Info when user has files in both storage modes"
   },
   "tutorialWelcomeTitle": "Welcome to SpotiFLAC!",
   "@tutorialWelcomeTitle": {
@@ -3553,18 +2399,6 @@
   "@tutorialSearchDesc": {
     "description": "Tutorial search page description"
   },
-  "tutorialSearchTip1": "Paste a Spotify or Deezer URL directly in the search box",
-  "@tutorialSearchTip1": {
-    "description": "Tutorial search tip 1"
-  },
-  "tutorialSearchTip2": "Or type the song name, artist, or album to search",
-  "@tutorialSearchTip2": {
-    "description": "Tutorial search tip 2"
-  },
-  "tutorialSearchTip3": "Supports tracks, albums, playlists, and artist pages",
-  "@tutorialSearchTip3": {
-    "description": "Tutorial search tip 3"
-  },
   "tutorialDownloadTitle": "Downloading Music",
   "@tutorialDownloadTitle": {
     "description": "Tutorial download page title"
@@ -3572,18 +2406,6 @@
   "tutorialDownloadDesc": "Downloading music is simple and fast. Here's how it works.",
   "@tutorialDownloadDesc": {
     "description": "Tutorial download page description"
-  },
-  "tutorialDownloadTip1": "Tap the download button next to any track to start downloading",
-  "@tutorialDownloadTip1": {
-    "description": "Tutorial download tip 1"
-  },
-  "tutorialDownloadTip2": "Choose your preferred quality (FLAC, Hi-Res, or MP3)",
-  "@tutorialDownloadTip2": {
-    "description": "Tutorial download tip 2"
-  },
-  "tutorialDownloadTip3": "Download entire albums or playlists with one tap",
-  "@tutorialDownloadTip3": {
-    "description": "Tutorial download tip 3"
   },
   "tutorialLibraryTitle": "Your Library",
   "@tutorialLibraryTitle": {
@@ -3648,10 +2470,6 @@
   "tutorialReadyMessage": "You're all set! Start downloading your favorite music now.",
   "@tutorialReadyMessage": {
     "description": "Tutorial completion message"
-  },
-  "tutorialExample": "EXAMPLE",
-  "@tutorialExample": {
-    "description": "Example label in tutorial"
   },
   "libraryForceFullScan": "Force Full Scan",
   "@libraryForceFullScan": {
@@ -3878,10 +2696,6 @@
   "trackReEnrich": "Re-enrich",
   "@trackReEnrich": {
     "description": "Menu action - re-embed metadata into audio file"
-  },
-  "trackReEnrichSubtitle": "Re-embed metadata without re-downloading",
-  "@trackReEnrichSubtitle": {
-    "description": "Subtitle for re-enrich metadata action"
   },
   "trackReEnrichOnlineSubtitle": "Search metadata online and embed into file",
   "@trackReEnrichOnlineSubtitle": {
@@ -4271,48 +3085,21 @@
       }
     }
   },
-  "setupModeSelectionTitle": "Choose Your Mode",
-  "@setupModeSelectionTitle": {
-    "description": "Title for mode selection step in setup wizard"
+  "downloadedAlbumDownloadedCount": "{count} downloaded",
+  "@downloadedAlbumDownloadedCount": {
+    "description": "Downloaded tracks count badge",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-  "setupModeSelectionDescription": "How would you like to use SpotiFLAC? You can always change this later in Settings.",
-  "@setupModeSelectionDescription": {
-    "description": "Description for mode selection step"
+  "downloadUseAlbumArtistForFoldersAlbumSubtitle": "Artist folders use Album Artist when available",
+  "@downloadUseAlbumArtistForFoldersAlbumSubtitle": {
+    "description": "Subtitle when Album Artist is used for folder naming"
   },
-  "setupModeDownloaderTitle": "Downloader",
-  "@setupModeDownloaderTitle": {
-    "description": "Title for downloader mode option"
-  },
-  "setupModeDownloaderFeature1": "Download tracks in lossless FLAC quality",
-  "@setupModeDownloaderFeature1": {
-    "description": "Downloader mode feature 1"
-  },
-  "setupModeDownloaderFeature2": "Save music to your device for offline listening",
-  "@setupModeDownloaderFeature2": {
-    "description": "Downloader mode feature 2"
-  },
-  "setupModeDownloaderFeature3": "Manage your local music library",
-  "@setupModeDownloaderFeature3": {
-    "description": "Downloader mode feature 3"
-  },
-  "setupModeStreamingTitle": "Streaming",
-  "@setupModeStreamingTitle": {
-    "description": "Title for streaming mode option"
-  },
-  "setupModeStreamingFeature1": "Stream tracks instantly without downloading",
-  "@setupModeStreamingFeature1": {
-    "description": "Streaming mode feature 1"
-  },
-  "setupModeStreamingFeature2": "Smart Queue auto-discovers new music for you",
-  "@setupModeStreamingFeature2": {
-    "description": "Streaming mode feature 2"
-  },
-  "setupModeStreamingFeature3": "Play any track on demand with playback controls",
-  "@setupModeStreamingFeature3": {
-    "description": "Streaming mode feature 3"
-  },
-  "setupModeChangeableLater": "You can switch between modes anytime in Settings.",
-  "@setupModeChangeableLater": {
-    "description": "Hint that mode can be changed later"
+  "downloadUseAlbumArtistForFoldersTrackSubtitle": "Artist folders use Track Artist only",
+  "@downloadUseAlbumArtistForFoldersTrackSubtitle": {
+    "description": "Subtitle when Track Artist is used for folder naming"
   }
 }
