@@ -164,7 +164,7 @@ class _RecentDonorsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const donorNames = <String>[];
+    const donorNames = <String>['a fan'];
 
     // Match SettingsGroup color logic
     final cardColor = isDark
