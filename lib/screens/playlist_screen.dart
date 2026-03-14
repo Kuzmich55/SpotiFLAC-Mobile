@@ -39,8 +39,12 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
   List<Track>? _fetchedTracks;
   bool _isLoading = false;
   String? _error;
+  String? _resolvedPlaylistName;
+  String? _resolvedCoverUrl;
 
   List<Track> get _tracks => _fetchedTracks ?? widget.tracks;
+  String get _playlistName => _resolvedPlaylistName ?? widget.playlistName;
+  String? get _coverUrl => _resolvedCoverUrl ?? widget.coverUrl;
 
   @override
   void initState() {
@@ -81,6 +85,9 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
       }
       if (!mounted) return;
 
+      final playlistInfo = result['playlist_info'] as Map<String, dynamic>?;
+      final owner = playlistInfo?['owner'] as Map<String, dynamic>?;
+
       // Go backend returns 'track_list' not 'tracks'
       final trackList = result['track_list'] as List<dynamic>? ?? [];
       final tracks = trackList
@@ -89,6 +96,10 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
 
       setState(() {
         _fetchedTracks = tracks;
+        _resolvedPlaylistName = (playlistInfo?['name'] ?? owner?['name'])
+            ?.toString();
+        _resolvedCoverUrl = (playlistInfo?['images'] ?? owner?['images'])
+            ?.toString();
         _isLoading = false;
       });
     } catch (e) {
@@ -188,7 +199,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
         duration: const Duration(milliseconds: 200),
         opacity: _showTitleInAppBar ? 1.0 : 0.0,
         child: Text(
-          widget.playlistName,
+          _playlistName,
           style: TextStyle(
             color: colorScheme.onSurface,
             fontWeight: FontWeight.w600,
@@ -210,10 +221,9 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
             background: Stack(
               fit: StackFit.expand,
               children: [
-                if (widget.coverUrl != null)
+                if (_coverUrl != null)
                   CachedNetworkImage(
-                    imageUrl:
-                        _highResCoverUrl(widget.coverUrl) ?? widget.coverUrl!,
+                    imageUrl: _highResCoverUrl(_coverUrl) ?? _coverUrl!,
                     fit: BoxFit.cover,
                     cacheManager: CoverCacheManager.instance,
                     placeholder: (_, _) =>
@@ -260,7 +270,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          widget.playlistName,
+                          _playlistName,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
@@ -424,7 +434,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                 track,
                 service,
                 qualityOverride: quality,
-                playlistName: widget.playlistName,
+                playlistName: _playlistName,
               );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -439,7 +449,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
           .addToQueue(
             track,
             settings.defaultService,
-            playlistName: widget.playlistName,
+            playlistName: _playlistName,
           );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.snackbarAddedToQueue(track.name))),
@@ -603,7 +613,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
       DownloadServicePicker.show(
         context,
         trackName: '${tracks.length} tracks',
-        artistName: widget.playlistName,
+        artistName: _playlistName,
         onSelect: (quality, service) {
           ref
               .read(downloadQueueProvider.notifier)
@@ -611,7 +621,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                 tracks,
                 service,
                 qualityOverride: quality,
-                playlistName: widget.playlistName,
+                playlistName: _playlistName,
               );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -628,7 +638,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
           .addMultipleToQueue(
             tracks,
             settings.defaultService,
-            playlistName: widget.playlistName,
+            playlistName: _playlistName,
           );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

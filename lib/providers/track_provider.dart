@@ -425,11 +425,15 @@ class TrackNotifier extends Notifier<TrackState> {
               .map((t) => _parseTrack(t as Map<String, dynamic>))
               .toList();
           final owner = playlistInfo['owner'] as Map<String, dynamic>?;
+          final playlistName =
+              (playlistInfo['name'] ?? owner?['name']) as String?;
+          final coverUrl =
+              (playlistInfo['images'] ?? owner?['images']) as String?;
           state = TrackState(
             tracks: tracks,
             isLoading: false,
-            playlistName: owner?['name'] as String?,
-            coverUrl: owner?['images'] as String?,
+            playlistName: playlistName,
+            coverUrl: coverUrl,
           );
           _preWarmCacheForTracks(tracks);
         } else if (type == 'artist') {
@@ -491,11 +495,15 @@ class TrackNotifier extends Notifier<TrackState> {
               .map((t) => _parseTrack(t as Map<String, dynamic>))
               .toList();
           final owner = playlistInfo['owner'] as Map<String, dynamic>?;
+          final playlistName =
+              (playlistInfo['name'] ?? owner?['name']) as String?;
+          final coverUrl =
+              (playlistInfo['images'] ?? owner?['images']) as String?;
           state = TrackState(
             tracks: tracks,
             isLoading: false,
-            playlistName: owner?['name'] as String?,
-            coverUrl: owner?['images'] as String?,
+            playlistName: playlistName,
+            coverUrl: coverUrl,
           );
           _preWarmCacheForTracks(tracks);
         } else if (type == 'artist') {
@@ -574,11 +582,15 @@ class TrackNotifier extends Notifier<TrackState> {
             .map((t) => _parseTrack(t as Map<String, dynamic>))
             .toList();
         final owner = playlistInfo['owner'] as Map<String, dynamic>?;
+        final playlistName =
+            (playlistInfo['name'] ?? owner?['name']) as String?;
+        final coverUrl =
+            (playlistInfo['images'] ?? owner?['images']) as String?;
         state = TrackState(
           tracks: tracks,
           isLoading: false,
-          playlistName: owner?['name'] as String?,
-          coverUrl: owner?['images'] as String?,
+          playlistName: playlistName,
+          coverUrl: coverUrl,
         );
         _preWarmCacheForTracks(tracks);
       } else if (type == 'artist') {

@@ -162,6 +162,47 @@ func TestTidalAlbumToArtistAlbum(t *testing.T) {
 	}
 }
 
+func TestTidalAlbumToArtistAlbumWithFallbackType(t *testing.T) {
+	album := &tidalPublicAlbum{
+		ID:             490623904,
+		Title:          "LET 'EM KNOW",
+		Cover:          "fc18a64b-d76b-4582-962a-224cb05193f3",
+		NumberOfTracks: 1,
+	}
+
+	got := tidalAlbumToArtistAlbumWithType(album, "single")
+	if got.AlbumType != "single" {
+		t.Fatalf("unexpected fallback album type: %q", got.AlbumType)
+	}
+}
+
+func TestTidalArtistAlbumTypeFromModuleTitle(t *testing.T) {
+	tests := []struct {
+		title string
+		want  string
+	}{
+		{title: "Albums", want: "album"},
+		{title: "EP & Singles", want: "single"},
+		{title: "Compilations", want: "album"},
+		{title: "Appears On", want: "album"},
+		{title: "Unknown", want: ""},
+	}
+
+	for _, test := range tests {
+		if got := tidalArtistAlbumTypeFromModuleTitle(test.title); got != test.want {
+			t.Fatalf("tidalArtistAlbumTypeFromModuleTitle(%q) = %q, want %q", test.title, got, test.want)
+		}
+	}
+}
+
+func TestTidalPlaylistImageUsesOrigin(t *testing.T) {
+	got := tidalImageURL("e6b59fd3-6995-40f0-8a32-174db3a8f4f2", "origin")
+	want := "https://resources.tidal.com/images/e6b59fd3/6995/40f0/8a32/174db3a8f4f2/origin.jpg"
+	if got != want {
+		t.Fatalf("unexpected origin playlist image URL: %q", got)
+	}
+}
+
 func TestTidalPlaylistOwnerName(t *testing.T) {
 	editorial := &tidalPublicPlaylist{Type: "EDITORIAL"}
 	if got := tidalPlaylistOwnerName(editorial); got != "TIDAL" {

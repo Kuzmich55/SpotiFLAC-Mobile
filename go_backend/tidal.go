@@ -158,6 +158,7 @@ type tidalPublicArtistPage struct {
 	Rows []struct {
 		Modules []struct {
 			Type   string `json:"type"`
+			Title  string `json:"title"`
 			Artist struct {
 				ID      int64  `json:"id"`
 				Name    string `json:"name"`
@@ -397,8 +398,20 @@ func tidalAlbumToAlbumInfo(album *tidalPublicAlbum) AlbumInfoMetadata {
 }
 
 func tidalAlbumToArtistAlbum(album *tidalPublicAlbum) ArtistAlbumMetadata {
+	return tidalAlbumToArtistAlbumWithType(album, "")
+}
+
+func tidalAlbumToArtistAlbumWithType(album *tidalPublicAlbum, fallbackType string) ArtistAlbumMetadata {
 	if album == nil {
 		return ArtistAlbumMetadata{}
+	}
+
+	albumType := strings.ToLower(strings.TrimSpace(album.Type))
+	if albumType == "" {
+		albumType = strings.ToLower(strings.TrimSpace(fallbackType))
+	}
+	if albumType == "" {
+		albumType = "album"
 	}
 
 	return ArtistAlbumMetadata{
@@ -407,7 +420,7 @@ func tidalAlbumToArtistAlbum(album *tidalPublicAlbum) ArtistAlbumMetadata {
 		ReleaseDate: strings.TrimSpace(album.ReleaseDate),
 		TotalTracks: album.NumberOfTracks,
 		Images:      tidalImageURL(album.Cover, "1280x1280"),
-		AlbumType:   strings.ToLower(strings.TrimSpace(album.Type)),
+		AlbumType:   albumType,
 		Artists:     tidalAlbumArtistsDisplay(album),
 	}
 }
@@ -423,6 +436,18 @@ func tidalPlaylistOwnerName(playlist *tidalPublicPlaylist) string {
 		return "Artist"
 	}
 	return "TIDAL"
+}
+
+func tidalArtistAlbumTypeFromModuleTitle(title string) string {
+	normalized := strings.ToLower(strings.TrimSpace(title))
+	switch normalized {
+	case "albums", "compilations", "appears on":
+		return "album"
+	case "ep & singles", "eps & singles", "singles", "ep", "eps":
+		return "single"
+	default:
+		return ""
+	}
 }
 
 func tidalBuildMetadataURL(path string, extraQuery url.Values) string {
@@ -595,6 +620,7 @@ func findTidalAlbumPageModule(page *tidalPublicAlbumPage, moduleType string) *st
 
 func findTidalArtistPageModule(page *tidalPublicArtistPage, moduleType string) *struct {
 	Type   string `json:"type"`
+	Title  string `json:"title"`
 	Artist struct {
 		ID      int64  `json:"id"`
 		Name    string `json:"name"`
@@ -790,7 +816,7 @@ func (t *TidalDownloader) GetPlaylistMetadata(resourceID string) (*PlaylistRespo
 	var info PlaylistInfoMetadata
 	info.Tracks.Total = totalTracks
 	info.Name = strings.TrimSpace(playlist.Title)
-	info.Images = tidalImageURL(tidalFirstNonEmpty(playlist.SquareImage, playlist.Image), "1280x1280")
+	info.Images = tidalImageURL(tidalFirstNonEmpty(playlist.SquareImage, playlist.Image), "origin")
 	info.Owner.DisplayName = tidalPlaylistOwnerName(playlist)
 	info.Owner.Name = strings.TrimSpace(playlist.Title)
 	info.Owner.Images = info.Images
@@ -817,29 +843,53 @@ func (t *TidalDownloader) GetArtistMetadata(resourceID string) (*ArtistResponseP
 	}
 
 	albums := make([]ArtistAlbumMetadata, 0, albumsModule.PagedList.TotalNumberOfItems)
-	for _, album := range albumsModule.PagedList.Items {
-		albums = append(albums, tidalAlbumToArtistAlbum(&album))
+	seenAlbumIDs := make(map[string]struct{})
+
+	appendArtistAlbum := func(album tidalPublicAlbum, fallbackType string) {
+		mapped := tidalAlbumToArtistAlbumWithType(&album, fallbackType)
+		if mapped.ID == "" {
+			return
+		}
+		if _, exists := seenAlbumIDs[mapped.ID]; exists {
+			return
+		}
+		seenAlbumIDs[mapped.ID] = struct{}{}
+		albums = append(albums, mapped)
 	}
 
-	pageSize := albumsModule.PagedList.Limit
-	if pageSize <= 0 {
-		pageSize = 50
-	}
-	offset := len(albumsModule.PagedList.Items)
-	for offset < albumsModule.PagedList.TotalNumberOfItems && strings.TrimSpace(albumsModule.PagedList.DataAPIPath) != "" {
-		albumsPage, pageErr := t.getArtistAlbumsPage(albumsModule.PagedList.DataAPIPath, offset, pageSize)
-		if pageErr != nil {
-			return nil, pageErr
-		}
+	for rowIndex := range page.Rows {
+		for moduleIndex := range page.Rows[rowIndex].Modules {
+			module := &page.Rows[rowIndex].Modules[moduleIndex]
+			if module.Type != "ALBUM_LIST" {
+				continue
+			}
 
-		for _, album := range albumsPage.Items {
-			albums = append(albums, tidalAlbumToArtistAlbum(&album))
-		}
+			fallbackType := tidalArtistAlbumTypeFromModuleTitle(module.Title)
+			for _, album := range module.PagedList.Items {
+				appendArtistAlbum(album, fallbackType)
+			}
 
-		if len(albumsPage.Items) == 0 || offset+len(albumsPage.Items) >= albumsPage.TotalNumberOfItems {
-			break
+			pageSize := module.PagedList.Limit
+			if pageSize <= 0 {
+				pageSize = 50
+			}
+			offset := len(module.PagedList.Items)
+			for offset < module.PagedList.TotalNumberOfItems && strings.TrimSpace(module.PagedList.DataAPIPath) != "" {
+				albumsPage, pageErr := t.getArtistAlbumsPage(module.PagedList.DataAPIPath, offset, pageSize)
+				if pageErr != nil {
+					return nil, pageErr
+				}
+
+				for _, album := range albumsPage.Items {
+					appendArtistAlbum(album, fallbackType)
+				}
+
+				if len(albumsPage.Items) == 0 || offset+len(albumsPage.Items) >= albumsPage.TotalNumberOfItems {
+					break
+				}
+				offset += len(albumsPage.Items)
+			}
 		}
-		offset += len(albumsPage.Items)
 	}
 
 	return &ArtistResponsePayload{
