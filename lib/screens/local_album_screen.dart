@@ -4,11 +4,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:spotiflac_android/l10n/l10n.dart';
+import 'package:spotiflac_android/models/track.dart';
+import 'package:spotiflac_android/providers/download_queue_provider.dart';
+import 'package:spotiflac_android/providers/extension_provider.dart';
 import 'package:spotiflac_android/providers/settings_provider.dart';
 import 'package:spotiflac_android/utils/file_access.dart';
 import 'package:spotiflac_android/utils/lyrics_metadata_helper.dart';
 import 'package:spotiflac_android/services/library_database.dart';
 import 'package:spotiflac_android/services/ffmpeg_service.dart';
+import 'package:spotiflac_android/services/local_track_redownload_service.dart';
 import 'package:spotiflac_android/services/platform_bridge.dart';
 import 'package:spotiflac_android/providers/local_library_provider.dart';
 import 'package:spotiflac_android/providers/playback_provider.dart';
@@ -41,11 +45,10 @@ class _LocalAlbumScreenState extends ConsumerState<LocalAlbumScreen> {
 
   void _showCueVirtualTrackSnackBar() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(cueVirtualTrackRequiresSplitMessage),
-      ),
+      const SnackBar(content: Text(cueVirtualTrackRequiresSplitMessage)),
     );
   }
+
   late List<int> _sortedDiscNumbersCache;
   late bool _hasMultipleDiscsCache;
   String? _commonQualityCache;
@@ -897,6 +900,127 @@ class _LocalAlbumScreenState extends ConsumerState<LocalAlbumScreen> {
     return false;
   }
 
+  Future<void> _queueSelectedAsFlac(List<LocalLibraryItem> allTracks) async {
+    final tracksById = {for (final t in allTracks) t.id: t};
+    final selected = <LocalLibraryItem>[];
+
+    for (final id in _selectedIds) {
+      final item = tracksById[id];
+      if (item != null) {
+        selected.add(item);
+      }
+    }
+
+    if (selected.isEmpty) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.queueFlacAction),
+        content: Text(context.l10n.queueFlacConfirmMessage(selected.length)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(context.l10n.dialogCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(context.l10n.queueFlacAction),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final settings = ref.read(settingsProvider);
+    final extensionState = ref.read(extensionProvider);
+    final includeExtensions =
+        settings.useExtensionProviders &&
+        extensionState.extensions.any(
+          (ext) => ext.enabled && ext.hasMetadataProvider,
+        );
+    final targetService = LocalTrackRedownloadService.preferredFlacService(
+      settings,
+    );
+    final targetQuality =
+        LocalTrackRedownloadService.preferredFlacQualityForService(
+          targetService,
+        );
+
+    final matchedTracks = <Track>[];
+    var skippedCount = 0;
+    final total = selected.length;
+
+    for (var i = 0; i < total; i++) {
+      if (!mounted) break;
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.l10n.queueFlacFindingProgress(i + 1, total),
+          ),
+          duration: const Duration(seconds: 30),
+        ),
+      );
+
+      try {
+        final resolution = await LocalTrackRedownloadService.resolveBestMatch(
+          selected[i],
+          includeExtensions: includeExtensions,
+        );
+        if (resolution.canQueue && resolution.match != null) {
+          matchedTracks.add(resolution.match!);
+        } else {
+          skippedCount++;
+        }
+      } catch (_) {
+        skippedCount++;
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+
+    if (matchedTracks.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.queueFlacNoReliableMatches)),
+      );
+      return;
+    }
+
+    ref
+        .read(downloadQueueProvider.notifier)
+        .addMultipleToQueue(
+          matchedTracks,
+          targetService,
+          qualityOverride: targetQuality,
+        );
+
+    final summary = skippedCount == 0
+        ? context.l10n.snackbarAddedTracksToQueue(matchedTracks.length)
+        : context.l10n.queueFlacQueuedWithSkipped(
+            matchedTracks.length,
+            skippedCount,
+          );
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(summary)));
+    setState(() {
+      _selectedIds.clear();
+      _isSelectionMode = false;
+    });
+  }
+
   Future<void> _reEnrichSelected(List<LocalLibraryItem> allTracks) async {
     final tracksById = {for (final t in allTracks) t.id: t};
     final selected = <LocalLibraryItem>[];
@@ -1525,6 +1649,17 @@ class _LocalAlbumScreenState extends ConsumerState<LocalAlbumScreen> {
 
               Row(
                 children: [
+                  Expanded(
+                    child: _LocalAlbumSelectionActionButton(
+                      icon: Icons.download_for_offline_outlined,
+                      label: '${context.l10n.queueFlacAction} ($selectedCount)',
+                      onPressed: selectedCount > 0
+                          ? () => _queueSelectedAsFlac(tracks)
+                          : null,
+                      colorScheme: colorScheme,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _LocalAlbumSelectionActionButton(
                       icon: Icons.auto_fix_high_outlined,

@@ -2755,6 +2755,47 @@
   "@trackReEnrichFfmpegFailed": {
     "description": "Snackbar when FFmpeg embed fails for MP3/Opus"
   },
+  "queueFlacAction": "Antrekan FLAC",
+  "@queueFlacAction": {
+    "description": "Action/button label for queueing FLAC redownloads for local tracks"
+  },
+  "queueFlacConfirmMessage": "Cari kecocokan online untuk track yang dipilih lalu antrekan download FLAC.\n\nFile yang sudah ada tidak akan diubah atau dihapus.\n\nHanya kecocokan dengan keyakinan tinggi yang akan diantrikan otomatis.\n\n{count} dipilih",
+  "@queueFlacConfirmMessage": {
+    "description": "Confirmation dialog body before queueing FLAC redownloads for local tracks",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "queueFlacFindingProgress": "Mencari kecocokan FLAC... ({current}/{total})",
+  "@queueFlacFindingProgress": {
+    "description": "Snackbar while resolving remote matches for local FLAC redownloads",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "queueFlacNoReliableMatches": "Tidak ada kecocokan online yang cukup meyakinkan untuk pilihan ini",
+  "@queueFlacNoReliableMatches": {
+    "description": "Snackbar when no safe FLAC redownload matches were found"
+  },
+  "queueFlacQueuedWithSkipped": "Menambahkan {addedCount} track ke antrean, melewati {skippedCount}",
+  "@queueFlacQueuedWithSkipped": {
+    "description": "Snackbar when some selected local tracks were queued for FLAC redownload and some were skipped",
+    "placeholders": {
+      "addedCount": {
+        "type": "int"
+      },
+      "skippedCount": {
+        "type": "int"
+      }
+    }
+  },
   "trackSaveFailed": "Failed: {error}",
   "@trackSaveFailed": {
     "description": "Snackbar when save operation fails",
