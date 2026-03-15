@@ -608,44 +608,81 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
 
   void _downloadTracks(BuildContext context, List<Track> tracks) {
     if (tracks.isEmpty) return;
+
+    // Filter out tracks already in download history or local library
+    final historyState = ref.read(downloadHistoryProvider);
     final settings = ref.read(settingsProvider);
+    final localLibState = (settings.localLibraryEnabled && settings.localLibraryShowDuplicates)
+        ? ref.read(localLibraryProvider)
+        : null;
+    final tracksToQueue = <Track>[];
+    int skippedCount = 0;
+
+    for (final track in tracks) {
+      final isInHistory = historyState.isDownloaded(track.id) ||
+          (track.isrc != null && historyState.getByIsrc(track.isrc!) != null) ||
+          historyState.findByTrackAndArtist(track.name, track.artistName) != null;
+      final isInLocal = localLibState?.existsInLibrary(
+            isrc: track.isrc,
+            trackName: track.name,
+            artistName: track.artistName,
+          ) ??
+          false;
+
+      if (isInHistory || isInLocal) {
+        skippedCount++;
+      } else {
+        tracksToQueue.add(track);
+      }
+    }
+
+    if (tracksToQueue.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.l10n.discographySkippedDownloaded(0, skippedCount),
+          ),
+        ),
+      );
+      return;
+    }
+
     if (settings.askQualityBeforeDownload) {
       DownloadServicePicker.show(
         context,
-        trackName: '${tracks.length} tracks',
+        trackName: '${tracksToQueue.length} tracks',
         artistName: _playlistName,
         onSelect: (quality, service) {
           ref
               .read(downloadQueueProvider.notifier)
               .addMultipleToQueue(
-                tracks,
+                tracksToQueue,
                 service,
                 qualityOverride: quality,
                 playlistName: _playlistName,
               );
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                context.l10n.snackbarAddedTracksToQueue(tracks.length),
-              ),
-            ),
-          );
+          _showQueuedSnackbar(context, tracksToQueue.length, skippedCount);
         },
       );
     } else {
       ref
           .read(downloadQueueProvider.notifier)
           .addMultipleToQueue(
-            tracks,
+            tracksToQueue,
             settings.defaultService,
             playlistName: _playlistName,
           );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.snackbarAddedTracksToQueue(tracks.length)),
-        ),
-      );
+      _showQueuedSnackbar(context, tracksToQueue.length, skippedCount);
     }
+  }
+
+  void _showQueuedSnackbar(BuildContext context, int added, int skipped) {
+    final message = skipped > 0
+        ? context.l10n.discographySkippedDownloaded(added, skipped)
+        : context.l10n.snackbarAddedTracksToQueue(added);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 }
 
