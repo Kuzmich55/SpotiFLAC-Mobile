@@ -2189,16 +2189,24 @@ func downloadFromTidal(req DownloadRequest) (TidalDownloadResult, error) {
 		lyricsLRC = parallelResult.LyricsLRC
 	}
 
+	resultAlbum, resultReleaseDate, resultTrackNumber, resultDiscNumber := preferredReleaseMetadata(
+		req,
+		track.Album.Title,
+		track.Album.ReleaseDate,
+		actualTrackNumber,
+		actualDiscNumber,
+	)
+
 	return TidalDownloadResult{
 		FilePath:    actualOutputPath,
 		BitDepth:    bitDepth,
 		SampleRate:  sampleRate,
 		Title:       track.Title,
 		Artist:      track.Artist.Name,
-		Album:       track.Album.Title,
-		ReleaseDate: track.Album.ReleaseDate,
-		TrackNumber: actualTrackNumber,
-		DiscNumber:  actualDiscNumber,
+		Album:       resultAlbum,
+		ReleaseDate: resultReleaseDate,
+		TrackNumber: resultTrackNumber,
+		DiscNumber:  resultDiscNumber,
 		ISRC:        track.ISRC,
 		LyricsLRC:   lyricsLRC,
 	}, nil

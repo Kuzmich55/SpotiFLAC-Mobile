@@ -135,6 +135,36 @@ type DownloadResult struct {
 	DecryptionKey string
 }
 
+func preferredReleaseMetadata(
+	req DownloadRequest,
+	album string,
+	releaseDate string,
+	trackNumber int,
+	discNumber int,
+) (string, string, int, int) {
+	preferredAlbum := strings.TrimSpace(req.AlbumName)
+	if preferredAlbum == "" {
+		preferredAlbum = album
+	}
+
+	preferredReleaseDate := strings.TrimSpace(req.ReleaseDate)
+	if preferredReleaseDate == "" {
+		preferredReleaseDate = releaseDate
+	}
+
+	preferredTrackNumber := req.TrackNumber
+	if preferredTrackNumber == 0 {
+		preferredTrackNumber = trackNumber
+	}
+
+	preferredDiscNumber := req.DiscNumber
+	if preferredDiscNumber == 0 {
+		preferredDiscNumber = discNumber
+	}
+
+	return preferredAlbum, preferredReleaseDate, preferredTrackNumber, preferredDiscNumber
+}
+
 func buildDownloadSuccessResponse(
 	req DownloadRequest,
 	result DownloadResult,
@@ -153,25 +183,16 @@ func buildDownloadSuccessResponse(
 		artist = req.ArtistName
 	}
 
-	album := result.Album
-	if album == "" {
-		album = req.AlbumName
-	}
-
-	releaseDate := result.ReleaseDate
-	if releaseDate == "" {
-		releaseDate = req.ReleaseDate
-	}
-
-	trackNumber := result.TrackNumber
-	if trackNumber == 0 {
-		trackNumber = req.TrackNumber
-	}
-
-	discNumber := result.DiscNumber
-	if discNumber == 0 {
-		discNumber = req.DiscNumber
-	}
+	// Preserve requested release metadata when available so mixed-provider
+	// fallback downloads from the same source album do not get split into
+	// different albums just because Tidal/Qobuz report variant titles/dates.
+	album, releaseDate, trackNumber, discNumber := preferredReleaseMetadata(
+		req,
+		result.Album,
+		result.ReleaseDate,
+		result.TrackNumber,
+		result.DiscNumber,
+	)
 
 	isrc := result.ISRC
 	if isrc == "" {

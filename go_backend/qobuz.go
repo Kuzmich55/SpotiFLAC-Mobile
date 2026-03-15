@@ -54,6 +54,7 @@ const (
 	qobuzDownloadAPIURL     = "https://www.musicdl.me/api/qobuz/download"
 	qobuzDabMusicAPIURL     = "https://dabmusic.xyz/api/stream?trackId="
 	qobuzDeebAPIURL         = "https://dab.yeet.su/api/stream?trackId="
+	qobuzAfkarAPIURL        = "https://qbz.afkarxyz.fun/api/track/"
 	qobuzSquidAPIURL        = "https://qobuz.squid.wtf/api/download-music?country=US&track_id="
 	qobuzDebugKeyXORMask    = byte(0x5A)
 )
@@ -1019,6 +1020,10 @@ func (q *QobuzDownloader) GetArtistMetadata(resourceID string) (*ArtistResponseP
 func (q *QobuzDownloader) GetAvailableAPIs() []string {
 	return []string{
 		qobuzDownloadAPIURL,
+		qobuzDabMusicAPIURL,
+		qobuzDeebAPIURL,
+		qobuzAfkarAPIURL,
+		qobuzSquidAPIURL,
 	}
 }
 
@@ -1039,6 +1044,8 @@ func (q *QobuzDownloader) GetAvailableProviders() []qobuzAPIProvider {
 		{Name: "dabmusic", URL: qobuzDabMusicAPIURL, Kind: qobuzAPIKindStandard},
 		// "deeb" is mapped from the legacy reference fallback endpoint.
 		{Name: "deeb", URL: qobuzDeebAPIURL, Kind: qobuzAPIKindStandard},
+		// "qbz" comes from the desktop reference app and uses /api/track/{id}?quality=...
+		{Name: "qbz", URL: qobuzAfkarAPIURL, Kind: qobuzAPIKindStandard},
 		{Name: "squid", URL: qobuzSquidAPIURL, Kind: qobuzAPIKindStandard},
 	}
 }
@@ -2156,6 +2163,10 @@ func downloadFromQobuz(req DownloadRequest) (QobuzDownloadResult, error) {
 	if req.AlbumName != "" {
 		albumName = req.AlbumName
 	}
+	releaseDate := track.Album.ReleaseDate
+	if req.ReleaseDate != "" {
+		releaseDate = req.ReleaseDate
+	}
 
 	actualTrackNumber := req.TrackNumber
 	if actualTrackNumber == 0 {
@@ -2167,7 +2178,7 @@ func downloadFromQobuz(req DownloadRequest) (QobuzDownloadResult, error) {
 		Artist:      track.Performer.Name,
 		Album:       albumName,
 		AlbumArtist: req.AlbumArtist,
-		Date:        track.Album.ReleaseDate,
+		Date:        releaseDate,
 		TrackNumber: actualTrackNumber,
 		TotalTracks: req.TotalTracks,
 		DiscNumber:  req.DiscNumber,
@@ -2231,16 +2242,24 @@ func downloadFromQobuz(req DownloadRequest) (QobuzDownloadResult, error) {
 		lyricsLRC = parallelResult.LyricsLRC
 	}
 
+	resultAlbum, resultReleaseDate, resultTrackNumber, resultDiscNumber := preferredReleaseMetadata(
+		req,
+		track.Album.Title,
+		track.Album.ReleaseDate,
+		actualTrackNumber,
+		req.DiscNumber,
+	)
+
 	return QobuzDownloadResult{
 		FilePath:    outputPath,
 		BitDepth:    actualBitDepth,
 		SampleRate:  actualSampleRate,
 		Title:       track.Title,
 		Artist:      track.Performer.Name,
-		Album:       track.Album.Title,
-		ReleaseDate: track.Album.ReleaseDate,
-		TrackNumber: actualTrackNumber,
-		DiscNumber:  req.DiscNumber,
+		Album:       resultAlbum,
+		ReleaseDate: resultReleaseDate,
+		TrackNumber: resultTrackNumber,
+		DiscNumber:  resultDiscNumber,
 		ISRC:        track.ISRC,
 		LyricsLRC:   lyricsLRC,
 	}, nil

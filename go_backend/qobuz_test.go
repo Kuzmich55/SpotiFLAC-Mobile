@@ -213,14 +213,16 @@ func TestExtractQobuzAlbumIDsFromArtistHTML(t *testing.T) {
 
 func TestQobuzAvailableProviders(t *testing.T) {
 	providers := NewQobuzDownloader().GetAvailableProviders()
-	if len(providers) != 3 {
-		t.Fatalf("expected 3 Qobuz providers, got %d", len(providers))
+	if len(providers) != 5 {
+		t.Fatalf("expected 5 Qobuz providers, got %d", len(providers))
 	}
 
 	want := map[string]string{
 		"musicdl":  qobuzAPIKindMusicDL,
 		"dabmusic": qobuzAPIKindStandard,
 		"deeb":     qobuzAPIKindStandard,
+		"qbz":      qobuzAPIKindStandard,
+		"squid":    qobuzAPIKindStandard,
 	}
 
 	for _, provider := range providers {
