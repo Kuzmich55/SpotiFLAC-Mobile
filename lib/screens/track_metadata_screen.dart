@@ -3932,12 +3932,33 @@ class _EditMetadataSheet extends StatefulWidget {
 class _EditMetadataSheetState extends State<_EditMetadataSheet> {
   bool _saving = false;
   bool _showAdvanced = false;
+  bool _showAutoFill = false;
+  bool _fetching = false;
   String? _selectedCoverPath;
   String? _selectedCoverTempDir;
   String? _selectedCoverName;
   String? _currentCoverPath;
   String? _currentCoverTempDir;
   bool _loadingCurrentCover = false;
+
+  // Auto-fill field selection — which fields the user wants to fetch
+  final Set<String> _autoFillFields = {};
+
+  // All auto-fillable fields and their mapping
+  static const _fieldDefs = <String, String>{
+    'title': 'title',
+    'artist': 'artist',
+    'album': 'album',
+    'album_artist': 'album_artist',
+    'date': 'date',
+    'track_number': 'track_number',
+    'disc_number': 'disc_number',
+    'genre': 'genre',
+    'isrc': 'isrc',
+    'label': 'label',
+    'copyright': 'copyright',
+    'cover': 'cover',
+  };
 
   late final TextEditingController _titleCtrl;
   late final TextEditingController _artistCtrl;
@@ -4129,6 +4150,286 @@ class _EditMetadataSheetState extends State<_EditMetadataSheet> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.snackbarError(e.toString()))));
+    }
+  }
+
+  String _fieldLabel(String key) {
+    final l10n = context.l10n;
+    switch (key) {
+      case 'title':
+        return l10n.editMetadataFieldTitle;
+      case 'artist':
+        return l10n.editMetadataFieldArtist;
+      case 'album':
+        return l10n.editMetadataFieldAlbum;
+      case 'album_artist':
+        return l10n.editMetadataFieldAlbumArtist;
+      case 'date':
+        return l10n.editMetadataFieldDate;
+      case 'track_number':
+        return l10n.editMetadataFieldTrackNum;
+      case 'disc_number':
+        return l10n.editMetadataFieldDiscNum;
+      case 'genre':
+        return l10n.editMetadataFieldGenre;
+      case 'isrc':
+        return l10n.editMetadataFieldIsrc;
+      case 'label':
+        return l10n.editMetadataFieldLabel;
+      case 'copyright':
+        return l10n.editMetadataFieldCopyright;
+      case 'cover':
+        return l10n.editMetadataFieldCover;
+      default:
+        return key;
+    }
+  }
+
+  TextEditingController? _controllerForKey(String key) {
+    switch (key) {
+      case 'title':
+        return _titleCtrl;
+      case 'artist':
+        return _artistCtrl;
+      case 'album':
+        return _albumCtrl;
+      case 'album_artist':
+        return _albumArtistCtrl;
+      case 'date':
+        return _dateCtrl;
+      case 'track_number':
+        return _trackNumCtrl;
+      case 'disc_number':
+        return _discNumCtrl;
+      case 'genre':
+        return _genreCtrl;
+      case 'isrc':
+        return _isrcCtrl;
+      case 'label':
+        return _labelCtrl;
+      case 'copyright':
+        return _copyrightCtrl;
+      default:
+        return null;
+    }
+  }
+
+  void _selectAllFields() {
+    setState(() {
+      _autoFillFields.addAll(_fieldDefs.keys);
+    });
+  }
+
+  void _selectEmptyFields() {
+    setState(() {
+      _autoFillFields.clear();
+      for (final key in _fieldDefs.keys) {
+        if (key == 'cover') {
+          if (!_hasValue(_currentCoverPath) && !_hasValue(_selectedCoverPath)) {
+            _autoFillFields.add(key);
+          }
+          continue;
+        }
+        final ctrl = _controllerForKey(key);
+        if (ctrl != null && ctrl.text.trim().isEmpty) {
+          _autoFillFields.add(key);
+        }
+      }
+    });
+  }
+
+  Future<void> _fetchAndFill() async {
+    if (_autoFillFields.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.editMetadataAutoFillNoneSelected)),
+      );
+      return;
+    }
+
+    setState(() => _fetching = true);
+
+    try {
+      // Build search query from current field values
+      final title = _titleCtrl.text.trim();
+      final artist = _artistCtrl.text.trim();
+      final album = _albumCtrl.text.trim();
+      final queryParts = <String>[];
+      if (title.isNotEmpty) queryParts.add(title);
+      if (artist.isNotEmpty) queryParts.add(artist);
+      if (album.isNotEmpty) queryParts.add(album);
+
+      if (queryParts.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.l10n.editMetadataAutoFillNoResults),
+            ),
+          );
+        }
+        return;
+      }
+
+      final query = queryParts.join(' ');
+      final results = await PlatformBridge.searchTracksWithMetadataProviders(
+        query,
+        limit: 5,
+      );
+
+      if (!mounted) return;
+
+      if (results.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.editMetadataAutoFillNoResults)),
+        );
+        return;
+      }
+
+      // Pick best match: prefer ISRC match, then first result
+      final currentIsrc = _isrcCtrl.text.trim().toUpperCase();
+      Map<String, dynamic>? best;
+      if (currentIsrc.isNotEmpty) {
+        for (final r in results) {
+          final candidateIsrc =
+              (r['isrc']?.toString() ?? '').trim().toUpperCase();
+          if (candidateIsrc == currentIsrc) {
+            best = r;
+            break;
+          }
+        }
+      }
+      best ??= results.first;
+
+      // Extract metadata from best match
+      final enriched = <String, String>{
+        'title': (best['name'] ?? '').toString(),
+        'artist': (best['artists'] ?? best['artist'] ?? '').toString(),
+        'album': (best['album_name'] ?? best['album'] ?? '').toString(),
+        'album_artist': (best['album_artist'] ?? '').toString(),
+        'date': (best['release_date'] ?? '').toString(),
+        'track_number': (best['track_number'] ?? '').toString(),
+        'disc_number': (best['disc_number'] ?? '').toString(),
+        'isrc': (best['isrc'] ?? '').toString(),
+      };
+
+      // Try to get extended metadata (genre, label, copyright) from Deezer
+      final trackId =
+          (best['spotify_id'] ?? best['id'] ?? '').toString();
+      final source = (best['source'] ?? best['provider_id'] ?? '').toString();
+
+      if ((_autoFillFields.contains('genre') ||
+              _autoFillFields.contains('label') ||
+              _autoFillFields.contains('copyright')) &&
+          trackId.isNotEmpty) {
+        try {
+          // If source is Deezer, fetch extended metadata directly
+          Map<String, String>? extended;
+          if (source.toLowerCase().contains('deezer')) {
+            extended = await PlatformBridge.getDeezerExtendedMetadata(trackId);
+          } else {
+            // Try ISRC lookup via Deezer for genre/label/copyright
+            final isrcForLookup = enriched['isrc'] ?? '';
+            if (isrcForLookup.isNotEmpty) {
+              try {
+                final deezerResult = await PlatformBridge.searchDeezerByISRC(
+                  isrcForLookup,
+                );
+                final deezerTrackId =
+                    (deezerResult['id'] ?? deezerResult['track_id'] ?? '')
+                        .toString();
+                if (deezerTrackId.isNotEmpty) {
+                  extended = await PlatformBridge.getDeezerExtendedMetadata(
+                    deezerTrackId,
+                  );
+                }
+              } catch (_) {}
+            }
+          }
+          if (extended != null) {
+            enriched['genre'] = extended['genre'] ?? '';
+            enriched['label'] = extended['label'] ?? '';
+            enriched['copyright'] = extended['copyright'] ?? '';
+          }
+        } catch (_) {
+          // Extended metadata is best-effort
+        }
+      }
+
+      if (!mounted) return;
+
+      // Apply selected fields to controllers
+      var filledCount = 0;
+      for (final key in _autoFillFields) {
+        if (key == 'cover') continue; // Handle cover separately below
+        final value = enriched[key];
+        if (value != null && value.isNotEmpty && value != '0' && value != 'null') {
+          final ctrl = _controllerForKey(key);
+          if (ctrl != null) {
+            ctrl.text = value;
+            filledCount++;
+          }
+        }
+      }
+
+      // Handle cover art download
+      if (_autoFillFields.contains('cover')) {
+        final coverUrl =
+            (best['cover_url'] ?? best['images'] ?? '').toString();
+        if (coverUrl.isNotEmpty) {
+          try {
+            final tempDir = await Directory.systemTemp.createTemp(
+              'autofill_cover_',
+            );
+            final coverOutput =
+                '${tempDir.path}${Platform.pathSeparator}cover.jpg';
+            final response = await HttpClient()
+                .getUrl(Uri.parse(coverUrl))
+                .then((req) => req.close());
+            final file = File(coverOutput);
+            final sink = file.openWrite();
+            await response.pipe(sink);
+            if (await file.exists() && await file.length() > 0) {
+              await _cleanupSelectedCoverTemp();
+              if (mounted) {
+                setState(() {
+                  _selectedCoverPath = coverOutput;
+                  _selectedCoverTempDir = tempDir.path;
+                  _selectedCoverName = 'Online cover';
+                });
+                filledCount++;
+              }
+            } else {
+              try {
+                await tempDir.delete(recursive: true);
+              } catch (_) {}
+            }
+          } catch (_) {
+            // Cover download is best-effort
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              filledCount > 0
+                  ? context.l10n.editMetadataAutoFillDone(filledCount)
+                  : context.l10n.editMetadataAutoFillNoResults,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.snackbarError(e.toString())),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _fetching = false);
     }
   }
 
@@ -4416,6 +4717,7 @@ class _EditMetadataSheetState extends State<_EditMetadataSheet> {
                 children: [
                   const SizedBox(height: 6),
                   _buildCoverEditor(cs),
+                  _buildAutoFillSection(cs),
                   _field('Title', _titleCtrl),
                   _field('Artist', _artistCtrl),
                   _field('Album', _albumCtrl),
@@ -4482,6 +4784,183 @@ class _EditMetadataSheetState extends State<_EditMetadataSheet> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAutoFillSection(ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _showAutoFill = !_showAutoFill),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.travel_explore,
+                      size: 20,
+                      color: cs.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        context.l10n.editMetadataAutoFill,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: cs.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      _showAutoFill ? Icons.expand_less : Icons.expand_more,
+                      size: 20,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_showAutoFill) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  context.l10n.editMetadataAutoFillDesc,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Quick select buttons
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    _quickSelectButton(
+                      label: context.l10n.editMetadataSelectAll,
+                      onTap: _selectAllFields,
+                      cs: cs,
+                    ),
+                    const SizedBox(width: 8),
+                    _quickSelectButton(
+                      label: context.l10n.editMetadataSelectEmpty,
+                      onTap: _selectEmptyFields,
+                      cs: cs,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Field chips
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: _fieldDefs.keys.map((key) {
+                    final selected = _autoFillFields.contains(key);
+                    return FilterChip(
+                      label: Text(_fieldLabel(key)),
+                      selected: selected,
+                      onSelected: _fetching
+                          ? null
+                          : (val) {
+                              setState(() {
+                                if (val) {
+                                  _autoFillFields.add(key);
+                                } else {
+                                  _autoFillFields.remove(key);
+                                }
+                              });
+                            },
+                      selectedColor: cs.primaryContainer,
+                      checkmarkColor: cs.onPrimaryContainer,
+                      labelStyle: Theme.of(context).textTheme.labelSmall
+                          ?.copyWith(
+                            color: selected
+                                ? cs.onPrimaryContainer
+                                : cs.onSurfaceVariant,
+                          ),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Fetch button
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 12,
+                  right: 12,
+                  bottom: 12,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed:
+                        (_fetching || _saving || _autoFillFields.isEmpty)
+                            ? null
+                            : _fetchAndFill,
+                    icon: _fetching
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.auto_fix_high),
+                    label: Text(
+                      _fetching
+                          ? context.l10n.editMetadataAutoFillSearching
+                          : context.l10n.editMetadataAutoFillFetch,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _quickSelectButton({
+    required String label,
+    required VoidCallback onTap,
+    required ColorScheme cs,
+  }) {
+    return InkWell(
+      onTap: _fetching ? null : onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cs.outline.withValues(alpha: 0.5)),
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: cs.primary,
+          ),
         ),
       ),
     );

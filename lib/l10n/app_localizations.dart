@@ -4817,6 +4817,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 playlist} other{{count} playlists}}'**
   String playlistsCount(int count);
+
+  /// Section title for selective online metadata auto-fill in the edit metadata sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-fill from online'**
+  String get editMetadataAutoFill;
+
+  /// Description for the auto-fill section
+  ///
+  /// In en, this message translates to:
+  /// **'Select fields to fill automatically from online metadata'**
+  String get editMetadataAutoFillDesc;
+
+  /// Button label to fetch online metadata and fill selected fields
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch & Fill'**
+  String get editMetadataAutoFillFetch;
+
+  /// Snackbar shown while searching for online metadata
+  ///
+  /// In en, this message translates to:
+  /// **'Searching online...'**
+  String get editMetadataAutoFillSearching;
+
+  /// Snackbar when online metadata search returns no results
+  ///
+  /// In en, this message translates to:
+  /// **'No matching metadata found online'**
+  String get editMetadataAutoFillNoResults;
+
+  /// Snackbar confirming how many fields were auto-filled
+  ///
+  /// In en, this message translates to:
+  /// **'Filled {count} {count, plural, =1{field} other{fields}} from online metadata'**
+  String editMetadataAutoFillDone(int count);
+
+  /// Snackbar when user taps Fetch without selecting any fields
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one field to auto-fill'**
+  String get editMetadataAutoFillNoneSelected;
+
+  /// Chip label for title field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get editMetadataFieldTitle;
+
+  /// Chip label for artist field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get editMetadataFieldArtist;
+
+  /// Chip label for album field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Album'**
+  String get editMetadataFieldAlbum;
+
+  /// Chip label for album artist field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Album Artist'**
+  String get editMetadataFieldAlbumArtist;
+
+  /// Chip label for date field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get editMetadataFieldDate;
+
+  /// Chip label for track number field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Track #'**
+  String get editMetadataFieldTrackNum;
+
+  /// Chip label for disc number field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Disc #'**
+  String get editMetadataFieldDiscNum;
+
+  /// Chip label for genre field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Genre'**
+  String get editMetadataFieldGenre;
+
+  /// Chip label for ISRC field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'ISRC'**
+  String get editMetadataFieldIsrc;
+
+  /// Chip label for label field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Label'**
+  String get editMetadataFieldLabel;
+
+  /// Chip label for copyright field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Copyright'**
+  String get editMetadataFieldCopyright;
+
+  /// Chip label for cover art field in auto-fill selector
+  ///
+  /// In en, this message translates to:
+  /// **'Cover Art'**
+  String get editMetadataFieldCover;
+
+  /// Button to select all fields for auto-fill
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get editMetadataSelectAll;
+
+  /// Button to select only fields that are currently empty
+  ///
+  /// In en, this message translates to:
+  /// **'Empty only'**
+  String get editMetadataSelectEmpty;
 }
 
 class _AppLocalizationsDelegate

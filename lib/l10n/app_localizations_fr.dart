@@ -2800,4 +2800,78 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get editMetadataAutoFill => 'Auto-fill from online';
+
+  @override
+  String get editMetadataAutoFillDesc =>
+      'Select fields to fill automatically from online metadata';
+
+  @override
+  String get editMetadataAutoFillFetch => 'Fetch & Fill';
+
+  @override
+  String get editMetadataAutoFillSearching => 'Searching online...';
+
+  @override
+  String get editMetadataAutoFillNoResults =>
+      'No matching metadata found online';
+
+  @override
+  String editMetadataAutoFillDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'fields',
+      one: 'field',
+    );
+    return 'Filled $count $_temp0 from online metadata';
+  }
+
+  @override
+  String get editMetadataAutoFillNoneSelected =>
+      'Select at least one field to auto-fill';
+
+  @override
+  String get editMetadataFieldTitle => 'Title';
+
+  @override
+  String get editMetadataFieldArtist => 'Artist';
+
+  @override
+  String get editMetadataFieldAlbum => 'Album';
+
+  @override
+  String get editMetadataFieldAlbumArtist => 'Album Artist';
+
+  @override
+  String get editMetadataFieldDate => 'Date';
+
+  @override
+  String get editMetadataFieldTrackNum => 'Track #';
+
+  @override
+  String get editMetadataFieldDiscNum => 'Disc #';
+
+  @override
+  String get editMetadataFieldGenre => 'Genre';
+
+  @override
+  String get editMetadataFieldIsrc => 'ISRC';
+
+  @override
+  String get editMetadataFieldLabel => 'Label';
+
+  @override
+  String get editMetadataFieldCopyright => 'Copyright';
+
+  @override
+  String get editMetadataFieldCover => 'Cover Art';
+
+  @override
+  String get editMetadataSelectAll => 'All';
+
+  @override
+  String get editMetadataSelectEmpty => 'Empty only';
 }

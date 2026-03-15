@@ -3706,5 +3706,94 @@
         "type": "int"
       }
     }
+  },
+  "editMetadataAutoFill": "Auto-fill from online",
+  "@editMetadataAutoFill": {
+    "description": "Section title for selective online metadata auto-fill in the edit metadata sheet"
+  },
+  "editMetadataAutoFillDesc": "Select fields to fill automatically from online metadata",
+  "@editMetadataAutoFillDesc": {
+    "description": "Description for the auto-fill section"
+  },
+  "editMetadataAutoFillFetch": "Fetch & Fill",
+  "@editMetadataAutoFillFetch": {
+    "description": "Button label to fetch online metadata and fill selected fields"
+  },
+  "editMetadataAutoFillSearching": "Searching online...",
+  "@editMetadataAutoFillSearching": {
+    "description": "Snackbar shown while searching for online metadata"
+  },
+  "editMetadataAutoFillNoResults": "No matching metadata found online",
+  "@editMetadataAutoFillNoResults": {
+    "description": "Snackbar when online metadata search returns no results"
+  },
+  "editMetadataAutoFillDone": "Filled {count} {count, plural, =1{field} other{fields}} from online metadata",
+  "@editMetadataAutoFillDone": {
+    "description": "Snackbar confirming how many fields were auto-filled",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editMetadataAutoFillNoneSelected": "Select at least one field to auto-fill",
+  "@editMetadataAutoFillNoneSelected": {
+    "description": "Snackbar when user taps Fetch without selecting any fields"
+  },
+  "editMetadataFieldTitle": "Title",
+  "@editMetadataFieldTitle": {
+    "description": "Chip label for title field in auto-fill selector"
+  },
+  "editMetadataFieldArtist": "Artist",
+  "@editMetadataFieldArtist": {
+    "description": "Chip label for artist field in auto-fill selector"
+  },
+  "editMetadataFieldAlbum": "Album",
+  "@editMetadataFieldAlbum": {
+    "description": "Chip label for album field in auto-fill selector"
+  },
+  "editMetadataFieldAlbumArtist": "Album Artist",
+  "@editMetadataFieldAlbumArtist": {
+    "description": "Chip label for album artist field in auto-fill selector"
+  },
+  "editMetadataFieldDate": "Date",
+  "@editMetadataFieldDate": {
+    "description": "Chip label for date field in auto-fill selector"
+  },
+  "editMetadataFieldTrackNum": "Track #",
+  "@editMetadataFieldTrackNum": {
+    "description": "Chip label for track number field in auto-fill selector"
+  },
+  "editMetadataFieldDiscNum": "Disc #",
+  "@editMetadataFieldDiscNum": {
+    "description": "Chip label for disc number field in auto-fill selector"
+  },
+  "editMetadataFieldGenre": "Genre",
+  "@editMetadataFieldGenre": {
+    "description": "Chip label for genre field in auto-fill selector"
+  },
+  "editMetadataFieldIsrc": "ISRC",
+  "@editMetadataFieldIsrc": {
+    "description": "Chip label for ISRC field in auto-fill selector"
+  },
+  "editMetadataFieldLabel": "Label",
+  "@editMetadataFieldLabel": {
+    "description": "Chip label for label field in auto-fill selector"
+  },
+  "editMetadataFieldCopyright": "Copyright",
+  "@editMetadataFieldCopyright": {
+    "description": "Chip label for copyright field in auto-fill selector"
+  },
+  "editMetadataFieldCover": "Cover Art",
+  "@editMetadataFieldCover": {
+    "description": "Chip label for cover art field in auto-fill selector"
+  },
+  "editMetadataSelectAll": "All",
+  "@editMetadataSelectAll": {
+    "description": "Button to select all fields for auto-fill"
+  },
+  "editMetadataSelectEmpty": "Empty only",
+  "@editMetadataSelectEmpty": {
+    "description": "Button to select only fields that are currently empty"
   }
 }
