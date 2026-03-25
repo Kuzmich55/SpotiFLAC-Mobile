@@ -1626,7 +1626,7 @@
   "@storeEmptyNoResults": {
     "description": "Message when search/filter returns no results"
   },
-  "extensionDefaultProvider": "Default (Deezer/Spotify)",
+  "extensionDefaultProvider": "Default (Deezer)",
   "@extensionDefaultProvider": {
     "description": "Default search provider option"
   },

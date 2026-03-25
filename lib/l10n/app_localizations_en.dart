@@ -1240,7 +1240,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeEmptyNoResults => 'No extensions found';
 
   @override
-  String get extensionDefaultProvider => 'Default (Deezer/Spotify)';
+  String get extensionDefaultProvider => 'Default (Deezer)';
 
   @override
   String get extensionDefaultProviderSubtitle => 'Use built-in search';

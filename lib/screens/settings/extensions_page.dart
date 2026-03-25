@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:spotiflac_android/l10n/l10n.dart';
 import 'package:spotiflac_android/providers/extension_provider.dart';
+import 'package:spotiflac_android/providers/explore_provider.dart';
 import 'package:spotiflac_android/providers/settings_provider.dart';
 import 'package:spotiflac_android/screens/settings/extension_detail_page.dart';
 import 'package:spotiflac_android/screens/settings/provider_priority_page.dart';
@@ -151,6 +152,7 @@ class _ExtensionsPageState extends ConsumerState<ExtensionsPage> {
                   _DownloadPriorityItem(),
                   _MetadataPriorityItem(),
                   _SearchProviderSelector(),
+                  _HomeFeedProviderSelector(),
                 ],
               ),
             ),
@@ -586,6 +588,8 @@ class _MetadataPriorityItem extends ConsumerWidget {
 class _SearchProviderSelector extends ConsumerWidget {
   const _SearchProviderSelector();
 
+  static const _builtInProviders = {'tidal': 'Tidal', 'qobuz': 'Qobuz'};
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
@@ -596,20 +600,29 @@ class _SearchProviderSelector extends ConsumerWidget {
         .where((e) => e.enabled && e.hasCustomSearch)
         .toList();
 
+    // Always allow tapping: built-in providers are always available
+    final hasAnyProvider =
+        searchProviders.isNotEmpty || _builtInProviders.isNotEmpty;
+
     String currentProviderName = context.l10n.extensionDefaultProvider;
     if (settings.searchProvider != null &&
         settings.searchProvider!.isNotEmpty) {
-      final ext = searchProviders
-          .where((e) => e.id == settings.searchProvider)
-          .firstOrNull;
-      currentProviderName = ext?.displayName ?? settings.searchProvider!;
+      // Check built-in first
+      if (_builtInProviders.containsKey(settings.searchProvider)) {
+        currentProviderName = _builtInProviders[settings.searchProvider]!;
+      } else {
+        final ext = searchProviders
+            .where((e) => e.id == settings.searchProvider)
+            .firstOrNull;
+        currentProviderName = ext?.displayName ?? settings.searchProvider!;
+      }
     }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         InkWell(
-          onTap: searchProviders.isEmpty
+          onTap: !hasAnyProvider
               ? null
               : () => _showSearchProviderPicker(
                   context,
@@ -623,7 +636,7 @@ class _SearchProviderSelector extends ConsumerWidget {
               children: [
                 Icon(
                   Icons.manage_search,
-                  color: searchProviders.isEmpty
+                  color: !hasAnyProvider
                       ? colorScheme.outline
                       : colorScheme.onSurfaceVariant,
                 ),
@@ -635,14 +648,12 @@ class _SearchProviderSelector extends ConsumerWidget {
                       Text(
                         context.l10n.extensionsSearchProvider,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: searchProviders.isEmpty
-                              ? colorScheme.outline
-                              : null,
+                          color: !hasAnyProvider ? colorScheme.outline : null,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        searchProviders.isEmpty
+                        !hasAnyProvider
                             ? context.l10n.extensionsNoCustomSearch
                             : currentProviderName,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -654,7 +665,7 @@ class _SearchProviderSelector extends ConsumerWidget {
                 ),
                 Icon(
                   Icons.chevron_right,
-                  color: searchProviders.isEmpty
+                  color: !hasAnyProvider
                       ? colorScheme.outline
                       : colorScheme.onSurfaceVariant,
                 ),
@@ -682,61 +693,245 @@ class _SearchProviderSelector extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-              child: Text(
-                ctx.l10n.extensionsSearchProvider,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-              child: Text(
-                ctx.l10n.extensionsSearchProviderDescription,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                child: Text(
+                  ctx.l10n.extensionsSearchProvider,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
-            ),
-            ListTile(
-              leading: Icon(Icons.music_note, color: colorScheme.primary),
-              title: Text(ctx.l10n.extensionDefaultProvider),
-              subtitle: Text(ctx.l10n.extensionDefaultProviderSubtitle),
-              trailing:
-                  (settings.searchProvider == null ||
-                      settings.searchProvider!.isEmpty)
-                  ? Icon(Icons.check_circle, color: colorScheme.primary)
-                  : Icon(Icons.circle_outlined, color: colorScheme.outline),
-              onTap: () {
-                ref.read(settingsProvider.notifier).setSearchProvider(null);
-                Navigator.pop(ctx);
-              },
-            ),
-            ...searchProviders.map(
-              (ext) => ListTile(
-                leading: Icon(Icons.extension, color: colorScheme.secondary),
-                title: Text(ext.displayName),
-                subtitle: Text(
-                  ext.searchBehavior?.placeholder ??
-                      ctx.l10n.extensionsCustomSearch,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                child: Text(
+                  ctx.l10n.extensionsSearchProviderDescription,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                trailing: settings.searchProvider == ext.id
+              ),
+              ListTile(
+                leading: Icon(Icons.music_note, color: colorScheme.primary),
+                title: Text(ctx.l10n.extensionDefaultProvider),
+                subtitle: Text(ctx.l10n.extensionDefaultProviderSubtitle),
+                trailing:
+                    (settings.searchProvider == null ||
+                        settings.searchProvider!.isEmpty)
                     ? Icon(Icons.check_circle, color: colorScheme.primary)
                     : Icon(Icons.circle_outlined, color: colorScheme.outline),
                 onTap: () {
-                  ref.read(settingsProvider.notifier).setSearchProvider(ext.id);
+                  ref.read(settingsProvider.notifier).setSearchProvider(null);
                   Navigator.pop(ctx);
                 },
               ),
+              ..._builtInProviders.entries.map(
+                (entry) => ListTile(
+                  leading: Icon(Icons.search, color: colorScheme.tertiary),
+                  title: Text(entry.value),
+                  subtitle: Text('Search with ${entry.value}'),
+                  trailing: settings.searchProvider == entry.key
+                      ? Icon(Icons.check_circle, color: colorScheme.primary)
+                      : Icon(Icons.circle_outlined, color: colorScheme.outline),
+                  onTap: () {
+                    ref
+                        .read(settingsProvider.notifier)
+                        .setSearchProvider(entry.key);
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ),
+              if (searchProviders.isNotEmpty) const Divider(height: 1),
+              ...searchProviders.map(
+                (ext) => ListTile(
+                  leading: Icon(Icons.extension, color: colorScheme.secondary),
+                  title: Text(ext.displayName),
+                  subtitle: Text(
+                    ext.searchBehavior?.placeholder ??
+                        ctx.l10n.extensionsCustomSearch,
+                  ),
+                  trailing: settings.searchProvider == ext.id
+                      ? Icon(Icons.check_circle, color: colorScheme.primary)
+                      : Icon(Icons.circle_outlined, color: colorScheme.outline),
+                  onTap: () {
+                    ref
+                        .read(settingsProvider.notifier)
+                        .setSearchProvider(ext.id);
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeFeedProviderSelector extends ConsumerWidget {
+  const _HomeFeedProviderSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final extState = ref.watch(extensionProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final homeFeedProviders = extState.extensions
+        .where((e) => e.enabled && e.hasHomeFeed)
+        .toList();
+
+    final hasAnyProvider = homeFeedProviders.isNotEmpty;
+
+    String currentProviderName = 'Auto';
+    if (settings.homeFeedProvider != null &&
+        settings.homeFeedProvider!.isNotEmpty) {
+      final ext = homeFeedProviders
+          .where((e) => e.id == settings.homeFeedProvider)
+          .firstOrNull;
+      currentProviderName = ext?.displayName ?? settings.homeFeedProvider!;
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: !hasAnyProvider
+              ? null
+              : () => _showHomeFeedProviderPicker(
+                  context,
+                  ref,
+                  settings,
+                  homeFeedProviders,
+                ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.explore_outlined,
+                  color: !hasAnyProvider
+                      ? colorScheme.outline
+                      : colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Home Feed Provider',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: !hasAnyProvider ? colorScheme.outline : null,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        !hasAnyProvider
+                            ? 'No extensions with home feed'
+                            : currentProviderName,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: !hasAnyProvider
+                      ? colorScheme.outline
+                      : colorScheme.onSurfaceVariant,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showHomeFeedProviderPicker(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic settings,
+    List<Extension> homeFeedProviders,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      backgroundColor: colorScheme.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                child: Text(
+                  'Home Feed Provider',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                child: Text(
+                  'Choose which extension provides the home feed on the main screen',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.auto_awesome, color: colorScheme.primary),
+                title: const Text('Auto'),
+                subtitle: const Text('Automatically select the best available'),
+                trailing:
+                    (settings.homeFeedProvider == null ||
+                        settings.homeFeedProvider!.isEmpty)
+                    ? Icon(Icons.check_circle, color: colorScheme.primary)
+                    : Icon(Icons.circle_outlined, color: colorScheme.outline),
+                onTap: () {
+                  ref.read(settingsProvider.notifier).setHomeFeedProvider(null);
+                  ref.read(exploreProvider.notifier).refresh();
+                  Navigator.pop(ctx);
+                },
+              ),
+              ...homeFeedProviders.map(
+                (ext) => ListTile(
+                  leading: Icon(Icons.extension, color: colorScheme.secondary),
+                  title: Text(ext.displayName),
+                  subtitle: Text('Use ${ext.displayName} home feed'),
+                  trailing: settings.homeFeedProvider == ext.id
+                      ? Icon(Icons.check_circle, color: colorScheme.primary)
+                      : Icon(Icons.circle_outlined, color: colorScheme.outline),
+                  onTap: () {
+                    ref
+                        .read(settingsProvider.notifier)
+                        .setHomeFeedProvider(ext.id);
+                    ref.read(exploreProvider.notifier).refresh();
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

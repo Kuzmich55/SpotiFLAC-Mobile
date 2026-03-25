@@ -2323,7 +2323,7 @@ abstract class AppLocalizations {
   /// Default search provider option
   ///
   /// In en, this message translates to:
-  /// **'Default (Deezer/Spotify)'**
+  /// **'Default (Deezer)'**
   String get extensionDefaultProvider;
 
   /// Subtitle for default provider

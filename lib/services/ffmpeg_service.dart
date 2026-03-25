@@ -130,6 +130,25 @@ class FFmpegService {
     }
   }
 
+  static Future<FFmpegResult> _executeWithArguments(
+    List<String> arguments,
+  ) async {
+    try {
+      final session = await FFmpegKit.executeWithArguments(arguments);
+      final returnCode = await session.getReturnCode();
+      final output = await session.getOutput() ?? '';
+
+      return FFmpegResult(
+        success: ReturnCode.isSuccess(returnCode),
+        returnCode: returnCode?.getValue() ?? -1,
+        output: output,
+      );
+    } catch (e) {
+      _log.e('FFmpeg executeWithArguments error: $e');
+      return FFmpegResult(success: false, returnCode: -1, output: e.toString());
+    }
+  }
+
   static Future<String?> convertM4aToFlac(String inputPath) async {
     final outputPath = _buildOutputPath(inputPath, '.flac');
 
@@ -1030,18 +1049,24 @@ class FFmpegService {
   }) async {
     final tempDir = await getTemporaryDirectory();
     final tempOutput = _nextTempEmbedPath(tempDir.path, '.opus');
-
-    final StringBuffer cmdBuffer = StringBuffer();
-    cmdBuffer.write('-i "$opusPath" ');
-    cmdBuffer.write('-map 0:a ');
-    cmdBuffer.write('-map_metadata -1 ');
-    cmdBuffer.write('-map_metadata:s:a -1 ');
-    cmdBuffer.write('-c:a copy ');
+    final arguments = <String>[
+      '-i',
+      opusPath,
+      '-map',
+      '0:a',
+      '-map_metadata',
+      '-1',
+      '-map_metadata:s:a',
+      '-1',
+      '-c:a',
+      'copy',
+    ];
 
     if (metadata != null) {
       metadata.forEach((key, value) {
-        final sanitizedValue = value.replaceAll('"', '\\"');
-        cmdBuffer.write('-metadata $key="$sanitizedValue" ');
+        arguments
+          ..add('-metadata')
+          ..add('$key=$value');
       });
     }
 
@@ -1049,8 +1074,9 @@ class FFmpegService {
       try {
         final pictureBlock = await _createMetadataBlockPicture(coverPath);
         if (pictureBlock != null) {
-          final escapedBlock = pictureBlock.replaceAll('"', '\\"');
-          cmdBuffer.write('-metadata METADATA_BLOCK_PICTURE="$escapedBlock" ');
+          arguments
+            ..add('-metadata')
+            ..add('METADATA_BLOCK_PICTURE=$pictureBlock');
           _log.d(
             'Created METADATA_BLOCK_PICTURE for Opus (${pictureBlock.length} chars)',
           );
@@ -1062,12 +1088,12 @@ class FFmpegService {
       }
     }
 
-    cmdBuffer.write('"$tempOutput" -y');
-
-    final command = cmdBuffer.toString();
+    arguments
+      ..add(tempOutput)
+      ..add('-y');
     _log.d('Executing FFmpeg Opus embed command');
 
-    final result = await _execute(command);
+    final result = await _executeWithArguments(arguments);
 
     if (result.success) {
       try {

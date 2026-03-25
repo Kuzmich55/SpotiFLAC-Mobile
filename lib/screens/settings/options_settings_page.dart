@@ -611,24 +611,34 @@ class _MetadataSourceSelector extends ConsumerWidget {
   final ValueChanged<String> onChanged;
   const _MetadataSourceSelector({required this.onChanged});
 
+  static const _builtInProviders = {'tidal': 'Tidal', 'qobuz': 'Qobuz'};
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final settings = ref.watch(settingsProvider);
     final extState = ref.watch(extensionProvider);
 
+    final searchProvider = settings.searchProvider ?? '';
+    final isBuiltIn = _builtInProviders.containsKey(searchProvider);
+
     Extension? activeExtension;
-    if (settings.searchProvider != null &&
-        settings.searchProvider!.isNotEmpty) {
+    if (searchProvider.isNotEmpty && !isBuiltIn) {
       activeExtension = extState.extensions
-          .where((e) => e.id == settings.searchProvider && e.enabled)
+          .where((e) => e.id == searchProvider && e.enabled)
           .firstOrNull;
     }
-    final hasExtensionSearch = activeExtension != null;
+    final hasNonDefaultProvider = isBuiltIn || activeExtension != null;
 
-    String? extensionName;
-    if (hasExtensionSearch) {
-      extensionName = activeExtension.displayName;
+    String subtitle;
+    if (isBuiltIn) {
+      subtitle = 'Using ${_builtInProviders[searchProvider]}';
+    } else if (activeExtension != null) {
+      subtitle = context.l10n.optionsUsingExtension(
+        activeExtension.displayName,
+      );
+    } else {
+      subtitle = context.l10n.optionsPrimaryProviderSubtitle;
     }
 
     return Padding(
@@ -644,11 +654,9 @@ class _MetadataSourceSelector extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            hasExtensionSearch
-                ? context.l10n.optionsUsingExtension(extensionName!)
-                : context.l10n.optionsPrimaryProviderSubtitle,
+            subtitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: hasExtensionSearch
+              color: hasNonDefaultProvider
                   ? colorScheme.primary
                   : colorScheme.onSurfaceVariant,
             ),
@@ -659,17 +667,41 @@ class _MetadataSourceSelector extends ConsumerWidget {
               _SourceChip(
                 icon: Icons.graphic_eq,
                 label: 'Deezer',
-                isSelected: !hasExtensionSearch,
+                isSelected: searchProvider.isEmpty,
                 onTap: () {
-                  if (hasExtensionSearch) {
+                  if (hasNonDefaultProvider) {
                     ref.read(settingsProvider.notifier).setSearchProvider(null);
                   }
                   onChanged('deezer');
                 },
               ),
+              const SizedBox(width: 8),
+              _SourceChip(
+                icon: Icons.waves,
+                label: 'Tidal',
+                isSelected: searchProvider == 'tidal',
+                onTap: () {
+                  ref
+                      .read(settingsProvider.notifier)
+                      .setSearchProvider('tidal');
+                  onChanged('tidal');
+                },
+              ),
+              const SizedBox(width: 8),
+              _SourceChip(
+                icon: Icons.album,
+                label: 'Qobuz',
+                isSelected: searchProvider == 'qobuz',
+                onTap: () {
+                  ref
+                      .read(settingsProvider.notifier)
+                      .setSearchProvider('qobuz');
+                  onChanged('qobuz');
+                },
+              ),
             ],
           ),
-          if (hasExtensionSearch) ...[
+          if (activeExtension != null) ...[
             const SizedBox(height: 12),
             Row(
               children: [
