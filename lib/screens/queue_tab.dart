@@ -5537,17 +5537,29 @@ class _QueueTabState extends ConsumerState<QueueTab> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                // When progress is 0 (unknown size, e.g. YouTube tunnel mode),
-                                // show bytes downloaded instead of percentage
-                                item.progress > 0
-                                    ? (item.speedMBps > 0
-                                          ? '${(item.progress * 100).toStringAsFixed(0)}% • ${item.speedMBps.toStringAsFixed(1)} MB/s'
-                                          : '${(item.progress * 100).toStringAsFixed(0)}%')
+                                item.bytesTotal > 0 && item.bytesReceived > 0
+                                    ? (() {
+                                        final receivedMB =
+                                            item.bytesReceived / (1024 * 1024);
+                                        final totalMB =
+                                            item.bytesTotal / (1024 * 1024);
+                                        final progressLabel = item.progress > 0
+                                            ? '${(item.progress * 100).toStringAsFixed(0)}% • '
+                                            : '';
+                                        final speedLabel = item.speedMBps > 0
+                                            ? ' • ${item.speedMBps.toStringAsFixed(1)} MB/s'
+                                            : '';
+                                        return '$progressLabel${receivedMB.toStringAsFixed(1)} / ${totalMB.toStringAsFixed(1)} MB$speedLabel';
+                                      })()
                                     : (item.bytesReceived > 0
-                                          ? '${(item.bytesReceived / (1024 * 1024)).toStringAsFixed(1)} MB • ${item.speedMBps.toStringAsFixed(1)} MB/s'
-                                          : (item.speedMBps > 0
-                                                ? 'Downloading • ${item.speedMBps.toStringAsFixed(1)} MB/s'
-                                                : 'Starting...')),
+                                          ? '${(item.bytesReceived / (1024 * 1024)).toStringAsFixed(1)} MB${item.speedMBps > 0 ? ' • ${item.speedMBps.toStringAsFixed(1)} MB/s' : ''}'
+                                          : (item.progress > 0
+                                                ? (item.speedMBps > 0
+                                                      ? '${(item.progress * 100).toStringAsFixed(0)}% • ${item.speedMBps.toStringAsFixed(1)} MB/s'
+                                                      : '${(item.progress * 100).toStringAsFixed(0)}%')
+                                                : (item.speedMBps > 0
+                                                      ? 'Downloading • ${item.speedMBps.toStringAsFixed(1)} MB/s'
+                                                      : 'Starting...'))),
                                 style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(
                                       color: colorScheme.primary,

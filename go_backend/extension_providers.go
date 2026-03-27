@@ -510,7 +510,7 @@ func (p *ExtensionProviderWrapper) GetDownloadURL(trackID, quality string) (*Ext
 
 const ExtDownloadTimeout = DownloadTimeout
 
-func (p *ExtensionProviderWrapper) Download(trackID, quality, outputPath string, onProgress func(percent int)) (*ExtDownloadResult, error) {
+func (p *ExtensionProviderWrapper) Download(trackID, quality, outputPath, itemID string, onProgress func(percent int)) (*ExtDownloadResult, error) {
 	if !p.extension.Manifest.IsDownloadProvider() {
 		return nil, fmt.Errorf("extension '%s' is not a download provider", p.extension.ID)
 	}
@@ -526,6 +526,10 @@ func (p *ExtensionProviderWrapper) Download(trackID, quality, outputPath string,
 		}, nil
 	}
 	defer p.extension.VMMu.Unlock()
+	if p.extension.runtime != nil {
+		p.extension.runtime.setActiveDownloadItemID(itemID)
+		defer p.extension.runtime.clearActiveDownloadItemID()
+	}
 
 	p.vm.Set("__onProgress", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) > 0 {
@@ -1128,7 +1132,7 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 				StartItemProgress(req.ItemID)
 			}
 
-			result, err := provider.Download(trackID, req.Quality, outputPath, func(percent int) {
+			result, err := provider.Download(trackID, req.Quality, outputPath, req.ItemID, func(percent int) {
 				if req.ItemID != "" {
 					normalized := float64(percent) / 100.0
 					if normalized < 0 {
@@ -1356,7 +1360,7 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 				StartItemProgress(req.ItemID)
 			}
 
-			result, err := provider.Download(availability.TrackID, req.Quality, outputPath, func(percent int) {
+			result, err := provider.Download(availability.TrackID, req.Quality, outputPath, req.ItemID, func(percent int) {
 				if req.ItemID != "" {
 					normalized := float64(percent) / 100.0
 					if normalized < 0 {

@@ -1166,12 +1166,14 @@ class _ProgressUpdate {
   final double progress;
   final double? speedMBps;
   final int? bytesReceived;
+  final int? bytesTotal;
 
   const _ProgressUpdate({
     required this.status,
     required this.progress,
     this.speedMBps,
     this.bytesReceived,
+    this.bytesTotal,
   });
 }
 
@@ -1587,6 +1589,7 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
           progress: normalizedProgress,
           speedMBps: normalizedSpeed,
           bytesReceived: normalizedBytes,
+          bytesTotal: bytesTotal,
         );
 
         if (LogBuffer.loggingEnabled) {
@@ -1624,11 +1627,13 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
           progress: update.progress,
           speedMBps: update.speedMBps ?? current.speedMBps,
           bytesReceived: update.bytesReceived ?? current.bytesReceived,
+          bytesTotal: update.bytesTotal ?? current.bytesTotal,
         );
         if (current.status != next.status ||
             current.progress != next.progress ||
             current.speedMBps != next.speedMBps ||
-            current.bytesReceived != next.bytesReceived) {
+            current.bytesReceived != next.bytesReceived ||
+            current.bytesTotal != next.bytesTotal) {
           if (!changed) {
             updatedItems = List<DownloadItem>.from(updatedItems);
             changed = true;
@@ -2408,6 +2413,7 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
             progress: 0,
             speedMBps: 0,
             bytesReceived: 0,
+            bytesTotal: 0,
           );
         })
         .toList(growable: false);
