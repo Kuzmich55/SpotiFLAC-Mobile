@@ -20,6 +20,7 @@ import 'package:spotiflac_android/utils/lyrics_metadata_helper.dart';
 import 'package:spotiflac_android/utils/logger.dart';
 import 'package:spotiflac_android/widgets/batch_convert_sheet.dart';
 import 'package:spotiflac_android/widgets/batch_progress_dialog.dart';
+import 'package:spotiflac_android/utils/saf_display_path.dart';
 
 final _batchActionsLog = AppLogger('BatchActions');
 
@@ -408,48 +409,13 @@ Future<void> _performBatchConversion(
         }
       } else if (isSaf && item.localItem != null) {
         failureStage = 'publish SAF output';
-        final uri = Uri.parse(item.filePath);
-        final pathSegments = uri.pathSegments;
+        final location = resolveSafDocumentLocation(item.filePath);
 
-        String? treeUri;
-        String relativeDir = '';
-        String oldFileName = '';
-
-        final treeIdx = pathSegments.indexOf('tree');
-        final docIdx = pathSegments.indexOf('document');
-        if (treeIdx >= 0 && treeIdx + 1 < pathSegments.length) {
-          final treeId = pathSegments[treeIdx + 1];
-          treeUri =
-              'content://${uri.authority}/tree/${Uri.encodeComponent(treeId)}';
-        }
-        if (docIdx >= 0 && docIdx + 1 < pathSegments.length) {
-          final docPath = Uri.decodeFull(pathSegments[docIdx + 1]);
-          final slashIdx = docPath.lastIndexOf('/');
-          if (slashIdx >= 0) {
-            oldFileName = docPath.substring(slashIdx + 1);
-            final treeId = treeIdx >= 0 && treeIdx + 1 < pathSegments.length
-                ? Uri.decodeFull(pathSegments[treeIdx + 1])
-                : '';
-            if (treeId.isNotEmpty && docPath.startsWith(treeId)) {
-              final afterTree = docPath.substring(treeId.length);
-              final trimmed = afterTree.startsWith('/')
-                  ? afterTree.substring(1)
-                  : afterTree;
-              final lastSlash = trimmed.lastIndexOf('/');
-              relativeDir = lastSlash >= 0
-                  ? trimmed.substring(0, lastSlash)
-                  : '';
-            }
-          } else {
-            oldFileName = docPath;
-          }
-        }
-
-        if (treeUri != null && oldFileName.isNotEmpty) {
+        if (location != null) {
           final published = await ConversionLibraryService.publishSafConversion(
-            treeUri: treeUri,
-            relativeDir: relativeDir,
-            originalFileName: oldFileName,
+            treeUri: location.treeUri,
+            relativeDir: location.relativeDir,
+            originalFileName: location.fileName,
             targetFormat: targetFormat,
             sourcePath: newPath,
             keepOriginal: keepOriginal,

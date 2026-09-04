@@ -1,3 +1,70 @@
+class SafDocumentLocation {
+  final String treeUri;
+  final String relativeDir;
+  final String fileName;
+
+  const SafDocumentLocation({
+    required this.treeUri,
+    required this.relativeDir,
+    required this.fileName,
+  });
+}
+
+/// Resolves the writable tree and relative destination of a SAF document URI.
+///
+/// [Uri.pathSegments] already percent-decodes every segment. Decoding those
+/// values again rejects ordinary Unicode filenames and corrupts literal `%`
+/// characters, so all values below are used directly.
+SafDocumentLocation? resolveSafDocumentLocation(String pathOrUri) {
+  try {
+    final uri = Uri.parse(pathOrUri.trim());
+    if (uri.scheme != 'content' || uri.authority.isEmpty) return null;
+
+    final segments = uri.pathSegments;
+    final treeIndex = segments.indexOf('tree');
+    final documentIndex = segments.indexOf('document');
+    if (treeIndex < 0 ||
+        treeIndex + 1 >= segments.length ||
+        documentIndex < 0 ||
+        documentIndex + 1 >= segments.length) {
+      return null;
+    }
+
+    final treeId = segments[treeIndex + 1];
+    final documentId = segments[documentIndex + 1];
+    if (treeId.isEmpty || documentId.isEmpty) return null;
+
+    final lastSlash = documentId.lastIndexOf('/');
+    final fileName = lastSlash >= 0
+        ? documentId.substring(lastSlash + 1)
+        : documentId;
+    if (fileName.isEmpty) return null;
+
+    var relativeDir = '';
+    final belongsToTree =
+        documentId == treeId || documentId.startsWith('$treeId/');
+    if (belongsToTree) {
+      var relativePath = documentId.substring(treeId.length);
+      if (relativePath.startsWith('/')) {
+        relativePath = relativePath.substring(1);
+      }
+      final relativeSlash = relativePath.lastIndexOf('/');
+      if (relativeSlash >= 0) {
+        relativeDir = relativePath.substring(0, relativeSlash);
+      }
+    }
+
+    return SafDocumentLocation(
+      treeUri:
+          '${uri.scheme}://${uri.authority}/tree/${Uri.encodeComponent(treeId)}',
+      relativeDir: relativeDir,
+      fileName: fileName,
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
 String formatSafUriForDisplay(String pathOrUri) {
   if (pathOrUri.isEmpty || !pathOrUri.startsWith('content://')) {
     return pathOrUri;

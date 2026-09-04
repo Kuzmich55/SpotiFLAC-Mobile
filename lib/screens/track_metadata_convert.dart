@@ -940,36 +940,11 @@ extension _TrackMetadataConvertAndCueSplit on _TrackMetadataScreenState {
         String relativeDir = '';
         String oldFileName = '';
         if (_isLocalItem) {
-          final uri = Uri.parse(cleanFilePath);
-          final pathSegments = uri.pathSegments;
-          final treeIdx = pathSegments.indexOf('tree');
-          final docIdx = pathSegments.indexOf('document');
-          if (treeIdx >= 0 && treeIdx + 1 < pathSegments.length) {
-            final treeId = pathSegments[treeIdx + 1];
-            treeUri =
-                'content://${uri.authority}/tree/${Uri.encodeComponent(treeId)}';
-          }
-          if (docIdx >= 0 && docIdx + 1 < pathSegments.length) {
-            final docPath = Uri.decodeFull(pathSegments[docIdx + 1]);
-            final slashIdx = docPath.lastIndexOf('/');
-            if (slashIdx >= 0) {
-              oldFileName = docPath.substring(slashIdx + 1);
-              final treeId = treeIdx >= 0 && treeIdx + 1 < pathSegments.length
-                  ? Uri.decodeFull(pathSegments[treeIdx + 1])
-                  : '';
-              if (treeId.isNotEmpty && docPath.startsWith(treeId)) {
-                final afterTree = docPath.substring(treeId.length);
-                final trimmed = afterTree.startsWith('/')
-                    ? afterTree.substring(1)
-                    : afterTree;
-                final lastSlash = trimmed.lastIndexOf('/');
-                relativeDir = lastSlash >= 0
-                    ? trimmed.substring(0, lastSlash)
-                    : '';
-              }
-            } else {
-              oldFileName = docPath;
-            }
+          final location = resolveSafDocumentLocation(cleanFilePath);
+          if (location != null) {
+            treeUri = location.treeUri;
+            relativeDir = location.relativeDir;
+            oldFileName = location.fileName;
           }
         } else {
           treeUri = _downloadItem?.downloadTreeUri;
