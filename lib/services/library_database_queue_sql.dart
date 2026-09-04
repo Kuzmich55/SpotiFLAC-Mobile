@@ -2,6 +2,11 @@ part of 'library_database.dart';
 
 // SQL builders for the queue tab's history+local union queries.
 
+String confirmedMissingLyricsSqlPredicate({
+  required String hasLyricsExpr,
+  required String lyricsKnownExpr,
+}) => '($lyricsKnownExpr) AND COALESCE($hasLyricsExpr, 0) = 0';
+
 class _QueueOrderTerm {
   final String column;
   final bool descending;
@@ -398,6 +403,7 @@ extension _LibraryDbQueueSql on LibraryDatabase {
       isrcExpr: 'h.isrc',
       labelExpr: 'h.label',
       hasLyricsExpr: 'h.has_lyrics',
+      lyricsKnownExpr: 'COALESCE(h.lyrics_metadata_scan_version, 0) >= 1',
     );
   }
 
@@ -441,6 +447,8 @@ extension _LibraryDbQueueSql on LibraryDatabase {
       isrcExpr: 'l.isrc',
       labelExpr: 'l.label',
       hasLyricsExpr: 'l.has_lyrics',
+      lyricsKnownExpr:
+          'COALESCE(l.audio_metadata_scan_version, 0) >= ${LibraryDatabase.audioMetadataScanVersion}',
     );
   }
 
@@ -461,6 +469,7 @@ extension _LibraryDbQueueSql on LibraryDatabase {
     required String isrcExpr,
     required String labelExpr,
     required String hasLyricsExpr,
+    required String lyricsKnownExpr,
   }) {
     final quality = request.quality?.trim().toLowerCase();
     if (quality != null && quality.isNotEmpty) {
@@ -546,7 +555,14 @@ extension _LibraryDbQueueSql on LibraryDatabase {
         where.add('NOT ($hasLabel)');
         break;
       case 'missing-lyrics':
-        where.add('COALESCE($hasLyricsExpr, 0) = 0');
+        // A default false value on legacy rows means "not scanned yet", not
+        // "confirmed missing". Only show files whose lyrics probe completed.
+        where.add(
+          confirmedMissingLyricsSqlPredicate(
+            hasLyricsExpr: hasLyricsExpr,
+            lyricsKnownExpr: lyricsKnownExpr,
+          ),
+        );
         break;
     }
   }

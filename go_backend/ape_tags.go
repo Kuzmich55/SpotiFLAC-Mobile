@@ -367,7 +367,7 @@ func APETagToAudioMetadata(tag *APETag) *AudioMetadata {
 			metadata.DiscNumber, metadata.TotalDiscs = parseIndexPair(value)
 		case "ISRC":
 			metadata.ISRC = value
-		case "LYRICS", "UNSYNCEDLYRICS":
+		case "LYRICS", "UNSYNCEDLYRICS", "SYNCEDLYRICS":
 			if metadata.Lyrics == "" {
 				metadata.Lyrics = value
 			}
@@ -491,7 +491,7 @@ func apeKeysFromFields(fields map[string]string) map[string]struct{} {
 	// Some fields have reader aliases that must also be cleared when the
 	// canonical key is updated (e.g. DATE writer ↔ DATE/YEAR reader,
 	// DISC ↔ DISCNUMBER, TRACK ↔ TRACKNUMBER, "ALBUM ARTIST" ↔ ALBUMARTIST,
-	// LABEL ↔ PUBLISHER, LYRICS ↔ UNSYNCEDLYRICS).
+	// LABEL ↔ PUBLISHER, and the supported lyrics aliases).
 	if _, present := fields["date"]; present {
 		result["DATE"] = struct{}{}
 	}
@@ -515,6 +515,7 @@ func apeKeysFromFields(fields map[string]string) map[string]struct{} {
 	}
 	if _, present := fields["lyrics"]; present {
 		result["UNSYNCEDLYRICS"] = struct{}{}
+		result["SYNCEDLYRICS"] = struct{}{}
 	}
 	return result
 }

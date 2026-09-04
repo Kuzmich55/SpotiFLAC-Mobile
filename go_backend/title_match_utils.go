@@ -458,3 +458,75 @@ func trackMatchesRequest(req DownloadRequest, resolved resolvedTrackInfo, logPre
 
 	return true
 }
+
+// selectBestMetadataEnrichmentTrack only returns a provider result when it is
+// safe to copy missing tags into a download request. Search ordering alone is
+// not evidence of identity: providers can put covers, remixes, or unrelated
+// same-title recordings first.
+func selectBestMetadataEnrichmentTrack(req DownloadRequest, tracks []ExtTrackMetadata) *ExtTrackMetadata {
+	var best *ExtTrackMetadata
+	bestScore := -1 << 30
+	expectedISRC := strings.TrimSpace(req.ISRC)
+
+	for i := range tracks {
+		track := &tracks[i]
+		candidateISRC := strings.TrimSpace(track.ISRC)
+		exactISRCMatch := expectedISRC != "" && candidateISRC != "" &&
+			strings.EqualFold(expectedISRC, candidateISRC)
+		if expectedISRC != "" && candidateISRC != "" && !exactISRCMatch {
+			GoLog("[MetadataEnrichment] Rejected %s result with conflicting ISRC %s\n", track.ProviderID, candidateISRC)
+			continue
+		}
+
+		resolved := resolvedTrackInfo{
+			Title:      track.Name,
+			ArtistName: track.Artists,
+			AlbumName:  track.AlbumName,
+			ISRC:       track.ISRC,
+			Duration:   track.DurationMS / 1000,
+		}
+		if !trackMatchesRequest(req, resolved, "MetadataEnrichment") {
+			continue
+		}
+		if !exactISRCMatch && !hasStrongTrackIdentity(req, resolved) {
+			GoLog("[MetadataEnrichment] Rejected low-confidence result: %s - %s\n", track.Name, track.Artists)
+			continue
+		}
+
+		score := 2000
+		if exactISRCMatch {
+			score += 10000
+		}
+		if exactLooseIdentityMatch(req.TrackName, track.Name, normalizeLooseTitle) {
+			score += 400
+		}
+		if exactLooseIdentityMatch(req.ArtistName, track.Artists, normalizeLooseArtistName) {
+			score += 320
+		}
+		if req.AlbumName != "" && track.AlbumName != "" && titlesMatch(req.AlbumName, track.AlbumName) {
+			score += 120
+		}
+		if durationMatchesRequest(req, resolved) {
+			score += 80
+		}
+		if track.ISRC != "" {
+			score += 40
+		}
+		if track.AlbumName != "" {
+			score += 30
+		}
+		if track.ReleaseDate != "" {
+			score += 30
+		}
+		if track.TrackNumber > 0 {
+			score += 10
+		}
+
+		if best == nil || score > bestScore {
+			best = track
+			bestScore = score
+		}
+	}
+
+	return best
+}

@@ -3198,6 +3198,10 @@
   "@trackReEnrichOnlineSubtitle": {
     "description": "Subtitle for re-enrich metadata action for local items"
   },
+  "trackReEnrichBatchSubtitle": "Choose an online or manual update, then review every change before writing",
+  "@trackReEnrichBatchSubtitle": {
+    "description": "Subtitle for batch metadata update choices"
+  },
   "trackReEnrichFieldCover": "Cover Art",
   "@trackReEnrichFieldCover": {
     "description": "Checkbox label for cover art field in re-enrich"
@@ -3249,6 +3253,22 @@
   "trackReEnrichModeReplaceSubtitle": "Choose which existing values may be replaced by online metadata",
   "@trackReEnrichModeReplaceSubtitle": {
     "description": "Explanation for the selected-tag batch metadata mode"
+  },
+  "trackReEnrichModeManual": "Set common values",
+  "@trackReEnrichModeManual": {
+    "description": "Batch metadata mode that applies shared values to every selected track"
+  },
+  "trackReEnrichModeManualSubtitle": "Apply the same values to every selected track",
+  "@trackReEnrichModeManualSubtitle": {
+    "description": "Explanation for the manual shared-value batch metadata mode"
+  },
+  "trackReEnrichManualFieldsTitle": "Values to apply",
+  "@trackReEnrichManualFieldsTitle": {
+    "description": "Heading above manual batch metadata inputs"
+  },
+  "trackReEnrichManualHint": "Leave a field empty to keep its current value. Track titles, numbers, and ISRCs stay unchanged.",
+  "@trackReEnrichManualHint": {
+    "description": "Safety explanation for manual batch metadata inputs"
   },
   "trackReEnrichFieldsTitle": "Tags to update",
   "@trackReEnrichFieldsTitle": {
@@ -3315,6 +3335,10 @@
   "trackReEnrichSearching": "Searching metadata online...",
   "@trackReEnrichSearching": {
     "description": "Snackbar while searching metadata from internet for local items"
+  },
+  "trackReEnrichPreparing": "Preparing metadata changes...",
+  "@trackReEnrichPreparing": {
+    "description": "Progress message while preparing manual batch metadata changes"
   },
   "trackReEnrichSuccess": "Metadata re-enriched successfully",
   "@trackReEnrichSuccess": {

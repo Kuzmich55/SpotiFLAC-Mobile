@@ -640,9 +640,11 @@ class _LocalAlbumScreenState extends ConsumerState<LocalAlbumScreen>
     var cancelled = false;
     BatchProgressDialog.show(
       context: context,
-      title: context.l10n.trackReEnrichSearching,
+      title: selection.usesManualValues
+          ? context.l10n.trackReEnrichPreparing
+          : context.l10n.trackReEnrichSearching,
       total: selected.length,
-      icon: Icons.manage_search,
+      icon: selection.usesManualValues ? Icons.edit_note : Icons.manage_search,
       onCancel: () {
         cancelled = true;
         BatchProgressDialog.dismiss(context);
@@ -658,6 +660,11 @@ class _LocalAlbumScreenState extends ConsumerState<LocalAlbumScreen>
       );
       final updateFields = selection.updateFieldsFor(item);
       if (updateFields.isEmpty) continue;
+      if (selection.usesManualValues) {
+        final preview = buildManualBatchReEnrichPreview(item, selection);
+        if (preview != null) previews.add(preview);
+        continue;
+      }
       try {
         final result = await PlatformBridge.reEnrichFile(
           buildBatchReEnrichRequest(

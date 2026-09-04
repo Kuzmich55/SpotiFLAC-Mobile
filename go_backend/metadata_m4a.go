@@ -101,7 +101,7 @@ func readM4ATagsFromIlst(f *os.File, fileSize int64, ilst atomHeader) (*AudioMet
 					if metadata.Copyright == "" {
 						metadata.Copyright = value
 					}
-				case "LYRICS", "UNSYNCEDLYRICS":
+				case "LYRICS", "UNSYNCEDLYRICS", "SYNCEDLYRICS":
 					if metadata.Lyrics == "" {
 						metadata.Lyrics = value
 					}

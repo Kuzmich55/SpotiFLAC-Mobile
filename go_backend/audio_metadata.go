@@ -496,7 +496,10 @@ func isLyricsDescription(description string) bool {
 		"lyric",
 		"unsyncedlyrics",
 		"unsynced lyrics",
+		"syncedlyrics",
+		"synced lyrics",
 		"uslt",
+		"sylt",
 		"lrc":
 		return true
 	default:

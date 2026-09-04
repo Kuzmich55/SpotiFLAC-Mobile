@@ -345,10 +345,7 @@ func metadataFromParsedFlac(f *flac.File) *Metadata {
 			metadata.ISRC = getComment(cmt, "ISRC")
 			metadata.Description = getComment(cmt, "DESCRIPTION")
 
-			metadata.Lyrics = getComment(cmt, "LYRICS")
-			if metadata.Lyrics == "" {
-				metadata.Lyrics = getComment(cmt, "UNSYNCEDLYRICS")
-			}
+			metadata.Lyrics = getLyricsComment(cmt)
 
 			trackNum := getComment(cmt, "TRACKNUMBER")
 			if trackNum != "" {
@@ -530,8 +527,10 @@ func applyVorbisFieldEdits(cmt *flacvorbis.MetaDataBlockVorbisComment, fields ma
 		removeCommentKey(cmt, "DISC") // alias
 	}
 
-	// Lyrics: set both LYRICS + UNSYNCEDLYRICS, or clear both.
+	// Lyrics: set the broadly-supported plain aliases and remove any stale
+	// SYNCEDLYRICS value, or clear every alias.
 	if v, ok := fields["lyrics"]; ok {
+		removeCommentKey(cmt, "SYNCEDLYRICS")
 		if v != "" {
 			setOrClearComment(cmt, "LYRICS", v)
 			setOrClearComment(cmt, "UNSYNCEDLYRICS", v)
@@ -711,6 +710,15 @@ func getComment(cmt *flacvorbis.MetaDataBlockVorbisComment, key string) string {
 		return ""
 	}
 	return values[0]
+}
+
+func getLyricsComment(cmt *flacvorbis.MetaDataBlockVorbisComment) string {
+	for _, key := range []string{"LYRICS", "UNSYNCEDLYRICS", "SYNCEDLYRICS"} {
+		if lyrics := getComment(cmt, key); strings.TrimSpace(lyrics) != "" {
+			return lyrics
+		}
+	}
+	return ""
 }
 
 func getJoinedComment(cmt *flacvorbis.MetaDataBlockVorbisComment, key string) string {
@@ -944,14 +952,8 @@ func extractLyricsFromFlac(filePath string) (string, error) {
 			continue
 		}
 
-		lyrics, err := cmt.Get("LYRICS")
-		if err == nil && len(lyrics) > 0 && strings.TrimSpace(lyrics[0]) != "" {
-			return lyrics[0], nil
-		}
-
-		lyrics, err = cmt.Get("UNSYNCEDLYRICS")
-		if err == nil && len(lyrics) > 0 && strings.TrimSpace(lyrics[0]) != "" {
-			return lyrics[0], nil
+		if lyrics := getLyricsComment(cmt); lyrics != "" {
+			return lyrics, nil
 		}
 	}
 

@@ -51,6 +51,62 @@ void main() {
     expect(fields, const ['isrc']);
   });
 
+  test('manual mode only exposes shared-value fields', () {
+    expect(manualBatchMetadataFields, containsAll(['album_name', 'genre']));
+    expect(manualBatchMetadataFields, isNot(contains('track_name')));
+    expect(manualBatchMetadataFields, isNot(contains('track_number')));
+    expect(manualBatchMetadataFields, isNot(contains('isrc')));
+  });
+
+  test('manual values build a per-track review without an online lookup', () {
+    final selection = const ReEnrichFieldSelection(
+      mode: ReEnrichBatchMode.manualValues,
+      manualValues: {'album_name': ' New Album ', 'genre': 'Rock'},
+    );
+
+    expect(selection.updateFieldsFor(_item()), ['album_name', 'genre']);
+    final preview = buildManualBatchReEnrichPreview(_item(), selection);
+
+    expect(preview, isNotNull);
+    expect(preview!.enrichedMetadata['album_name'], 'New Album');
+    expect(preview.changes.map((change) => change.field), [
+      'album_name',
+      'genre',
+    ]);
+
+    final request = buildBatchReEnrichRequest(
+      item: preview.item,
+      settings: const AppSettings(),
+      updateFields: preview.updateFields,
+      resolvedMetadata: preview.enrichedMetadata,
+    );
+    expect(request['search_online'], isFalse);
+    expect(request['album_name'], 'New Album');
+    expect(request['genre'], 'Rock');
+  });
+
+  test('manual preview omits unchanged and empty values', () {
+    final preview = buildManualBatchReEnrichPreview(
+      _item(genre: 'Rock'),
+      const ReEnrichFieldSelection(
+        mode: ReEnrichBatchMode.manualValues,
+        manualValues: {'album_name': 'Album', 'genre': 'Rock', 'label': '   '},
+      ),
+    );
+
+    expect(preview, isNull);
+  });
+
+  test('manual mode rejects unsafe per-track identifiers', () {
+    final selection = const ReEnrichFieldSelection(
+      mode: ReEnrichBatchMode.manualValues,
+      manualValues: {'isrc': 'USAAA2600001', 'track_name': 'Same title'},
+    );
+
+    expect(selection.updateFieldsFor(_item()), isEmpty);
+    expect(buildManualBatchReEnrichPreview(_item(), selection), isNull);
+  });
+
   test('resolved preview metadata is reused without another online search', () {
     final request = buildBatchReEnrichRequest(
       item: _item(),

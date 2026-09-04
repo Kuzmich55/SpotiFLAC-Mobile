@@ -260,7 +260,7 @@ func parseVorbisComments(data []byte, metadata *AudioMetadata) {
 			metadata.Composer = value
 		case "COMMENT", "DESCRIPTION":
 			metadata.Comment = value
-		case "LYRICS", "UNSYNCEDLYRICS":
+		case "LYRICS", "UNSYNCEDLYRICS", "SYNCEDLYRICS":
 			if metadata.Lyrics == "" {
 				metadata.Lyrics = value
 			}

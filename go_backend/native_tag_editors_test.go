@@ -221,6 +221,7 @@ func TestEditM4AFieldsPreservesAtomsAndShiftsChunkOffsets(t *testing.T) {
 	existing := append([]byte{}, buildM4ATextAtom("\xa9nam", "Old")...)
 	existing = append(existing, buildM4ATextAtom("\xa9too", "SomeEncoder")...) // foreign, untouched
 	existing = append(existing, buildM4AFreeformAtom("MusicBrainz Track Id", "xyz")...)
+	existing = append(existing, buildM4AFreeformAtom("SYNCEDLYRICS", "Old synced lyrics")...)
 	mdatPayload := []byte("M4ADATA")
 	file, oldOffset := buildTestM4A(t, existing, mdatPayload)
 
@@ -230,8 +231,9 @@ func TestEditM4AFieldsPreservesAtomsAndShiftsChunkOffsets(t *testing.T) {
 	}
 
 	if err := EditM4AFields(path, map[string]string{
-		"title": "A Much Longer Replacement Title",
-		"isrc":  "USABC1234567",
+		"title":  "A Much Longer Replacement Title",
+		"isrc":   "USABC1234567",
+		"lyrics": "Updated lyrics",
 	}); err != nil {
 		t.Fatalf("EditM4AFields: %v", err)
 	}
@@ -248,6 +250,13 @@ func TestEditM4AFieldsPreservesAtomsAndShiftsChunkOffsets(t *testing.T) {
 	}
 	if !bytes.Contains(updated, []byte("USABC1234567")) {
 		t.Error("ISRC freeform missing")
+	}
+	if bytes.Contains(updated, []byte("SYNCEDLYRICS")) ||
+		bytes.Contains(updated, []byte("Old synced lyrics")) {
+		t.Error("stale SYNCEDLYRICS freeform was not removed")
+	}
+	if meta, err := ReadM4ATags(path); err != nil || meta.Lyrics != "Updated lyrics" {
+		t.Fatalf("updated M4A lyrics = %#v/%v", meta, err)
 	}
 
 	// stco entry must still point at the mdat payload.

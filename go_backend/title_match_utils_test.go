@@ -179,3 +179,86 @@ func TestTitlesMatch_EmojiStrict(t *testing.T) {
 		t.Fatal("expected identical emoji titles to match")
 	}
 }
+
+func TestSelectBestMetadataEnrichmentTrackSkipsWrongFirstResult(t *testing.T) {
+	req := DownloadRequest{
+		TrackName:  "Song",
+		ArtistName: "Original Artist",
+		DurationMS: 180000,
+	}
+	tracks := []ExtTrackMetadata{
+		{
+			Name:       "Song",
+			Artists:    "Cover Band",
+			AlbumName:  "Covers",
+			DurationMS: 180000,
+			ProviderID: "first",
+		},
+		{
+			Name:        "Song",
+			Artists:     "Original Artist",
+			AlbumName:   "Original Album",
+			ReleaseDate: "2026-01-01",
+			ISRC:        "USAAA2600001",
+			DurationMS:  180000,
+			ProviderID:  "second",
+		},
+	}
+
+	best := selectBestMetadataEnrichmentTrack(req, tracks)
+	if best == nil || best.ProviderID != "second" {
+		t.Fatalf("best metadata match = %#v, want second result", best)
+	}
+}
+
+func TestSelectBestMetadataEnrichmentTrackRejectsConflictingISRC(t *testing.T) {
+	req := DownloadRequest{
+		TrackName:  "Song",
+		ArtistName: "Artist",
+		ISRC:       "USAAA2600001",
+	}
+	tracks := []ExtTrackMetadata{{
+		Name:       "Song",
+		Artists:    "Artist",
+		AlbumName:  "Album",
+		ISRC:       "USAAA2600002",
+		ProviderID: "provider",
+	}}
+
+	if best := selectBestMetadataEnrichmentTrack(req, tracks); best != nil {
+		t.Fatalf("expected conflicting ISRC to be rejected, got %#v", best)
+	}
+}
+
+func TestSelectBestMetadataEnrichmentTrackAcceptsExactISRC(t *testing.T) {
+	req := DownloadRequest{
+		TrackName:  "Localized Song Name",
+		ArtistName: "Localized Artist Name",
+		ISRC:       "USAAA2600001",
+	}
+	tracks := []ExtTrackMetadata{{
+		Name:       "Original Song Name",
+		Artists:    "Original Artist Name",
+		AlbumName:  "Album",
+		ISRC:       "usaaa2600001",
+		ProviderID: "provider",
+	}}
+
+	if best := selectBestMetadataEnrichmentTrack(req, tracks); best == nil {
+		t.Fatal("expected exact ISRC to provide a confident metadata match")
+	}
+}
+
+func TestSelectBestMetadataEnrichmentTrackRejectsWeakArtistMatch(t *testing.T) {
+	req := DownloadRequest{TrackName: "Song", ArtistName: "Artist"}
+	tracks := []ExtTrackMetadata{{
+		Name:       "Song",
+		Artists:    "Artist feat. Someone Else",
+		AlbumName:  "Album",
+		ProviderID: "provider",
+	}}
+
+	if best := selectBestMetadataEnrichmentTrack(req, tracks); best != nil {
+		t.Fatalf("expected fuzzy artist match without duration to be rejected, got %#v", best)
+	}
+}

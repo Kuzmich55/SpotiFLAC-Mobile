@@ -100,6 +100,9 @@ func TestAudioMetadataID3ParsingBranches(t *testing.T) {
 	if got := syncsafeToInt([]byte{0, 0, 2, 0}); got != 256 {
 		t.Fatalf("syncsafe = %d", got)
 	}
+	if !isLyricsDescription("SYNCEDLYRICS") || !isLyricsDescription("SYLT") {
+		t.Fatal("synced lyrics descriptions must be recognized")
+	}
 }
 
 func TestAudioMetadataCoverAndQualityHelpers(t *testing.T) {
@@ -276,6 +279,23 @@ func TestM4AMetadataAtomHelpers(t *testing.T) {
 		t.Fatal("expected missing M4A lyrics error")
 	}
 
+	syncedM4A := filepath.Join(dir, "synced.m4a")
+	syncedIlst := buildM4AFreeformAtom(
+		"SYNCEDLYRICS",
+		"[00:01.00]M4A synced lyrics",
+	)
+	if err := os.WriteFile(
+		syncedM4A,
+		buildM4AFileWithIlst(syncedIlst, true),
+		0600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if synced, err := ReadM4ATags(syncedM4A); err != nil ||
+		synced.Lyrics != "[00:01.00]M4A synced lyrics" {
+		t.Fatalf("M4A SYNCEDLYRICS = %#v/%v", synced, err)
+	}
+
 	sidecarAudio := filepath.Join(dir, "sidecar.mp3")
 	if err := os.WriteFile(sidecarAudio, []byte("audio"), 0600); err != nil {
 		t.Fatal(err)
@@ -392,7 +412,7 @@ func TestOggMetadataQualityAndCoverHelpers(t *testing.T) {
 		"ALBUMARTIST=Album Artist",
 		"TRACKNUMBER=2/9",
 		"DISCNUMBER=1/2",
-		"LYRICS=[00:00.00]Ogg Lyrics",
+		"SYNCEDLYRICS=[00:00.00]Ogg Lyrics",
 		"ITUNESADVISORY=1",
 		"RELEASETYPE=ep",
 		"BARCODE=4006381333931",
@@ -415,6 +435,9 @@ func TestOggMetadataQualityAndCoverHelpers(t *testing.T) {
 	meta, err := ReadOggVorbisComments(oggPath)
 	if err != nil || meta.Title != "Ogg Title" || meta.TrackNumber != 2 || meta.TotalTracks != 9 {
 		t.Fatalf("ReadOggVorbisComments = %#v/%v", meta, err)
+	}
+	if meta.Lyrics != "[00:00.00]Ogg Lyrics" {
+		t.Fatalf("Ogg SYNCEDLYRICS = %q", meta.Lyrics)
 	}
 	if !meta.Explicit || meta.AlbumType != "ep" || meta.UPC != "4006381333931" {
 		t.Fatalf("Ogg release identity = %#v", meta)

@@ -81,6 +81,15 @@ func TestAPETagReadWriteMergeAndMetadataConversion(t *testing.T) {
 	if mergedMeta.Lyrics != "" {
 		t.Fatalf("expected lyrics cleared, got %q", mergedMeta.Lyrics)
 	}
+	if _, ok := override["SYNCEDLYRICS"]; !ok {
+		t.Fatal("lyrics edit must also clear the SYNCEDLYRICS alias")
+	}
+	if synced := APETagToAudioMetadata(&APETag{Items: []APETagItem{{
+		Key:   "SYNCEDLYRICS",
+		Value: "[00:01.00]Synced APE lyrics",
+	}}}); synced.Lyrics != "[00:01.00]Synced APE lyrics" {
+		t.Fatalf("APE SYNCEDLYRICS = %q", synced.Lyrics)
+	}
 
 	if err := WriteAPETags(path, &APETag{Items: []APETagItem{{Key: "Title", Value: "Replacement"}}}); err != nil {
 		t.Fatalf("replace APE tags: %v", err)

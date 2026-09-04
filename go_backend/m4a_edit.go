@@ -275,6 +275,13 @@ func EditM4AFields(filePath string, fields map[string]string) error {
 		removeFreeform["ORGANIZATION"] = struct{}{}
 		freeformTags = append(freeformTags, m4aFreeformTag{name: "LABEL", value: strings.TrimSpace(fields["label"])})
 	}
+	if _, ok := fields["lyrics"]; ok {
+		// The canonical iTunes lyrics atom is written above. Remove custom
+		// aliases so an older synced value cannot survive a replace/clear edit.
+		removeFreeform["LYRICS"] = struct{}{}
+		removeFreeform["UNSYNCEDLYRICS"] = struct{}{}
+		removeFreeform["SYNCEDLYRICS"] = struct{}{}
+	}
 	if v, ok := fields["album_type"]; ok {
 		removeFreeform["RELEASETYPE"] = struct{}{}
 		freeformTags = append(freeformTags, m4aFreeformTag{name: "RELEASETYPE", value: strings.TrimSpace(v)})

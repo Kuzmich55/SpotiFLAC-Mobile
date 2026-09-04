@@ -517,32 +517,35 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 			searchQuery := req.TrackName + " " + req.ArtistName
 			GoLog("[DownloadWithExtensionFallback] Metadata incomplete, searching providers for: %s\n", searchQuery)
 
-			// Only the first match is consumed below. Asking for five made the manager
-			// continue through additional providers even after it already had a usable
-			// match, multiplying the per-provider timeout on slow networks.
-			tracks, searchErr := extManager.SearchTracksWithMetadataProvidersForItemID(searchQuery, 1, true, req.ItemID)
+			// Inspect several candidates: the first search result can be an unrelated
+			// same-title recording, remix, or cover.
+			tracks, searchErr := extManager.SearchTracksWithMetadataProvidersForItemID(searchQuery, 5, true, req.ItemID)
 			if shouldAbortCancelledFallback(req.ItemID, searchErr) {
 				return nil, ErrDownloadCancelled
 			}
 			if searchErr == nil && len(tracks) > 0 {
-				track := tracks[0]
-				GoLog("[DownloadWithExtensionFallback] Metadata match (%s): %s - %s (album: %s, date: %s, isrc: %s)\n",
-					track.ProviderID, track.Name, track.Artists, track.AlbumName, track.ReleaseDate, track.ISRC)
+				track := selectBestMetadataEnrichmentTrack(req, tracks)
+				if track == nil {
+					GoLog("[DownloadWithExtensionFallback] No confident metadata match; preserving source metadata\n")
+				} else {
+					GoLog("[DownloadWithExtensionFallback] Metadata match (%s): %s - %s (album: %s, date: %s, isrc: %s)\n",
+						track.ProviderID, track.Name, track.Artists, track.AlbumName, track.ReleaseDate, track.ISRC)
 
-				overlayStr(&req.AlbumName, track.AlbumName, "")
-				overlayStr(&req.AlbumArtist, track.AlbumArtist, "")
-				overlayStr(&req.ReleaseDate, track.ReleaseDate, "")
-				overlayStr(&req.ISRC, track.ISRC, "")
-				overlayInt(&req.TrackNumber, track.TrackNumber, "")
-				overlayInt(&req.TotalTracks, track.TotalTracks, "")
-				overlayInt(&req.DiscNumber, track.DiscNumber, "")
-				overlayInt(&req.TotalDiscs, track.TotalDiscs, "")
-				overlayStr(&req.Composer, track.Composer, "")
-				overlayStr(&req.CoverURL, track.CoverURL, "")
-				overlayStr(&req.Genre, track.Genre, "")
-				overlayStr(&req.Label, track.Label, "")
-				overlayStr(&req.Copyright, track.Copyright, "")
-				overlayExtensionReleaseMetadata(&req, track)
+					overlayStr(&req.AlbumName, track.AlbumName, "")
+					overlayStr(&req.AlbumArtist, track.AlbumArtist, "")
+					overlayStr(&req.ReleaseDate, track.ReleaseDate, "")
+					overlayStr(&req.ISRC, track.ISRC, "")
+					overlayInt(&req.TrackNumber, track.TrackNumber, "")
+					overlayInt(&req.TotalTracks, track.TotalTracks, "")
+					overlayInt(&req.DiscNumber, track.DiscNumber, "")
+					overlayInt(&req.TotalDiscs, track.TotalDiscs, "")
+					overlayStr(&req.Composer, track.Composer, "")
+					overlayStr(&req.CoverURL, track.CoverURL, "")
+					overlayStr(&req.Genre, track.Genre, "")
+					overlayStr(&req.Label, track.Label, "")
+					overlayStr(&req.Copyright, track.Copyright, "")
+					overlayExtensionReleaseMetadata(&req, *track)
+				}
 			} else if searchErr != nil {
 				GoLog("[DownloadWithExtensionFallback] Metadata provider search failed (non-fatal): %v\n", searchErr)
 			}

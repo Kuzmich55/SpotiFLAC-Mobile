@@ -219,9 +219,11 @@ extension _QueueTabBatchActions on _QueueTabState {
     var cancelled = false;
     BatchProgressDialog.show(
       context: context,
-      title: context.l10n.trackReEnrichSearching,
+      title: selection.usesManualValues
+          ? context.l10n.trackReEnrichPreparing
+          : context.l10n.trackReEnrichSearching,
       total: selectedLocalItems.length,
-      icon: Icons.manage_search,
+      icon: selection.usesManualValues ? Icons.edit_note : Icons.manage_search,
       onCancel: () {
         cancelled = true;
         BatchProgressDialog.dismiss(context);
@@ -237,6 +239,11 @@ extension _QueueTabBatchActions on _QueueTabState {
       );
       final updateFields = selection.updateFieldsFor(item);
       if (updateFields.isEmpty) continue;
+      if (selection.usesManualValues) {
+        final preview = buildManualBatchReEnrichPreview(item, selection);
+        if (preview != null) previews.add(preview);
+        continue;
+      }
       try {
         final result = await PlatformBridge.reEnrichFile(
           buildBatchReEnrichRequest(

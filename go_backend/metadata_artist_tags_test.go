@@ -54,6 +54,20 @@ func TestParseVorbisCommentsJoinsRepeatedArtists(t *testing.T) {
 	}
 }
 
+func TestGetLyricsCommentReadsAndClearsSyncedLyrics(t *testing.T) {
+	cmt := flacvorbis.New()
+	setComment(cmt, "SYNCEDLYRICS", "[00:01.00]Synced line")
+
+	if got := getLyricsComment(cmt); got != "[00:01.00]Synced line" {
+		t.Fatalf("getLyricsComment() = %q", got)
+	}
+
+	applyVorbisFieldEdits(cmt, map[string]string{"lyrics": ""})
+	if got := getComment(cmt, "SYNCEDLYRICS"); got != "" {
+		t.Fatalf("cleared SYNCEDLYRICS = %q", got)
+	}
+}
+
 func buildVorbisCommentPayload(comments []string) []byte {
 	var buf bytes.Buffer
 	_ = binary.Write(&buf, binary.LittleEndian, uint32(len("spotiflac")))

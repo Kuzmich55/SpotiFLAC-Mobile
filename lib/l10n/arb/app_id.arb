@@ -720,6 +720,10 @@
   "trackReEnrichModeMissingSubtitle": "Keep existing values and fill only fields that are empty",
   "trackReEnrichModeReplace": "Update selected tags",
   "trackReEnrichModeReplaceSubtitle": "Choose which existing values may be replaced by online metadata",
+  "trackReEnrichModeManual": "Tetapkan nilai yang sama",
+  "trackReEnrichModeManualSubtitle": "Terapkan nilai yang sama ke setiap lagu yang dipilih",
+  "trackReEnrichManualFieldsTitle": "Nilai yang akan diterapkan",
+  "trackReEnrichManualHint": "Biarkan kolom kosong untuk mempertahankan nilai saat ini. Judul, nomor lagu, dan ISRC tidak akan diubah.",
   "trackReEnrichFieldsTitle": "Tags to update",
   "trackReEnrichReview": "Review changes",
   "trackReEnrichReviewTitle": "Review metadata changes",
@@ -2288,6 +2292,7 @@
   "@trackReEnrichOnlineSubtitle": {
     "description": "Subtitle for re-enrich metadata action for local items"
   },
+  "trackReEnrichBatchSubtitle": "Pilih pembaruan online atau manual, lalu tinjau setiap perubahan sebelum ditulis",
   "nowPlayingNothingPlaying": "Nothing is playing",
   "@nowPlayingNothingPlaying": {
     "description": "Empty state when no track is currently playing"
@@ -5811,6 +5816,7 @@
   "lyricsProviderLyricsPlusDesc": "Word-by-word karaoke lyrics (Apple/Musixmatch/Spotify/QQ, via proxy)",
   "dialogSave": "Simpan",
   "trackReEnrichSearching": "Searching metadata online...",
+  "trackReEnrichPreparing": "Menyiapkan perubahan metadata...",
   "regionCountryUS": "United States",
   "audioAnalysisDescription": "Verify lossless quality with spectrum analysis",
   "downloadFilenameFormat": "Format Nama File",

@@ -165,6 +165,21 @@ void main() {
     });
   });
 
+  group('missing lyrics filter', () {
+    test(
+      'requires a completed lyrics scan before treating false as missing',
+      () {
+        final predicate = confirmedMissingLyricsSqlPredicate(
+          hasLyricsExpr: 'item.has_lyrics',
+          lyricsKnownExpr: 'item.lyrics_scan_version >= 1',
+        );
+
+        expect(predicate, contains('item.lyrics_scan_version >= 1'));
+        expect(predicate, contains('COALESCE(item.has_lyrics, 0) = 0'));
+      },
+    );
+  });
+
   group('app state database migrations', () {
     final source = File(
       'lib/services/app_state_database.dart',

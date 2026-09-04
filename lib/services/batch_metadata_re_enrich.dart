@@ -20,13 +20,34 @@ class ReEnrichFields {
   ];
 }
 
-enum ReEnrichBatchMode { isrcOnly, missingOnly, selectedFields }
+enum ReEnrichBatchMode { isrcOnly, missingOnly, selectedFields, manualValues }
+
+/// Tags where applying one shared value to multiple tracks is normally safe.
+/// Per-track identifiers, titles, and track/disc numbers are deliberately
+/// excluded so the batch editor cannot accidentally duplicate them.
+const List<String> manualBatchMetadataFields = [
+  'artist_name',
+  'album_name',
+  'album_artist',
+  'release_date',
+  'genre',
+  'composer',
+  'label',
+  'copyright',
+];
 
 class ReEnrichFieldSelection {
   final ReEnrichBatchMode mode;
   final List<String> fields;
+  final Map<String, String> manualValues;
 
-  const ReEnrichFieldSelection({required this.mode, this.fields = const []});
+  const ReEnrichFieldSelection({
+    required this.mode,
+    this.fields = const [],
+    this.manualValues = const {},
+  });
+
+  bool get usesManualValues => mode == ReEnrichBatchMode.manualValues;
 
   List<String> updateFieldsFor(LocalLibraryItem item) {
     switch (mode) {
@@ -36,6 +57,15 @@ class ReEnrichFieldSelection {
         return fields;
       case ReEnrichBatchMode.missingOnly:
         return missingReEnrichFields(item);
+      case ReEnrichBatchMode.manualValues:
+        return manualValues.entries
+            .where(
+              (entry) =>
+                  manualBatchMetadataFields.contains(entry.key) &&
+                  entry.value.trim().isNotEmpty,
+            )
+            .map((entry) => entry.key)
+            .toList(growable: false);
     }
   }
 }
@@ -136,6 +166,36 @@ class BatchReEnrichPreview {
     required this.enrichedMetadata,
     required this.changes,
   });
+}
+
+BatchReEnrichPreview? buildManualBatchReEnrichPreview(
+  LocalLibraryItem item,
+  ReEnrichFieldSelection selection,
+) {
+  if (!selection.usesManualValues) return null;
+
+  final enrichedMetadata = <String, dynamic>{
+    for (final entry in selection.manualValues.entries)
+      if (manualBatchMetadataFields.contains(entry.key) &&
+          entry.value.trim().isNotEmpty)
+        entry.key: entry.value.trim(),
+  };
+  final updateFields = enrichedMetadata.keys.toList(growable: false);
+  if (updateFields.isEmpty) return null;
+
+  final changes = buildReEnrichMetadataChanges(
+    item,
+    enrichedMetadata,
+    updateFields,
+  );
+  if (changes.isEmpty) return null;
+
+  return BatchReEnrichPreview(
+    item: item,
+    updateFields: updateFields,
+    enrichedMetadata: enrichedMetadata,
+    changes: changes,
+  );
 }
 
 String _displayValue(Object? value) {

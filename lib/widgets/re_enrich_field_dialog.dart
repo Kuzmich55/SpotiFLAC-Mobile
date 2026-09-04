@@ -12,7 +12,7 @@ Future<ReEnrichFieldSelection?> showReEnrichFieldDialog(
     context: context,
     useRootNavigator: true,
     title: AppLocalizations.of(context).trackReEnrich,
-    subtitle: AppLocalizations.of(context).trackReEnrichOnlineSubtitle,
+    subtitle: AppLocalizations.of(context).trackReEnrichBatchSubtitle,
     maxHeightFactor: 0.9,
     builder: (ctx) => _ReEnrichFieldSheet(selectedCount: selectedCount),
   );
@@ -28,9 +28,30 @@ class _ReEnrichFieldSheet extends StatefulWidget {
 
 class _ReEnrichFieldSheetState extends State<_ReEnrichFieldSheet> {
   final Set<String> _selected = Set<String>.from(ReEnrichFields.all);
+  final Map<String, TextEditingController> _manualControllers = {
+    for (final field in manualBatchMetadataFields)
+      field: TextEditingController(),
+  };
   ReEnrichBatchMode _mode = ReEnrichBatchMode.missingOnly;
 
   bool get _allSelected => _selected.length == ReEnrichFields.all.length;
+  bool get _hasManualValues => _manualControllers.values.any(
+    (controller) => controller.text.trim().isNotEmpty,
+  );
+
+  Map<String, String> get _manualValues => {
+    for (final entry in _manualControllers.entries)
+      if (entry.value.text.trim().isNotEmpty)
+        entry.key: entry.value.text.trim(),
+  };
+
+  @override
+  void dispose() {
+    for (final controller in _manualControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
 
   void _toggleAll(bool? value) {
     setState(() {
@@ -90,6 +111,29 @@ class _ReEnrichFieldSheetState extends State<_ReEnrichFieldSheet> {
     }
   }
 
+  String _manualLabelFor(String field, AppLocalizations l10n) {
+    switch (field) {
+      case 'artist_name':
+        return l10n.trackArtist;
+      case 'album_name':
+        return l10n.trackAlbum;
+      case 'album_artist':
+        return l10n.trackAlbumArtist;
+      case 'release_date':
+        return l10n.trackReleaseDate;
+      case 'genre':
+        return l10n.trackGenre;
+      case 'composer':
+        return l10n.editMetadataFieldComposer;
+      case 'label':
+        return l10n.trackLabel;
+      case 'copyright':
+        return l10n.trackCopyright;
+      default:
+        return field;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -146,6 +190,17 @@ class _ReEnrichFieldSheetState extends State<_ReEnrichFieldSheet> {
                   onTap: () =>
                       setState(() => _mode = ReEnrichBatchMode.selectedFields),
                 ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.edit_note),
+                  title: Text(l10n.trackReEnrichModeManual),
+                  subtitle: Text(l10n.trackReEnrichModeManualSubtitle),
+                  trailing: _mode == ReEnrichBatchMode.manualValues
+                      ? Icon(Icons.check, color: colorScheme.primary)
+                      : null,
+                  onTap: () =>
+                      setState(() => _mode = ReEnrichBatchMode.manualValues),
+                ),
               ],
             ),
             if (_mode == ReEnrichBatchMode.selectedFields) ...[
@@ -185,6 +240,58 @@ class _ReEnrichFieldSheetState extends State<_ReEnrichFieldSheet> {
                 ],
               ),
             ],
+            if (_mode == ReEnrichBatchMode.manualValues) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.trackReEnrichManualFieldsTitle,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.trackReEnrichManualHint,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SettingsGroup(
+                children: [
+                  for (
+                    var index = 0;
+                    index < manualBatchMetadataFields.length;
+                    index++
+                  ) ...[
+                    if (index > 0) const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                      child: TextField(
+                        controller:
+                            _manualControllers[manualBatchMetadataFields[index]],
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: _manualLabelFor(
+                            manualBatchMetadataFields[index],
+                            l10n,
+                          ),
+                          border: const OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -192,14 +299,17 @@ class _ReEnrichFieldSheetState extends State<_ReEnrichFieldSheet> {
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed:
-                      _mode == ReEnrichBatchMode.selectedFields &&
-                          _selected.isEmpty
+                      (_mode == ReEnrichBatchMode.selectedFields &&
+                              _selected.isEmpty) ||
+                          (_mode == ReEnrichBatchMode.manualValues &&
+                              !_hasManualValues)
                       ? null
                       : () => Navigator.pop(
                           context,
                           ReEnrichFieldSelection(
                             mode: _mode,
                             fields: _selected.toList(),
+                            manualValues: _manualValues,
                           ),
                         ),
                   icon: const Icon(Icons.preview_outlined, size: 18),
