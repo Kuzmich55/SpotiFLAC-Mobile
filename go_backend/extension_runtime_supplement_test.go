@@ -15,6 +15,12 @@ import (
 	"github.com/dop251/goja"
 )
 
+func TestPendingAuthRequestExpiresAfterThreeMinutes(t *testing.T) {
+	if pendingAuthRequestTTL != 3*time.Minute {
+		t.Fatalf("pending auth request TTL = %v", pendingAuthRequestTTL)
+	}
+}
+
 func TestExtensionRuntimeAuthAndPolyfills(t *testing.T) {
 	vm := goja.New()
 	runtime := &extensionRuntime{

@@ -12,6 +12,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 final _log = AppLogger('ExtensionAuthLauncher');
 
+const extensionVerificationGrantTimeout = Duration(minutes: 3);
+
 bool isExtensionVerificationRequired(Object error) {
   final message = error.toString().toLowerCase();
   return message.contains('verify_required') ||
@@ -160,7 +162,7 @@ Timer? scheduleExtensionVerificationHelpDialog(
   });
 }
 
-/// Opens a pending extension verification challenge and waits (up to 5
+/// Opens a pending extension verification challenge and waits (up to 3
 /// minutes) for its grant result, returning whether it succeeded. When
 /// [cancellationSignal] completes, all local waiting resources are released
 /// and the method returns false without waiting for the timeout.
@@ -220,7 +222,7 @@ Future<bool> openVerificationAndAwaitGrant(
     final event = await _awaitVerificationStepOrCancellation(
       grantCompleter.future,
       cancellationSignal,
-    ).timeout(const Duration(minutes: 5));
+    ).timeout(extensionVerificationGrantTimeout);
     if (event == null) {
       _log.i('Stopped waiting for verification grant: $normalizedExtensionId');
       return false;
