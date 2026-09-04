@@ -44,7 +44,6 @@ class AppSliverHeader extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final topPadding = normalizedHeaderTopPadding(context);
     final maxHeight = tokens.headerExpandedHeight + topPadding;
-    final minHeight = kToolbarHeight + topPadding;
     final edgeInset = detailHeaderEdgeInset(context);
 
     return SliverAppBar(
@@ -74,9 +73,21 @@ class AppSliverHeader extends StatelessWidget {
       actions: actions,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
-          final expandRatio =
-              ((constraints.maxHeight - minHeight) / (maxHeight - minHeight))
-                  .clamp(0.0, 1.0);
+          // SliverAppBar adds the platform's actual top safe-area inset to its
+          // extents. Deriving the collapse ratio from our requested heights
+          // left notched iPhones looking almost fully expanded even after the
+          // toolbar had collapsed, so the large title occupied the back
+          // button's space. Read the resolved sliver geometry instead.
+          final settings = context
+              .dependOnInheritedWidgetOfExactType<FlexibleSpaceBarSettings>();
+          final minExtent = settings?.minExtent ?? kToolbarHeight;
+          final maxExtent = settings?.maxExtent ?? maxHeight;
+          final currentExtent =
+              settings?.currentExtent ?? constraints.maxHeight;
+          final extentDelta = maxExtent - minExtent;
+          final expandRatio = extentDelta > 0
+              ? ((currentExtent - minExtent) / extentDelta).clamp(0.0, 1.0)
+              : 0.0;
           final leftPadding = _showLeading
               ? (_leadingClearance + edgeInset) -
                     (((_leadingClearance + edgeInset) - _contentMargin) *

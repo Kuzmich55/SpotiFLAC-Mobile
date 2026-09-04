@@ -341,6 +341,52 @@ void main() {
       expect(style.fontSize, AppTokens.standard.headerExpandedTitleSize);
     });
 
+    for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+      testWidgets(
+        'collapsed page title clears leading control on ${platform.name}',
+        (tester) async {
+          final controller = ScrollController();
+          addTearDown(controller.dispose);
+          final topInset = platform == TargetPlatform.iOS ? 59.0 : 24.0;
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light().copyWith(platform: platform),
+              home: MediaQuery(
+                data: MediaQueryData(
+                  size: const Size(430, 932),
+                  padding: EdgeInsets.only(top: topInset),
+                ),
+                child: Scaffold(
+                  body: CustomScrollView(
+                    controller: controller,
+                    slivers: const [
+                      AppSliverHeader.page(title: 'Metadata'),
+                      SliverToBoxAdapter(child: SizedBox(height: 1200)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          controller.jumpTo(AppTokens.standard.headerExpandedHeight);
+          await tester.pump();
+
+          final title = find.text('Metadata');
+          final backIcon = find.byIcon(Icons.arrow_back);
+          expect(
+            tester.getRect(title).overlaps(tester.getRect(backIcon)),
+            isFalse,
+          );
+          expect(
+            tester.widget<Text>(title).style?.fontSize,
+            AppTokens.standard.headerCollapsedTitleSize,
+          );
+        },
+      );
+    }
+
     test('is the only collapsing header implementation left', () {
       final offenders = _libSources()
           .where(
