@@ -258,6 +258,8 @@ func libraryFormatForM4ACodec(codec string) string {
 		return "ac3"
 	case "ac4", "ac-4":
 		return "ac4"
+	case "opus":
+		return "opus"
 	case "aac", "mp4a":
 		return "m4a"
 	default:

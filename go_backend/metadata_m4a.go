@@ -842,6 +842,8 @@ func normalizeM4AAudioCodec(atomType string) string {
 		return "ac3"
 	case "ac-4":
 		return "ac4"
+	case "Opus":
+		return "opus"
 	default:
 		return strings.TrimSpace(atomType)
 	}

@@ -56,6 +56,7 @@ func TestM4ACodecFormatMapping(t *testing.T) {
 		"ec-3": "eac3",
 		"ac-3": "ac3",
 		"ac-4": "ac4",
+		"Opus": "opus",
 	}
 	for atomType, want := range cases {
 		if got := normalizeM4AAudioCodec(atomType); got != want {
@@ -68,6 +69,9 @@ func TestM4ACodecFormatMapping(t *testing.T) {
 	}
 	if got := libraryFormatForM4ACodec("eac3"); got != "eac3" {
 		t.Fatalf("libraryFormatForM4ACodec(eac3) = %q", got)
+	}
+	if got := libraryFormatForM4ACodec("Opus"); got != "opus" {
+		t.Fatalf("libraryFormatForM4ACodec(Opus) = %q", got)
 	}
 	if got := libraryFormatForM4ACodec("aac"); got != "m4a" {
 		t.Fatalf("libraryFormatForM4ACodec(aac) = %q", got)
