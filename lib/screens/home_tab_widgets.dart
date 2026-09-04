@@ -782,6 +782,7 @@ class _ArtistLoadingScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final edgeInset = detailHeaderEdgeInset(context);
     final url = coverUrl;
     final hasImage =
         url != null &&
@@ -836,8 +837,8 @@ class _ArtistLoadingScaffold extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    left: 16,
-                    right: 16,
+                    left: 16 + edgeInset,
+                    right: 16 + edgeInset,
                     bottom: 16,
                     child: Text(
                       artistName,
@@ -860,17 +861,21 @@ class _ArtistLoadingScaffold extends StatelessWidget {
                 ],
               ),
             ),
-            leading: IconButton(
-              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  shape: BoxShape.circle,
+            leadingWidth: kToolbarHeight + edgeInset,
+            leading: Padding(
+              padding: EdgeInsets.only(left: edgeInset),
+              child: IconButton(
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.arrow_back, color: Colors.white),
                 ),
-                child: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
               ),
-              onPressed: () => Navigator.pop(context),
             ),
           ),
           const SliverToBoxAdapter(

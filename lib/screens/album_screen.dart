@@ -514,25 +514,19 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen>
           ? context.l10n.selectionSelected(selectedIds.length)
           : null,
       leading: isSelectionMode
-          ? Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: HeaderCircleButton(
-                icon: Icons.close,
-                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                onPressed: exitSelectionMode,
-              ),
+          ? HeaderCircleButton(
+              icon: Icons.close,
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              onPressed: exitSelectionMode,
             )
           : null,
       appBarActions: isSelectionMode
           ? const []
           : [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: HeaderCircleButton(
-                  icon: Icons.open_in_new_rounded,
-                  tooltip: context.l10n.openInOtherServices,
-                  onPressed: () => _showShareSheet(context, tracks, artistName),
-                ),
+              HeaderCircleButton(
+                icon: Icons.open_in_new_rounded,
+                tooltip: context.l10n.openInOtherServices,
+                onPressed: () => _showShareSheet(context, tracks, artistName),
               ),
             ],
     );

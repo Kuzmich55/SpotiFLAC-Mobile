@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:spotiflac_android/theme/app_tokens.dart';
 import 'package:spotiflac_android/theme/cover_palette.dart';
+import 'package:spotiflac_android/utils/adaptive_layout.dart';
 
 /// Collapsing album-detail header shared by the album, local-album, and
 /// downloaded-album screens: full-bleed [background] (optionally blurred and
@@ -91,6 +92,11 @@ class AlbumDetailHeader extends StatelessWidget {
 
   Widget _buildAppBar(BuildContext context, ColorScheme headerScheme) {
     final tokens = context.tokens;
+    // iOS does not add horizontal safe-area padding in portrait. Give toolbar
+    // controls and header content an explicit inset so circular actions do not
+    // sit against the glass edge on either iPhone or iPad. Android retains its
+    // existing spacing.
+    final iosEdgeInset = detailHeaderEdgeInset(context);
     // Scrim and gradient are drawn from the palette surface instead of black,
     // so a light theme gets a light header with dark text and a dark theme
     // keeps the familiar dark treatment — both tinted by the artwork.
@@ -157,8 +163,8 @@ class AlbumDetailHeader extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  left: 20,
-                  right: 20,
+                  left: 20 + iosEdgeInset,
+                  right: 20 + iosEdgeInset,
                   bottom: 40,
                   child: AnimatedOpacity(
                     duration: tokens.motionFast,
@@ -235,20 +241,25 @@ class AlbumDetailHeader extends StatelessWidget {
           );
         },
       ),
-      leading:
-          leading ??
-          IconButton.filledTonal(
-            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-            icon: const Icon(Icons.arrow_back),
-            style: IconButton.styleFrom(
-              minimumSize: Size.square(tokens.minTouchTarget),
-              backgroundColor: headerScheme.surfaceContainerHigh.withValues(
-                alpha: 0.75,
+      leadingWidth: kToolbarHeight + iosEdgeInset,
+      leading: Padding(
+        padding: EdgeInsets.only(left: iosEdgeInset),
+        child:
+            leading ??
+            IconButton.filledTonal(
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              icon: const Icon(Icons.arrow_back),
+              style: IconButton.styleFrom(
+                minimumSize: Size.square(tokens.minTouchTarget),
+                backgroundColor: headerScheme.surfaceContainerHigh.withValues(
+                  alpha: 0.75,
+                ),
+                foregroundColor: headerScheme.onSurfaceVariant,
               ),
-              foregroundColor: headerScheme.onSurfaceVariant,
+              onPressed: () => Navigator.pop(context),
             ),
-            onPressed: () => Navigator.pop(context),
-          ),
+      ),
+      actionsPadding: EdgeInsets.only(right: iosEdgeInset),
       actions: appBarActions,
     );
   }

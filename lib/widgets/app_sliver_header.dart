@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:spotiflac_android/theme/app_tokens.dart';
+import 'package:spotiflac_android/utils/adaptive_layout.dart';
 import 'package:spotiflac_android/utils/app_bar_layout.dart';
 
 /// The collapsing header used by every top-level tab and every settings-style
@@ -44,6 +45,7 @@ class AppSliverHeader extends StatelessWidget {
     final topPadding = normalizedHeaderTopPadding(context);
     final maxHeight = tokens.headerExpandedHeight + topPadding;
     final minHeight = kToolbarHeight + topPadding;
+    final edgeInset = detailHeaderEdgeInset(context);
 
     return SliverAppBar(
       expandedHeight: maxHeight,
@@ -53,14 +55,22 @@ class AppSliverHeader extends StatelessWidget {
       backgroundColor: colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       automaticallyImplyLeading: false,
+      leadingWidth: _showLeading ? kToolbarHeight + edgeInset : null,
       leading: _showLeading
-          ? leading ??
-                IconButton(
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
-                )
+          ? Padding(
+              padding: EdgeInsets.only(left: edgeInset),
+              child:
+                  leading ??
+                  IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).backButtonTooltip,
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+            )
           : null,
+      actionsPadding: EdgeInsets.only(right: edgeInset),
       actions: actions,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
@@ -68,8 +78,9 @@ class AppSliverHeader extends StatelessWidget {
               ((constraints.maxHeight - minHeight) / (maxHeight - minHeight))
                   .clamp(0.0, 1.0);
           final leftPadding = _showLeading
-              ? _leadingClearance -
-                    ((_leadingClearance - _contentMargin) * expandRatio)
+              ? (_leadingClearance + edgeInset) -
+                    (((_leadingClearance + edgeInset) - _contentMargin) *
+                        expandRatio)
               : _contentMargin;
           final fontSize =
               tokens.headerCollapsedTitleSize +
@@ -78,6 +89,7 @@ class AppSliverHeader extends StatelessWidget {
                   expandRatio;
 
           return FlexibleSpaceBar(
+            centerTitle: false,
             expandedTitleScale: 1.0,
             titlePadding: EdgeInsets.only(
               left: leftPadding,

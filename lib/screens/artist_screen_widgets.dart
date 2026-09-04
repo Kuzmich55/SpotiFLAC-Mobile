@@ -81,6 +81,7 @@ extension _ArtistScreenSections on _ArtistScreenState {
     required String? listenersText,
     required bool isFavoriteArtist,
   }) {
+    final edgeInset = detailHeaderEdgeInset(context);
     return SliverAppBar(
       expandedHeight: hasDiscography ? 420 : 380,
       pinned: true,
@@ -186,8 +187,8 @@ extension _ArtistScreenSections on _ArtistScreenState {
               ),
             ),
             Positioned(
-              left: 16,
-              right: 16,
+              left: 16 + edgeInset,
+              right: 16 + edgeInset,
               bottom: 16,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -274,19 +275,21 @@ extension _ArtistScreenSections on _ArtistScreenState {
         ),
         stretchModes: const [StretchMode.zoomBackground],
       ),
-      leading: HeaderCircleButton(
-        icon: Icons.arrow_back,
-        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-        onPressed: () => Navigator.pop(context),
+      leadingWidth: kToolbarHeight + edgeInset,
+      leading: Padding(
+        padding: EdgeInsets.only(left: edgeInset),
+        child: HeaderCircleButton(
+          icon: Icons.arrow_back,
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
+      actionsPadding: EdgeInsets.only(right: edgeInset),
       actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: HeaderCircleButton(
-            icon: Icons.open_in_new_rounded,
-            tooltip: context.l10n.openInOtherServices,
-            onPressed: () => _showShareSheet(context),
-          ),
+        HeaderCircleButton(
+          icon: Icons.open_in_new_rounded,
+          tooltip: context.l10n.openInOtherServices,
+          onPressed: () => _showShareSheet(context),
         ),
       ],
     );

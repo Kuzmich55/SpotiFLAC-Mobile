@@ -31,6 +31,7 @@ import 'package:spotiflac_android/widgets/settings_group.dart';
 import 'package:spotiflac_android/widgets/mini_player.dart';
 import 'package:spotiflac_android/widgets/selection_bottom_bar.dart';
 import 'package:spotiflac_android/utils/logger.dart';
+import 'package:spotiflac_android/utils/adaptive_layout.dart';
 
 final _log = AppLogger('MainShell');
 
@@ -746,9 +747,12 @@ class _MainShellState extends ConsumerState<MainShell>
       });
     }
 
-    // Material breakpoint: rail navigation on tablet/landscape widths, the
-    // bottom NavigationBar on phones.
-    final useNavigationRail = MediaQuery.sizeOf(context).width >= 600;
+    final screenSize = MediaQuery.sizeOf(context);
+    final isTablet = screenSize.shortestSide >= 600;
+    // Tablets remain touch-first in both orientations. Reserving the rail for
+    // desktop-width windows keeps all primary destinations at the reachable
+    // bottom edge on iPad and large Android tablets.
+    final useNavigationRail = useNavigationRailForWidth(screenSize.width);
 
     final pageView = KeyedSubtree(
       key: _pageViewKey,
@@ -863,7 +867,7 @@ class _MainShellState extends ConsumerState<MainShell>
                         onDestinationSelected: _onNavTap,
                         animationDuration: const Duration(milliseconds: 500),
                         elevation: 0,
-                        height: 64,
+                        height: isTablet ? 72 : 64,
                         backgroundColor: settingsGroupColor(
                           context,
                         ).withValues(alpha: 0.72),

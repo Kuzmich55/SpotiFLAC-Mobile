@@ -122,7 +122,7 @@ class _HomeTabState extends ConsumerState<HomeTab>
   }
 
   double _recentDownloadCoverSize(BuildContext context) {
-    final scale = _responsiveScale(context: context, min: 0.82, max: 1.05);
+    final scale = _responsiveScale(context: context, min: 0.82, max: 1.25);
     final textScale = _effectiveTextScale(context);
     return 100 * scale * (1 + (textScale - 1) * 0.15);
   }
@@ -134,7 +134,10 @@ class _HomeTabState extends ConsumerState<HomeTab>
   }
 
   double _exploreCardSize(BuildContext context) {
-    final scale = _responsiveScale(context: context, min: 0.82, max: 1.08);
+    // Six phone-sized cards across an iPad made the feed look like a desktop
+    // page zoomed out. A higher tablet cap gives roughly five generous cards
+    // in portrait while leaving all phone sizes unchanged.
+    final scale = _responsiveScale(context: context, min: 0.82, max: 1.32);
     final textScale = _effectiveTextScale(context);
     return 145 * scale * (1 + (textScale - 1) * 0.12);
   }

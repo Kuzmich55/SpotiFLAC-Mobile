@@ -85,6 +85,7 @@ class _ExtensionDetailsScreenState
     RepoExtension ext,
     ColorScheme colorScheme,
   ) {
+    final edgeInset = detailHeaderEdgeInset(context);
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
@@ -124,10 +125,14 @@ class _ExtensionDetailsScreenState
           ),
         ),
       ),
-      leading: IconButton(
-        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => Navigator.pop(context),
+      leadingWidth: kToolbarHeight + edgeInset,
+      leading: Padding(
+        padding: EdgeInsets.only(left: edgeInset),
+        child: IconButton(
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
     );
   }

@@ -644,6 +644,7 @@ class _TrackMetadataScreenState extends ConsumerState<TrackMetadataScreen>
     final colorScheme = Theme.of(context).colorScheme;
     final expandedHeight = calculateExpandedHeight(context);
     final bottomInset = context.navBarBottomInset;
+    final edgeInset = detailHeaderEdgeInset(context);
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
@@ -692,18 +693,23 @@ class _TrackMetadataScreenState extends ConsumerState<TrackMetadataScreen>
                   );
                 },
               ),
-              leading: IconButton(
-                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    shape: BoxShape.circle,
+              leadingWidth: kToolbarHeight + edgeInset,
+              leading: Padding(
+                padding: EdgeInsets.only(left: edgeInset),
+                child: IconButton(
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_back, color: Colors.white),
                   ),
-                  child: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: _popWithMetadataResult,
                 ),
-                onPressed: _popWithMetadataResult,
               ),
+              actionsPadding: EdgeInsets.only(right: edgeInset),
               actions: [
                 IconButton(
                   tooltip: MaterialLocalizations.of(context).showMenuTooltip,

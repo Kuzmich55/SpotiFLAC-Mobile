@@ -7,6 +7,7 @@ extension _HomeTabExploreUI on _HomeTabState {
     ColorScheme colorScheme,
   ) {
     final hasGreeting = greeting != null && greeting.isNotEmpty;
+    final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
     final sectionOffset = hasGreeting ? 1 : 0;
     final totalCount = sections.length + sectionOffset + 1;
 
@@ -18,9 +19,11 @@ extension _HomeTabExploreUI on _HomeTabState {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Text(
                 greeting,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style:
+                    (isTablet
+                            ? Theme.of(context).textTheme.headlineMedium
+                            : Theme.of(context).textTheme.headlineSmall)
+                        ?.copyWith(fontWeight: FontWeight.bold),
               ),
             );
           }
@@ -42,6 +45,7 @@ extension _HomeTabExploreUI on _HomeTabState {
 
   Widget _buildExploreSection(ExploreSection section, ColorScheme colorScheme) {
     final sectionHeight = _exploreSectionHeight(context);
+    final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
     if (section.isYTMusicQuickPicks) {
       return _buildYTMusicQuickPicksSection(section, colorScheme);
     }
@@ -53,9 +57,10 @@ extension _HomeTabExploreUI on _HomeTabState {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
           child: Text(
             section.title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: isTablet ? 20 : null,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         SizedBox(
@@ -157,6 +162,7 @@ extension _HomeTabExploreUI on _HomeTabState {
 
   Widget _buildExploreItem(ExploreItem item, ColorScheme colorScheme) {
     final isArtist = item.type == 'artist';
+    final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
     final cardSize = _exploreCardSize(context);
     final iconSize = cardSize * 0.3;
 
@@ -225,10 +231,14 @@ extension _HomeTabExploreUI on _HomeTabState {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: isArtist ? TextAlign.center : TextAlign.start,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
+                  style:
+                      (isTablet
+                              ? Theme.of(context).textTheme.titleMedium
+                              : Theme.of(context).textTheme.bodyMedium)
+                          ?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                          ),
                 ),
                 if (item.artists.isNotEmpty && !isArtist)
                   ClickableArtistName(
@@ -239,7 +249,7 @@ extension _HomeTabExploreUI on _HomeTabState {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
-                      fontSize: 12,
+                      fontSize: isTablet ? 14 : 12,
                     ),
                   ),
               ],

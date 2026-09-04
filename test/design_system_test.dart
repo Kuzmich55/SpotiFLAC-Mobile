@@ -12,6 +12,7 @@ import 'package:spotiflac_android/theme/app_theme.dart';
 import 'package:spotiflac_android/theme/app_tokens.dart';
 import 'package:spotiflac_android/theme/cover_palette.dart';
 import 'package:spotiflac_android/widgets/app_bottom_sheet.dart';
+import 'package:spotiflac_android/widgets/album_detail_header.dart';
 import 'package:spotiflac_android/widgets/app_search_field.dart';
 import 'package:spotiflac_android/widgets/app_sliver_header.dart';
 import 'package:spotiflac_android/widgets/collection_scaffold.dart';
@@ -251,6 +252,37 @@ void main() {
       } finally {
         directory.deleteSync(recursive: true);
       }
+    });
+  });
+
+  group('AlbumDetailHeader', () {
+    testWidgets('keeps iOS toolbar controls clear of the screen edge', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light().copyWith(platform: TargetPlatform.iOS),
+          home: Scaffold(
+            body: CustomScrollView(
+              slivers: const [
+                AlbumDetailHeader(
+                  title: 'Album',
+                  expandedHeight: 500,
+                  showTitleInAppBar: false,
+                  background: ColoredBox(color: Colors.orange),
+                  appBarActions: [SizedBox.square(dimension: 48)],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final appBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
+      expect(appBar.leadingWidth, kToolbarHeight + 12);
+      expect(appBar.actionsPadding, const EdgeInsets.only(right: 12));
+      final leadingPadding = appBar.leading! as Padding;
+      expect(leadingPadding.padding, const EdgeInsets.only(left: 12));
     });
   });
 

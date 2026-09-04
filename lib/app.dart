@@ -11,6 +11,7 @@ import 'package:spotiflac_android/services/app_navigation_service.dart';
 import 'package:spotiflac_android/theme/dynamic_color_wrapper.dart';
 import 'package:spotiflac_android/l10n/app_localizations.dart';
 import 'package:spotiflac_android/l10n/supported_locales.dart';
+import 'package:spotiflac_android/utils/adaptive_layout.dart';
 
 String initialLocationForAppState({
   required bool isFirstLaunch,
@@ -117,9 +118,6 @@ class _OrientationFadeState extends State<_OrientationFade>
     duration: const Duration(milliseconds: 300),
     value: 1,
   );
-  // Matches the shell's NavigationRail breakpoint.
-  static const double _railBreakpoint = 600;
-
   Orientation? _lastOrientation;
   double? _lastWidth;
 
@@ -132,7 +130,8 @@ class _OrientationFadeState extends State<_OrientationFade>
         _lastOrientation != null && orientation != _lastOrientation;
     final crossedRailBreakpoint =
         _lastWidth != null &&
-        (_lastWidth! < _railBreakpoint) != (width < _railBreakpoint);
+        useNavigationRailForWidth(_lastWidth!) !=
+            useNavigationRailForWidth(width);
     if (orientationChanged || crossedRailBreakpoint) {
       _controller.forward(from: 0);
     }
@@ -209,9 +208,11 @@ class SpotiFLACApp extends ConsumerWidget {
               // level it sits above the router's Navigator, so the controller
               // never encounters it while collecting heroes. Removing the
               // inherited controller disables flights on the root Navigator.
-              child: heroAnimationsEnabled
-                  ? appContent
-                  : HeroControllerScope.none(child: appContent),
+              child: AdaptiveUiScaler(
+                child: heroAnimationsEnabled
+                    ? appContent
+                    : HeroControllerScope.none(child: appContent),
+              ),
             );
           },
           routerConfig: router,
