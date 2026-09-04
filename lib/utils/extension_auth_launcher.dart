@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:spotiflac_android/l10n/l10n.dart';
 import 'package:spotiflac_android/services/app_navigation_service.dart';
 import 'package:spotiflac_android/services/platform_bridge.dart';
+import 'package:spotiflac_android/utils/extension_session_callback.dart';
 import 'package:spotiflac_android/utils/logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -359,6 +360,7 @@ Future<bool> showExtensionVerificationHelpDialog(
                         await _completeSessionGrantFromClipboard(
                           dialogContext,
                           extensionId,
+                          authUri,
                         );
                         if (dialogContext.mounted) {
                           setDialogState(() => clipboardGrantInFlight = false);
@@ -389,15 +391,13 @@ Future<bool> showExtensionVerificationHelpDialog(
 Future<void> _completeSessionGrantFromClipboard(
   BuildContext context,
   String extensionId,
+  Uri verificationUri,
 ) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   try {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim() ?? '';
-    final parsed = _parseSessionGrantCallback(
-      text,
-      fallbackExtensionId: extensionId,
-    );
+    final parsed = parseExtensionSessionGrantCallback(text);
     if (parsed == null) {
       messenger?.showSnackBar(
         const SnackBar(content: Text('No verification callback found')),
@@ -405,8 +405,20 @@ Future<void> _completeSessionGrantFromClipboard(
       return;
     }
 
+    final expectedState = extensionCallbackStateFromVerificationUri(
+      verificationUri,
+    );
+    if (expectedState == null || parsed.state != expectedState) {
+      messenger?.showSnackBar(
+        const SnackBar(
+          content: Text('This callback does not match the active verification'),
+        ),
+      );
+      return;
+    }
+
     final success = await PlatformBridge.completeExtensionSessionGrant(
-      parsed.extensionId,
+      extensionId.trim(),
       parsed.grant,
     );
     if (!context.mounted) return;
@@ -427,50 +439,6 @@ Future<void> _completeSessionGrantFromClipboard(
       ),
     );
   }
-}
-
-({String extensionId, String grant})? _parseSessionGrantCallback(
-  String text, {
-  required String fallbackExtensionId,
-}) {
-  final trimmed = text.trim();
-  if (trimmed.isEmpty) return null;
-
-  String? grant;
-  String? state;
-  final uri = Uri.tryParse(trimmed);
-  if (uri != null) {
-    grant = uri.queryParameters['grant'] ?? uri.queryParameters['code'];
-    state = uri.queryParameters['state'];
-
-    final nestedCallback = uri.queryParameters['cb'];
-    if ((grant == null || grant.trim().isEmpty) &&
-        nestedCallback != null &&
-        nestedCallback.trim().isNotEmpty) {
-      final nested = _parseSessionGrantCallback(
-        nestedCallback,
-        fallbackExtensionId: fallbackExtensionId,
-      );
-      if (nested != null) return nested;
-    }
-  }
-
-  grant ??= _firstRegexGroup(trimmed, RegExp(r'(?:^|[?&#\s])grant=([^&#\s]+)'));
-  grant ??= _firstRegexGroup(trimmed, RegExp(r'(?:^|[?&#\s])code=([^&#\s]+)'));
-  state ??= _firstRegexGroup(trimmed, RegExp(r'(?:^|[?&#\s])state=([^&#\s]+)'));
-
-  grant = grant == null ? null : Uri.decodeComponent(grant.trim());
-  state = state == null ? null : Uri.decodeComponent(state.trim());
-  final extension = (state != null && state.isNotEmpty)
-      ? state
-      : fallbackExtensionId.trim();
-  if (extension.isEmpty || grant == null || grant.isEmpty) return null;
-  return (extensionId: extension, grant: grant);
-}
-
-String? _firstRegexGroup(String input, RegExp regex) {
-  final match = regex.firstMatch(input);
-  return match?.group(1);
 }
 
 /// Opens an extension auth/verification page. On iOS this prefers an

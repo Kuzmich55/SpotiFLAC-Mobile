@@ -150,6 +150,32 @@ func removePendingAuthStateLocked(state string) {
 	}
 }
 
+func resolveExtensionCallbackStateLocked(state string) (string, error) {
+	extensionID := pendingAuthStates[state]
+	request := pendingAuthRequests[extensionID]
+	if extensionID == "" || request == nil || request.State != state ||
+		time.Since(request.CreatedAt) >= pendingAuthRequestTTL {
+		removePendingAuthStateLocked(state)
+		return "", fmt.Errorf("callback state is invalid, expired, or already used")
+	}
+	return extensionID, nil
+}
+
+// ResolveExtensionCallbackState validates a callback nonce without consuming
+// it. Callback handlers use this before an exchange so a transient exchange
+// failure can still be retried with the same short-lived challenge.
+func ResolveExtensionCallbackState(state string) (string, error) {
+	state = strings.TrimSpace(state)
+	if state == "" {
+		return "", fmt.Errorf("callback state is required")
+	}
+
+	pendingAuthRequestsMu.Lock()
+	extensionID, err := resolveExtensionCallbackStateLocked(state)
+	pendingAuthRequestsMu.Unlock()
+	return extensionID, err
+}
+
 func ConsumeExtensionCallbackState(state string) (string, error) {
 	state = strings.TrimSpace(state)
 	if state == "" {
@@ -157,13 +183,10 @@ func ConsumeExtensionCallbackState(state string) (string, error) {
 	}
 
 	pendingAuthRequestsMu.Lock()
-	extensionID := pendingAuthStates[state]
-	request := pendingAuthRequests[extensionID]
-	if extensionID == "" || request == nil || request.State != state ||
-		time.Since(request.CreatedAt) >= pendingAuthRequestTTL {
-		removePendingAuthStateLocked(state)
+	extensionID, err := resolveExtensionCallbackStateLocked(state)
+	if err != nil {
 		pendingAuthRequestsMu.Unlock()
-		return "", fmt.Errorf("callback state is invalid, expired, or already used")
+		return "", err
 	}
 	removePendingAuthStateLocked(state)
 	pendingAuthRequestsMu.Unlock()

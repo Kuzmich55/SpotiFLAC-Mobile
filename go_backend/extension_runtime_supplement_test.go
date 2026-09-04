@@ -83,6 +83,12 @@ func TestExtensionRuntimeAuthAndPolyfills(t *testing.T) {
 	if pending == nil || pending.AuthURL == "" || pending.State == "" || !strings.Contains(pending.AuthURL, "state=") {
 		t.Fatalf("pending auth = %#v", pending)
 	}
+	if extensionID, err := ResolveExtensionCallbackState(pending.State); err != nil || extensionID != "auth-ext" {
+		t.Fatalf("resolve callback state = %q/%v", extensionID, err)
+	}
+	if extensionID, err := ResolveExtensionCallbackState(pending.State); err != nil || extensionID != "auth-ext" {
+		t.Fatalf("resolve callback state retry = %q/%v", extensionID, err)
+	}
 	if extensionID, err := ConsumeExtensionCallbackState(pending.State); err != nil || extensionID != "auth-ext" {
 		t.Fatalf("consume callback state = %q/%v", extensionID, err)
 	}

@@ -750,7 +750,11 @@ class MainActivity: FlutterFragmentActivity() {
         var callbackExtensionId = ""
         scope.launch(Dispatchers.IO) {
             try {
-                val extId = Gobackend.consumeExtensionCallbackState(callbackState)
+                val extId = if (isSessionGrant) {
+                    Gobackend.resolveExtensionCallbackState(callbackState)
+                } else {
+                    Gobackend.consumeExtensionCallbackState(callbackState)
+                }
                 callbackExtensionId = extId
                 val json = if (isSessionGrant) {
                     Gobackend.setExtensionSessionGrantByID(extId, code)
