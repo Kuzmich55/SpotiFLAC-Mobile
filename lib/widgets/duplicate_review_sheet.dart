@@ -9,6 +9,7 @@ import 'package:spotiflac_android/providers/download_history_provider.dart';
 import 'package:spotiflac_android/providers/local_library_provider.dart';
 import 'package:spotiflac_android/services/downloaded_embedded_cover_resolver.dart';
 import 'package:spotiflac_android/services/library_database.dart';
+import 'package:spotiflac_android/utils/duplicate_cleanup_policy.dart';
 import 'package:spotiflac_android/utils/file_access.dart';
 import 'package:spotiflac_android/utils/path_match_keys.dart';
 import 'package:spotiflac_android/widgets/audio_quality_badges.dart';
@@ -41,6 +42,7 @@ class _DuplicateReviewSheetState extends ConsumerState<DuplicateReviewSheet> {
   late final LocalLibraryNotifier _localLibraryNotifier;
   late Future<List<IsrcDuplicateGroup>> _groupsFuture;
   bool _deletedLocalRows = false;
+  bool _deleteActionInProgress = false;
 
   @override
   void initState() {
@@ -151,37 +153,63 @@ class _DuplicateReviewSheetState extends ConsumerState<DuplicateReviewSheet> {
     _reload();
   }
 
+  Future<void> _confirmAndDelete({
+    required String message,
+    required List<IsrcDuplicateEntry> entries,
+    required List<IsrcDuplicateEntry> retainedEntries,
+  }) async {
+    if (_deleteActionInProgress || entries.isEmpty) return;
+    setState(() => _deleteActionInProgress = true);
+    try {
+      final confirmed = await _confirmDelete(message);
+      if (confirmed) {
+        await _deleteEntries(entries, retainedEntries: retainedEntries);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _deleteActionInProgress = false);
+      }
+    }
+  }
+
   Future<void> _keepBest(IsrcDuplicateGroup group) async {
     final toDelete = group.entries.sublist(1);
-    final confirmed = await _confirmDelete(
-      context.l10n.duplicatesKeepBestMessage(
+    await _confirmAndDelete(
+      message: context.l10n.duplicatesKeepBestMessage(
         toDelete.length,
         group.entries.first.trackName,
       ),
+      entries: toDelete,
+      retainedEntries: [group.entries.first],
     );
-    if (confirmed) {
-      await _deleteEntries(toDelete, retainedEntries: [group.entries.first]);
-    }
+  }
+
+  Future<void> _keepBestAll(List<IsrcDuplicateGroup> groups) async {
+    final plan = buildKeepBestAllDuplicatePlan(groups);
+    await _confirmAndDelete(
+      message: context.l10n.duplicatesKeepBestAllMessage(
+        plan.entriesToDelete.length,
+        plan.groupCount,
+      ),
+      entries: plan.entriesToDelete,
+      retainedEntries: plan.retainedEntries,
+    );
   }
 
   Future<void> _deleteSingle(
     IsrcDuplicateGroup group,
     IsrcDuplicateEntry entry,
   ) async {
-    final confirmed = await _confirmDelete(
-      context.l10n.duplicatesDeleteCopyMessage(entry.trackName),
+    await _confirmAndDelete(
+      message: context.l10n.duplicatesDeleteCopyMessage(entry.trackName),
+      entries: [entry],
+      retainedEntries: group.entries
+          .where(
+            (candidate) =>
+                candidate.source != entry.source || candidate.id != entry.id,
+          )
+          .toList(growable: false),
     );
-    if (confirmed) {
-      await _deleteEntries(
-        [entry],
-        retainedEntries: group.entries
-            .where(
-              (candidate) =>
-                  candidate.source != entry.source || candidate.id != entry.id,
-            )
-            .toList(growable: false),
-      );
-    }
   }
 
   @override
@@ -215,11 +243,47 @@ class _DuplicateReviewSheetState extends ConsumerState<DuplicateReviewSheet> {
         final compact = groups.length <= 12;
         return ListView.builder(
           shrinkWrap: compact,
-          itemCount: groups.length,
-          itemBuilder: (context, index) =>
-              _buildGroup(context, colorScheme, groups[index]),
+          itemCount: groups.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return _buildKeepBestAllAction(context, colorScheme, groups);
+            }
+            return _buildGroup(context, colorScheme, groups[index - 1]);
+          },
         );
       },
+    );
+  }
+
+  Widget _buildKeepBestAllAction(
+    BuildContext context,
+    ColorScheme colorScheme,
+    List<IsrcDuplicateGroup> groups,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: _deleteActionInProgress
+              ? null
+              : () => _keepBestAll(groups),
+          style: FilledButton.styleFrom(
+            backgroundColor: colorScheme.error,
+            foregroundColor: colorScheme.onError,
+          ),
+          icon: _deleteActionInProgress
+              ? SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colorScheme.onError,
+                  ),
+                )
+              : const Icon(Icons.delete_sweep_outlined),
+          label: Text(context.l10n.duplicatesKeepBestAll),
+        ),
+      ),
     );
   }
 
@@ -260,7 +324,9 @@ class _DuplicateReviewSheetState extends ConsumerState<DuplicateReviewSheet> {
                 ),
               ),
               TextButton(
-                onPressed: () => _keepBest(group),
+                onPressed: _deleteActionInProgress
+                    ? null
+                    : () => _keepBest(group),
                 child: Text(context.l10n.duplicatesKeepBest),
               ),
             ],
@@ -295,7 +361,9 @@ class _DuplicateReviewSheetState extends ConsumerState<DuplicateReviewSheet> {
                 : IconButton(
                     tooltip: context.l10n.dialogDelete,
                     icon: Icon(Icons.delete_outline, color: colorScheme.error),
-                    onPressed: () => _deleteSingle(group, group.entries[i]),
+                    onPressed: _deleteActionInProgress
+                        ? null
+                        : () => _deleteSingle(group, group.entries[i]),
                   ),
           ),
       ],

@@ -854,6 +854,22 @@
   "@duplicatesKeepBest": {
     "description": "Button that deletes all but the highest-quality copy in a duplicate group"
   },
+  "duplicatesKeepBestAll": "Keep best for all",
+  "@duplicatesKeepBestAll": {
+    "description": "Button that keeps the highest-quality copy in every duplicate group and deletes the rest"
+  },
+  "duplicatesKeepBestAllMessage": "Keep the best copy of {groupCount} {groupCount, plural, =1{track} other{tracks}} and delete {count} lower-quality {count, plural, =1{copy} other{copies}}?\n\nThe deleted files will be removed from storage.",
+  "@duplicatesKeepBestAllMessage": {
+    "description": "Confirmation message for keeping the best copy across every duplicate group",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "groupCount": {
+        "type": "int"
+      }
+    }
+  },
   "duplicatesKeepBestMessage": "Delete {count} lower-quality copies of \"{trackName}\"?",
   "@duplicatesKeepBestMessage": {
     "description": "Confirmation message for the keep-best action",

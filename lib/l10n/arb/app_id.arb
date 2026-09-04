@@ -1551,7 +1551,7 @@
   "@searchSortTitleZA": {
     "description": "Sort option - title descending"
   },
-  "tutorialLibraryTip2": "Tap a track to play it with the built-in player",
+  "tutorialLibraryTip2": "Ketuk lagu untuk memutarnya dengan pemutar bawaan",
   "@tutorialLibraryTip2": {
     "description": "Tutorial library tip 2"
   },
@@ -6168,6 +6168,8 @@
   "duplicatesTitle": "Duplikat",
   "duplicatesEmpty": "Tidak menemukan lagu duplikat.",
   "duplicatesKeepBest": "Simpan lagu kualitas terbaik",
+  "duplicatesKeepBestAll": "Simpan yang terbaik untuk semua",
+  "duplicatesKeepBestAllMessage": "Simpan salinan terbaik dari {groupCount} lagu dan hapus {count} salinan berkualitas lebih rendah?\n\nFile yang dihapus juga akan dihapus dari penyimpanan.",
   "duplicatesKeepBestMessage": "Hapus {count} salinan kualitas rendah lagu \"{trackName}\"?",
   "duplicatesDeleteCopyMessage": "Hapus salinan lagu \"{trackName}\"?",
   "appearanceForceBlur": "Selalu gunakan efek blur",

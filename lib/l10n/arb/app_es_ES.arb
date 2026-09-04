@@ -1,7 +1,7 @@
 {
   "@@locale": "es_ES",
   "@@last_modified": "2026-04-28",
-  "appName": "SpotiFLAC Móvil",
+  "appName": "SpotiFLAC Mobile",
   "@appName": {
     "description": "App name - DO NOT TRANSLATE"
   },
@@ -2624,7 +2624,7 @@
       }
     }
   },
-  "tutorialWelcomeTitle": "¡Bienvenido a SpotiFLAC Móvil!",
+  "tutorialWelcomeTitle": "¡Bienvenido a SpotiFLAC Mobile!",
   "@tutorialWelcomeTitle": {
     "description": "Tutorial welcome page title"
   },
