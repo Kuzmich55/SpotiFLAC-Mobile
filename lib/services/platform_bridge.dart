@@ -1826,7 +1826,10 @@ class PlatformBridge {
         'options': optionsJson,
         'request_id': requestId,
       });
-      final decoded = _decodeMapListResult(result, 'customSearchWithExtension');
+      final decoded = await _decodeMapListResultAsync(
+        result,
+        'customSearchWithExtension',
+      );
       if (generation == _lookupCacheGeneration &&
           _customSearchInFlight[cacheKey]?.requestId == requestId) {
         _putMemoryCachedMapList(
