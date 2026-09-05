@@ -180,15 +180,17 @@ func (c *signedSessionCoordinator) clearChallenge() {
 	c.pendingExtensionIDs = nil
 }
 
-func (c *signedSessionCoordinator) rememberChallenge(extensionID, authURL, callbackURL, callbackState string) {
+func (c *signedSessionCoordinator) rememberChallenge(request *PendingAuthRequest) {
 	if c.pendingExtensionIDs == nil {
 		c.pendingExtensionIDs = make(map[string]struct{})
 	}
-	c.authURL = authURL
-	c.callbackURL = callbackURL
-	c.callbackState = callbackState
-	c.challengeCreatedAt = time.Now()
-	c.pendingExtensionIDs[extensionID] = struct{}{}
+	c.authURL = request.AuthURL
+	c.callbackURL = request.CallbackURL
+	c.callbackState = request.State
+	// Reusers must register the exact same challenge identity, including its
+	// original timestamp. A fresh time both breaks nonce sharing and extends TTL.
+	c.challengeCreatedAt = request.CreatedAt
+	c.pendingExtensionIDs[request.ExtensionID] = struct{}{}
 }
 
 func (c *signedSessionCoordinator) activeChallenge() bool {
@@ -1285,12 +1287,7 @@ func (r *extensionRuntime) startSignedSessionVerificationLocked(
 	if pending := GetPendingAuthRequest(r.extensionID); pending != nil {
 		if time.Since(pending.CreatedAt) < pendingAuthRequestTTL &&
 			strings.TrimSpace(pending.AuthURL) != "" {
-			coordinator.rememberChallenge(
-				r.extensionID,
-				pending.AuthURL,
-				pending.CallbackURL,
-				pending.State,
-			)
+			coordinator.rememberChallenge(pending)
 			return pending.AuthURL, nil
 		}
 		ClearPendingAuthRequest(r.extensionID)
@@ -1367,12 +1364,7 @@ func (r *extensionRuntime) startSignedSessionVerificationLocked(
 		if registerErr := registerPendingAuthRequest(request); registerErr != nil {
 			finalErr = registerErr
 		} else {
-			coordinator.rememberChallenge(
-				r.extensionID,
-				bootstrap.AuthURL,
-				bootstrap.CallbackURL,
-				bootstrap.CallbackState,
-			)
+			coordinator.rememberChallenge(request)
 			authURL = bootstrap.AuthURL
 		}
 	}

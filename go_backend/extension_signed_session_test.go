@@ -437,6 +437,58 @@ func TestParallelSignedSessionPreflightSharesOneBootstrap(t *testing.T) {
 	if got := calls.Load(); got != 1 {
 		t.Fatalf("parallel preflight bootstrap calls = %d, want 1", got)
 	}
+	pendingA := GetPendingAuthRequest("provider-a")
+	pendingB := GetPendingAuthRequest("provider-b")
+	if pendingA == nil || pendingB == nil || pendingA.State != pendingB.State ||
+		!pendingA.CreatedAt.Equal(pendingB.CreatedAt) {
+		t.Fatal("shared bootstrap must preserve the same nonce and creation time")
+	}
+	if _, err := ConsumeExtensionCallbackState(pendingA.State); err != nil {
+		t.Fatalf("shared callback cannot be consumed: %v", err)
+	}
+	if GetPendingAuthRequest("provider-a") != nil || GetPendingAuthRequest("provider-b") != nil {
+		t.Fatal("consuming a shared callback must clear every alias")
+	}
+	if _, err := ConsumeExtensionCallbackState(pendingA.State); err == nil {
+		t.Fatal("shared callback replay was accepted")
+	}
+}
+
+func TestRememberSignedSessionChallengePreservesOriginalLifetime(t *testing.T) {
+	request := &PendingAuthRequest{
+		ExtensionID: "remember-original", AuthURL: "https://auth.example.com/challenge",
+		CallbackURL: "spotiflac://callback", State: "remember-original-state",
+		CreatedAt: time.Now().Add(-2 * time.Minute),
+	}
+	if err := registerPendingAuthRequest(request); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		ClearPendingAuthRequest("remember-original")
+		ClearPendingAuthRequest("remember-shared")
+	})
+	coordinator := &signedSessionCoordinator{}
+	coordinator.rememberChallenge(request)
+	if !coordinator.challengeCreatedAt.Equal(request.CreatedAt) {
+		t.Fatal("remembering an existing challenge reset its TTL")
+	}
+	runtime := &extensionRuntime{extensionID: "remember-shared"}
+	coordinator.mu.Lock()
+	_, err := runtime.startSignedSessionVerificationLocked(SignedSessionConfig{}, coordinator, "test")
+	coordinator.mu.Unlock()
+	if err != nil {
+		t.Fatalf("reusing a remembered challenge: %v", err)
+	}
+	shared := GetPendingAuthRequest("remember-shared")
+	if shared == nil || !shared.CreatedAt.Equal(request.CreatedAt) {
+		t.Fatal("shared request lost the original challenge timestamp")
+	}
+	expired := *request
+	expired.CreatedAt = time.Now().Add(-pendingAuthRequestTTL - time.Second)
+	coordinator.rememberChallenge(&expired)
+	if coordinator.activeChallenge() {
+		t.Fatal("remembering an expired challenge made it active again")
+	}
 }
 
 func TestParallelSignedSessionPreflightSharesBootstrapFailure(t *testing.T) {
