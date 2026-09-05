@@ -220,6 +220,161 @@ void main() {
     },
   );
 
+  test(
+    'cached SAF previews batch validation and throttle repeated hits',
+    () async {
+      var now = DateTime.utc(2026);
+      DownloadedEmbeddedCoverResolver.setValidationClockForTesting(() => now);
+      final paths = List.generate(
+        18,
+        (index) => 'content://covers/document/$index',
+      );
+      final batches = <List<String>>[];
+      var extractions = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(backendChannel, (call) async {
+            final args = call.arguments as Map;
+            if (call.method == 'getSafFileModTimes') {
+              final uris = (jsonDecode(args['uris'] as String) as List)
+                  .cast<String>();
+              batches.add(uris);
+              return jsonEncode({for (final path in uris) path: 1234});
+            }
+            expect(call.method, 'extractCoverToFile');
+            extractions++;
+            await File(args['output_path'] as String).writeAsBytes([1, 2, 3]);
+            return jsonEncode({'success': true});
+          });
+      for (final path in paths) {
+        expect(
+          await DownloadedEmbeddedCoverResolver.resolveOrExtract(path),
+          isNotNull,
+        );
+      }
+      batches.clear();
+      for (final path in paths) {
+        DownloadedEmbeddedCoverResolver.resolve(path);
+        DownloadedEmbeddedCoverResolver.resolve(path);
+      }
+      await DownloadedEmbeddedCoverResolver.waitForPreviewValidationForTesting();
+      expect(batches.map((batch) => batch.length), [8, 8, 2]);
+      expect(batches.expand((batch) => batch).toSet(), paths.toSet());
+      for (final path in paths) {
+        DownloadedEmbeddedCoverResolver.resolve(path);
+      }
+      await DownloadedEmbeddedCoverResolver.waitForPreviewValidationForTesting();
+      expect(batches.length, 3);
+      now = now.add(const Duration(seconds: 5));
+      for (final path in paths) {
+        DownloadedEmbeddedCoverResolver.resolve(path);
+      }
+      await DownloadedEmbeddedCoverResolver.waitForPreviewValidationForTesting();
+      expect(batches.length, 6);
+      expect(extractions, paths.length);
+      // Explicit edits bypass the interval, even immediately after validation.
+      await DownloadedEmbeddedCoverResolver.scheduleRefreshForPath(
+        paths.first,
+        force: true,
+      );
+      await DownloadedEmbeddedCoverResolver.resolveOrExtract(paths.first);
+      expect(extractions, paths.length + 1);
+    },
+  );
+
+  test(
+    'validation shares callbacks and detects external changes after interval',
+    () async {
+      var now = DateTime.utc(2026);
+      DownloadedEmbeddedCoverResolver.setValidationClockForTesting(() => now);
+      const path = 'content://covers/document/external';
+      var modTime = 1234;
+      var extractions = 0;
+      var modTimeCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(backendChannel, (call) async {
+            if (call.method == 'getSafFileModTimes') {
+              modTimeCalls++;
+              return jsonEncode({path: modTime});
+            }
+            expect(call.method, 'extractCoverToFile');
+            extractions++;
+            await File(
+              (call.arguments as Map)['output_path'] as String,
+            ).writeAsBytes([1, 2, 3]);
+            return jsonEncode({'success': true});
+          });
+      await DownloadedEmbeddedCoverResolver.resolveOrExtract(path);
+      DownloadedEmbeddedCoverResolver.resolve(path);
+      await DownloadedEmbeddedCoverResolver.waitForPreviewValidationForTesting();
+      modTime = 5678;
+      DownloadedEmbeddedCoverResolver.resolve(path);
+      await DownloadedEmbeddedCoverResolver.waitForPreviewValidationForTesting();
+      expect(extractions, 1);
+      expect(modTimeCalls, 2);
+      now = now.add(const Duration(seconds: 5));
+      var firstNotified = 0;
+      var secondNotified = 0;
+      DownloadedEmbeddedCoverResolver.resolve(
+        path,
+        onChanged: () => firstNotified++,
+      );
+      DownloadedEmbeddedCoverResolver.resolve(
+        path,
+        onChanged: () => secondNotified++,
+      );
+      await DownloadedEmbeddedCoverResolver.waitForPreviewValidationForTesting();
+      expect(extractions, 2);
+      expect(firstNotified, 1);
+      expect(secondNotified, 1);
+    },
+  );
+
+  test(
+    'invalidation during a pending validation cannot restore stale artwork',
+    () async {
+      const path = 'content://covers/document/invalidation';
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      var modTimeCalls = 0;
+      var extractions = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(backendChannel, (call) async {
+            if (call.method == 'getSafFileModTimes') {
+              if (++modTimeCalls == 2) {
+                entered.complete();
+                await release.future;
+                return jsonEncode({path: 5678});
+              }
+              return jsonEncode({path: 1234});
+            }
+            expect(call.method, 'extractCoverToFile');
+            extractions++;
+            await File(
+              (call.arguments as Map)['output_path'] as String,
+            ).writeAsBytes([1, 2, 3]);
+            return jsonEncode({'success': true});
+          });
+      final preview = await DownloadedEmbeddedCoverResolver.resolveOrExtract(
+        path,
+      );
+      var notified = false;
+      DownloadedEmbeddedCoverResolver.resolve(
+        path,
+        onChanged: () => notified = true,
+      );
+      await entered.future.timeout(const Duration(seconds: 2));
+      await DownloadedEmbeddedCoverResolver.invalidate(path);
+      release.complete();
+      await DownloadedEmbeddedCoverResolver.waitForPreviewValidationForTesting();
+      expect(extractions, 1);
+      expect(notified, isFalse);
+      expect(await File(preview!).exists(), isFalse);
+    },
+  );
+
   test('foreground extraction is promoted ahead of background jobs', () async {
     final paths = await Future.wait([
       for (var index = 0; index < 4; index++)

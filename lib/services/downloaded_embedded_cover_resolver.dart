@@ -13,12 +13,25 @@ class _EmbeddedCoverCacheEntry {
   final String previewPath;
   final int? sourceModTimeMillis;
   final bool isPersistent;
+  DateTime? lastValidatedAt;
 
-  const _EmbeddedCoverCacheEntry({
+  _EmbeddedCoverCacheEntry({
     required this.previewPath,
     required this.isPersistent,
     this.sourceModTimeMillis,
   });
+}
+
+class _PendingPreviewValidation {
+  final _EmbeddedCoverCacheEntry entry;
+  final Set<VoidCallback> callbacks = {};
+  _PendingPreviewValidation(this.entry);
+
+  void notify() {
+    for (final callback in callbacks) {
+      callback();
+    }
+  }
 }
 
 class _PendingEmbeddedCoverExtraction {
@@ -74,7 +87,12 @@ class DownloadedEmbeddedCoverResolver {
   static bool _drainScheduled = false;
   static final Map<String, int> _cacheGeneration = <String, int>{};
   static final Set<String> _pendingRefresh = <String>{};
-  static final Set<String> _pendingPreviewValidation = <String>{};
+  static final _pendingPreviewValidation = <String, _PendingPreviewValidation>{};
+  static Future<void>? _previewValidationFuture;
+  static const _previewValidationInterval = Duration(seconds: 5);
+  static const _previewValidationBatchSize = 8;
+  static const _maxPendingPreviewValidations = 64;
+  static DateTime Function() _validationClock = DateTime.now;
   static final LinkedHashSet<String> _failedExtract = LinkedHashSet<String>();
 
   static Directory? _persistentCacheDirectoryOverride;
@@ -243,6 +261,7 @@ class DownloadedEmbeddedCoverResolver {
     _cache.clear();
     _pendingRefresh.clear();
     _pendingPreviewValidation.clear();
+    await _previewValidationFuture;
     _failedExtract.clear();
     for (final entry in entries) {
       if (!entry.isPersistent) await _cleanupTempCoverPath(entry.previewPath);
@@ -290,6 +309,8 @@ class DownloadedEmbeddedCoverResolver {
     _backgroundExtractionQueue.clear();
     _pendingRefresh.clear();
     _pendingPreviewValidation.clear();
+    await _previewValidationFuture;
+    _validationClock = DateTime.now;
     _failedExtract.clear();
     _cacheGeneration.clear();
     _drainScheduled = false;
@@ -356,38 +377,108 @@ class DownloadedEmbeddedCoverResolver {
     _EmbeddedCoverCacheEntry entry, {
     VoidCallback? onChanged,
   }) {
-    if (_pendingPreviewValidation.contains(cleanPath)) return;
-    _pendingPreviewValidation.add(cleanPath);
-    Future.microtask(() async {
-      try {
-        final exists = await fileExists(entry.previewPath);
-        final latest = _cache[cleanPath];
-        if (!identical(latest, entry)) return;
+    final existing = _pendingPreviewValidation[cleanPath];
+    if (existing != null && identical(existing.entry, entry)) {
+      if (onChanged != null) existing.callbacks.add(onChanged);
+      return;
+    }
+    final lastValidated = entry.lastValidatedAt;
+    if (lastValidated != null &&
+        _validationClock().difference(lastValidated) <
+            _previewValidationInterval) {
+      return;
+    }
+    if (_pendingPreviewValidation.length >= _maxPendingPreviewValidations) {
+      return; // A later visible cache hit can retry; extraction is unaffected.
+    }
+    final request = _PendingPreviewValidation(entry);
+    if (onChanged != null) request.callbacks.add(onChanged);
+    _pendingPreviewValidation[cleanPath] = request;
+    _previewValidationFuture ??= Future.microtask(_drainPreviewValidations);
+  }
 
-        if (!exists) {
-          _cache.remove(cleanPath);
-          _failedExtract.remove(cleanPath);
-          await _cleanupCacheEntry(entry);
-          onChanged?.call();
-          return;
-        }
-
-        final cachedModTime = entry.sourceModTimeMillis;
-        if (cachedModTime != null) {
-          final currentModTime = await readFileModTimeMillis(cleanPath);
-          if (currentModTime != null && currentModTime != cachedModTime) {
-            await _ensureCover(
-              cleanPath,
-              forceRefresh: true,
-              knownModTime: currentModTime,
-              onChanged: onChanged,
-            );
+  static Future<void> _drainPreviewValidations() async {
+    try {
+      while (_pendingPreviewValidation.isNotEmpty) {
+        final batch = _pendingPreviewValidation.entries
+            .take(_previewValidationBatchSize)
+            .toList(growable: false);
+        final safPaths = batch
+            .where(
+              (item) =>
+                  isContentUri(item.key) &&
+                  item.value.entry.sourceModTimeMillis != null,
+            )
+            .map((item) => item.key)
+            .toList(growable: false);
+        Map<String, int> safModTimes = const {};
+        if (safPaths.isNotEmpty) {
+          try {
+            safModTimes = await PlatformBridge.getSafFileModTimes(safPaths);
+          } catch (_) {
+            // An unavailable provider is not evidence of changed artwork.
           }
         }
-      } finally {
-        _pendingPreviewValidation.remove(cleanPath);
+        await Future.wait(
+          batch.map((item) async {
+            final path = item.key;
+            final request = item.value;
+            final entry = request.entry;
+            bool isCurrent() =>
+                identical(_cache[path], entry) &&
+                identical(_pendingPreviewValidation[path], request);
+            try {
+              if (!isCurrent()) return;
+              final exists = await fileExists(entry.previewPath);
+              if (!isCurrent()) return;
+              if (!exists) {
+                _cache.remove(path);
+                _failedExtract.remove(path);
+                await _cleanupCacheEntry(entry);
+                request.notify();
+                return;
+              }
+              final cachedModTime = entry.sourceModTimeMillis;
+              final currentModTime = cachedModTime == null
+                  ? null
+                  : isContentUri(path)
+                  ? safModTimes[path]
+                  : await readFileModTimeMillis(path);
+              if (!isCurrent()) return;
+              entry.lastValidatedAt = _validationClock();
+              if (currentModTime != null &&
+                  currentModTime > 0 &&
+                  currentModTime != cachedModTime) {
+                await _ensureCover(
+                  path,
+                  forceRefresh: true,
+                  knownModTime: currentModTime,
+                  onChanged: request.notify,
+                );
+              }
+            } catch (_) {
+              // Keep the cached preview on inconclusive I/O failures.
+            } finally {
+              if (identical(_pendingPreviewValidation[path], request)) {
+                _pendingPreviewValidation.remove(path);
+              }
+            }
+          }),
+        );
       }
-    });
+    } finally {
+      _previewValidationFuture = null;
+    }
+  }
+
+  @visibleForTesting
+  static void setValidationClockForTesting(DateTime Function() clock) {
+    _validationClock = clock;
+  }
+
+  @visibleForTesting
+  static Future<void> waitForPreviewValidationForTesting() async {
+    await _previewValidationFuture;
   }
 
   static Future<String?> _ensureCover(
