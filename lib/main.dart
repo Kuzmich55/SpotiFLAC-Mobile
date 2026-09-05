@@ -251,6 +251,7 @@ class _EagerInitializationState extends ConsumerState<_EagerInitialization>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    CoverCacheManager.stopMaintenance();
     _localLibraryEnabledSub?.close();
     _downloadHistoryWarmupTimer?.cancel();
     _localLibraryWarmupTimer?.cancel();
@@ -260,6 +261,7 @@ class _EagerInitializationState extends ConsumerState<_EagerInitialization>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      CoverCacheManager.scheduleMaintenance();
       _maybeAutoScanLocalLibrary();
       if (ref.exists(localLibraryProvider)) {
         unawaited(
@@ -274,6 +276,7 @@ class _EagerInitializationState extends ConsumerState<_EagerInitialization>
             .resumePendingDownloadsOnForeground();
       }
     } else if (state == AppLifecycleState.paused) {
+      CoverCacheManager.stopMaintenance();
       // Last reliable moment before the OS may kill the process: make sure
       // any debounced download-queue persistence reaches disk.
       if (ref.exists(downloadQueueProvider)) {

@@ -5,6 +5,8 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:spotiflac_android/utils/cache_byte_budget.dart';
+import 'package:spotiflac_android/utils/periodic_async_task.dart';
 
 /// Persistent cache manager for album/track cover images.
 ///
@@ -17,13 +19,30 @@ class CoverCacheManager {
   static const Duration _maxCacheAge = Duration(days: 365);
   // flutter_cache_manager only caps object count, not bytes; hi-res covers
   // run 300KB-1.5MB each, so 1000 objects can mean hundreds of MB on a
-  // storage-starved device. Sweep oldest files past the byte cap on init.
+  // storage-starved device. Sweep periodically while the app is foregrounded.
   static const int _maxCacheBytes = 150 << 20;
   static const int _sweepTargetBytes = 120 << 20;
 
   static CacheManager? _instance;
   static bool _initialized = false;
-  static bool _maintenanceScheduled = false;
+  static Future<void> _cacheWork = Future<void>.value();
+  static final _maintenance = PeriodicAsyncTask(
+    interval: const Duration(minutes: 15),
+    run: () => _serializeCacheWork(() async {
+      final cachePath = _cachePath;
+      if (cachePath == null) return;
+      final deleted = await trimCacheToByteBudget(
+        Directory(cachePath),
+        maxBytes: _maxCacheBytes,
+        targetBytes: _sweepTargetBytes,
+      );
+      if (deleted > 0) {
+        debugPrint('CoverCacheManager: Trimmed $deleted cached covers');
+      }
+    }),
+    onError: (error, _) =>
+        debugPrint('CoverCacheManager: Sweep failed: $error'),
+  );
   static String? _cachePath;
 
   static CacheManager get instance {
@@ -58,57 +77,29 @@ class CoverCacheManager {
     }
   }
 
-  /// Runs byte-cap maintenance after startup work has settled. Calling this
-  /// repeatedly is cheap; only the first call schedules a sweep.
+  /// Runs after startup and periodically thereafter. The next sweep is
+  /// scheduled after completion, so even slow storage cannot overlap sweeps.
   static void scheduleMaintenance({
     Duration delay = const Duration(seconds: 20),
   }) {
-    if (_maintenanceScheduled) return;
-    _maintenanceScheduled = true;
-    unawaited(
-      Future<void>.delayed(delay).then((_) async {
-        final cachePath = _cachePath;
-        if (cachePath != null) await _sweepOverByteCap(cachePath);
-      }),
-    );
+    _maintenance.start(delay: delay);
   }
 
-  /// Deletes oldest cover files until the cache is back under
-  /// [_sweepTargetBytes]. Stale JSON repo entries self-heal: a missing file
-  /// is a cache miss and gets re-downloaded on demand.
-  static Future<void> _sweepOverByteCap(String cachePath) async {
-    try {
-      final dir = Directory(cachePath);
-      if (!await dir.exists()) return;
-
-      final files = <File>[];
-      var totalSize = 0;
-      await for (final entity in dir.list(recursive: true)) {
-        if (entity is File && !entity.path.endsWith('.json')) {
-          files.add(entity);
-          totalSize += await entity.length();
-        }
-      }
-      if (totalSize <= _maxCacheBytes) return;
-
-      final stats = <File, FileStat>{
-        for (final file in files) file: await file.stat(),
-      };
-      files.sort((a, b) => stats[a]!.modified.compareTo(stats[b]!.modified));
-      for (final file in files) {
-        if (totalSize <= _sweepTargetBytes) break;
-        try {
-          totalSize -= stats[file]!.size;
-          await file.delete();
-        } catch (_) {}
-      }
-      debugPrint('CoverCacheManager: Swept cover cache over byte cap');
-    } catch (e) {
-      debugPrint('CoverCacheManager: Byte-cap sweep failed: $e');
-    }
+  static void stopMaintenance() {
+    _maintenance.stop();
   }
 
-  static Future<void> clearCache() async {
+  static Future<void> _serializeCacheWork(Future<void> Function() operation) {
+    final next = _cacheWork.then((_) => operation());
+    _cacheWork = next.catchError((Object error) {
+      debugPrint('CoverCacheManager: Cache maintenance failed: $error');
+    });
+    return next;
+  }
+
+  static Future<void> clearCache() => _serializeCacheWork(_clearCache);
+
+  static Future<void> _clearCache() async {
     if (!_initialized || _instance == null || _cachePath == null) {
       await initialize();
     }
