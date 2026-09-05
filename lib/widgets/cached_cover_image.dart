@@ -41,10 +41,38 @@ class CachedCoverImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final autoMemCacheWidth =
+    if (width != null ||
+        height != null ||
+        memCacheWidth != null ||
+        memCacheHeight != null) {
+      return _buildImage(context, const BoxConstraints());
+    }
+    // Grid cells size their children through constraints rather than explicit
+    // width/height. Use those bounds for decoding as well as explicit sizes.
+    return LayoutBuilder(
+      builder: (context, constraints) => _buildImage(context, constraints),
+    );
+  }
+
+  Widget _buildImage(BuildContext context, BoxConstraints constraints) {
+    var autoMemCacheWidth =
         memCacheWidth ?? _cacheExtentForLogicalSize(context, width);
-    final autoMemCacheHeight =
+    var autoMemCacheHeight =
         memCacheHeight ?? _cacheExtentForLogicalSize(context, height);
+    if (autoMemCacheWidth == null && autoMemCacheHeight == null) {
+      // Infer one axis to preserve the source aspect ratio and respect any
+      // explicit decode override used by large artwork/header consumers.
+      autoMemCacheWidth = _cacheExtentForLogicalSize(
+        context,
+        constraints.maxWidth,
+      );
+      if (autoMemCacheWidth == null) {
+        autoMemCacheHeight = _cacheExtentForLogicalSize(
+          context,
+          constraints.maxHeight,
+        );
+      }
+    }
     final diskCacheWidth = resizeDiskCache ? autoMemCacheWidth : null;
     final diskCacheHeight = resizeDiskCache ? autoMemCacheHeight : null;
     final image = CachedNetworkImage(
