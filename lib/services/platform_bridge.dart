@@ -611,6 +611,9 @@ class PlatformBridge {
   }) {
     for (final entry in _customSearchInFlight.entries.toList()) {
       if (entry.key == exceptKey || entry.value.scopeKey != scopeKey) continue;
+      // A cancelled request must not be reused if the user types its query
+      // again before the native cancellation finishes.
+      _customSearchInFlight.remove(entry.key);
       _cancelExtensionRequestUnawaited(entry.value.requestId);
     }
   }
@@ -1824,7 +1827,8 @@ class PlatformBridge {
         'request_id': requestId,
       });
       final decoded = _decodeMapListResult(result, 'customSearchWithExtension');
-      if (generation == _lookupCacheGeneration) {
+      if (generation == _lookupCacheGeneration &&
+          _customSearchInFlight[cacheKey]?.requestId == requestId) {
         _putMemoryCachedMapList(
           _customSearchCache,
           cacheKey,

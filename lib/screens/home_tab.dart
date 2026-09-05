@@ -70,8 +70,7 @@ class _HomeTabState extends ConsumerState<HomeTab>
   late final ProviderSubscription<bool> _homeFeedExtSub;
 
   Timer? _liveSearchDebounce;
-  bool _isLiveSearchInProgress = false;
-  String? _pendingLiveSearchQuery;
+  int _searchGeneration = 0;
   static const int _minLiveSearchChars = 3;
   static const Duration _liveSearchDelay = Duration(milliseconds: 800);
 
@@ -396,40 +395,21 @@ class _HomeTabState extends ConsumerState<HomeTab>
   }
 
   Future<void> _executeLiveSearch(String query) async {
-    if (_isLiveSearchInProgress) {
-      _pendingLiveSearchQuery = query;
-      return;
-    }
-
-    _isLiveSearchInProgress = true;
-    _pendingLiveSearchQuery = null;
-
-    try {
-      await _performSearch(query);
-    } finally {
-      _isLiveSearchInProgress = false;
-
-      final pending = _pendingLiveSearchQuery;
-      _pendingLiveSearchQuery = null;
-
-      if (pending != null &&
-          pending != query &&
-          mounted &&
-          _urlController.text.trim() == pending) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        if (mounted && _urlController.text.trim() == pending) {
-          _executeLiveSearch(pending);
-        }
-      }
-    }
+    if (!mounted || _urlController.text.trim() != query) return;
+    // The provider cancels the preceding native request and rejects stale
+    // results. Let the latest debounced input reach that cancellation path.
+    await _performSearch(query);
   }
 
   Future<void> _performSearch(String query, {String? filterOverride}) async {
+    final generation = ++_searchGeneration;
     var extState = ref.read(extensionProvider);
     if (!extState.isInitialized && extState.error == null) {
       await ref.read(extensionProvider.notifier).waitForInitialization();
+      if (!mounted || generation != _searchGeneration) return;
       extState = ref.read(extensionProvider);
     }
+    if (!mounted || generation != _searchGeneration) return;
 
     final settings = ref.read(settingsProvider);
     final searchProvider = HomeSearchProviderPolicy.resolveProvider(
@@ -501,7 +481,9 @@ class _HomeTabState extends ConsumerState<HomeTab>
           .read(trackProvider.notifier)
           .search(query, filterOverride: selectedFilter);
     }
-    ref.read(settingsProvider.notifier).setHasSearchedBefore();
+    if (mounted && generation == _searchGeneration) {
+      ref.read(settingsProvider.notifier).setHasSearchedBefore();
+    }
   }
 
   Future<void> _pasteFromClipboard() async {
@@ -524,7 +506,7 @@ class _HomeTabState extends ConsumerState<HomeTab>
     _isResettingSearchSurface = true;
     try {
       _liveSearchDebounce?.cancel();
-      _pendingLiveSearchQuery = null;
+      _searchGeneration++;
       _lastSearchQuery = null;
       _activeSearchInput = null;
       FocusManager.instance.primaryFocus?.unfocus();

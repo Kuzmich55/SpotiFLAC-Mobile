@@ -824,7 +824,7 @@ extension _HomeTabSearchResultsUI on _HomeTabState {
 
   void _onSearchSubmitted() {
     _liveSearchDebounce?.cancel();
-    _pendingLiveSearchQuery = null;
+    _searchGeneration++;
 
     final text = _urlController.text.trim();
     if (text.isEmpty) return;
