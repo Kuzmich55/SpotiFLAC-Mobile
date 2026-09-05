@@ -96,6 +96,19 @@ func readCachedJSONMapLocked(
 	path string,
 	load func() (map[string]any, error),
 ) (map[string]any, error) {
+	snapshot, err := cachedJSONMapLocked(path, load)
+	if err != nil {
+		return nil, err
+	}
+	return cloneJSONMap(snapshot), nil
+}
+
+// cachedJSONMapLocked returns the shared, read-only cache entry. Never expose
+// it to a VM or mutate it. Callers must hold the path-specific file mutex.
+func cachedJSONMapLocked(
+	path string,
+	load func() (map[string]any, error),
+) (map[string]any, error) {
 	identity, err := extensionFileIdentityForPath(path)
 	if err != nil {
 		return nil, err
@@ -103,7 +116,7 @@ func readCachedJSONMapLocked(
 	if cached, ok := extensionJSONCaches.Load(path); ok {
 		entry := cached.(*extensionJSONCacheEntry)
 		if entry.identity == identity {
-			return cloneJSONMap(entry.snapshot), nil
+			return entry.snapshot, nil
 		}
 	}
 
@@ -113,9 +126,18 @@ func readCachedJSONMapLocked(
 	}
 	extensionJSONCaches.Store(path, &extensionJSONCacheEntry{
 		identity: identity,
-		snapshot: cloneJSONMap(snapshot),
+		snapshot: snapshot,
 	})
 	return snapshot, nil
+}
+
+func readCachedJSONValueLocked(path, key string, load func() (map[string]any, error)) (any, bool, error) {
+	snapshot, err := cachedJSONMapLocked(path, load)
+	if err != nil {
+		return nil, false, err
+	}
+	value, exists := snapshot[key]
+	return cloneJSONValue(value), exists, nil
 }
 
 func storeCachedJSONMapLocked(path string, snapshot map[string]any) error {
@@ -223,14 +245,18 @@ func (r *extensionRuntime) storageGet(call goja.FunctionCall) goja.Value {
 
 	key := call.Arguments[0].String()
 
-	if err := r.refreshStorage(); err != nil {
+	path := r.getStoragePath()
+	fileMu := extensionFileMu(path)
+	fileMu.Lock()
+	value, exists, err := readCachedJSONValueLocked(path, key, func() (map[string]any, error) {
+		return readJSONMapFile(path)
+	})
+	fileMu.Unlock()
+	if err != nil {
 		GoLog("[Extension:%s] Storage load error: %v\n", r.extensionID, err)
 		return goja.Undefined()
 	}
 
-	r.storageMu.RLock()
-	value, exists := r.storageCache[key]
-	r.storageMu.RUnlock()
 	if !exists {
 		if len(call.Arguments) > 1 {
 			return call.Arguments[1]

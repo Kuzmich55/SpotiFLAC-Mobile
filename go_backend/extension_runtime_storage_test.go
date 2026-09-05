@@ -3,6 +3,7 @@ package gobackend
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -65,6 +66,79 @@ func TestExtensionJSONCacheUsesIdentityAndIsolatesSnapshots(t *testing.T) {
 	}
 	if loads != 2 || third["value"] != "external update" {
 		t.Fatalf("external update was not reloaded: loads=%d data=%#v", loads, third)
+	}
+}
+
+func TestExtensionStorageKeyReadIsolatedAndFresh(t *testing.T) {
+	dataDir := t.TempDir()
+	ext := &loadedExtension{ID: "key-read", Manifest: &ExtensionManifest{Name: "key-read"}, DataDir: dataDir}
+	a := newExtensionRuntime(ext)
+	b := newExtensionRuntime(ext)
+	a.RegisterAPIs(goja.New())
+	b.RegisterAPIs(goja.New())
+	setStorageValue(t, a, "nested", map[string]any{"items": []any{map[string]any{"value": "original"}}})
+	read := func(r *extensionRuntime, key string) goja.Value {
+		return r.storageGet(goja.FunctionCall{Arguments: []goja.Value{r.vm.ToValue(key)}})
+	}
+	value := read(a, "nested").ToObject(a.vm)
+	items := value.Get("items").ToObject(a.vm)
+	if err := items.Get("0").ToObject(a.vm).Set("value", "local mutation"); err != nil {
+		t.Fatal(err)
+	}
+	for _, runtime := range []*extensionRuntime{a, b} {
+		got := read(runtime, "nested").ToObject(runtime.vm).Get("items").ToObject(runtime.vm).Get("0").ToObject(runtime.vm).Get("value").String()
+		if got != "original" {
+			t.Fatalf("VM mutation leaked: %q", got)
+		}
+	}
+	setStorageValue(t, b, "nested", "updated")
+	if got := read(a, "nested").String(); got != "updated" {
+		t.Fatalf("cross-runtime update not visible: %q", got)
+	}
+	if err := os.WriteFile(filepath.Join(dataDir, "storage.json"), []byte(`{"nested":"external replacement","nullValue":null}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(a, "nested").String(); got != "external replacement" {
+		t.Fatalf("external replacement not visible: %q", got)
+	}
+	if !goja.IsNull(read(a, "nullValue")) || !goja.IsUndefined(read(a, "absent")) {
+		t.Fatal("null and absent values must remain distinct")
+	}
+	if err := os.Remove(filepath.Join(dataDir, "storage.json")); err != nil {
+		t.Fatal(err)
+	}
+	if !goja.IsUndefined(read(a, "nested")) {
+		t.Fatal("removed storage file reused stale value")
+	}
+}
+
+func BenchmarkExtensionCachedSingleKeyRead(b *testing.B) {
+	for _, size := range []int{10, 10000} {
+		b.Run(fmt.Sprintf("entries_%d", size), func(b *testing.B) {
+			path := filepath.Join(b.TempDir(), "storage.json")
+			snapshot := map[string]any{"token": "value"}
+			for i := 0; i < size; i++ {
+				snapshot[fmt.Sprint(i)] = map[string]any{"items": []any{"large cached value", i}}
+			}
+			data, _ := json.Marshal(snapshot)
+			if err := os.WriteFile(path, data, 0600); err != nil {
+				b.Fatal(err)
+			}
+			load := func() (map[string]any, error) { return readJSONMapFile(path) }
+			mu := extensionFileMu(path)
+			mu.Lock()
+			defer mu.Unlock()
+			if _, _, err := readCachedJSONValueLocked(path, "token", load); err != nil {
+				b.Fatal(err)
+			}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				if _, _, err := readCachedJSONValueLocked(path, "token", load); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
 	}
 }
 
