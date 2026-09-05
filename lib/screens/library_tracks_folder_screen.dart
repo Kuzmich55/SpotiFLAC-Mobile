@@ -28,6 +28,7 @@ import 'package:spotiflac_android/utils/nav_bar_inset.dart';
 import 'package:spotiflac_android/utils/cover_art_utils.dart';
 import 'package:spotiflac_android/screens/collapsing_header_scroll_mixin.dart';
 import 'package:spotiflac_android/screens/selection_mode_mixin.dart';
+import 'package:spotiflac_android/screens/library_tracks_folder_data.dart';
 import 'package:spotiflac_android/screens/track_metadata_screen.dart';
 import 'package:spotiflac_android/widgets/selection_action_button.dart';
 import 'package:spotiflac_android/widgets/selection_bottom_bar.dart';
@@ -67,6 +68,7 @@ class _LibraryTracksFolderScreenState
         SelectionModeMixin<LibraryTracksFolderScreen>,
         CollapsingHeaderScrollMixin<LibraryTracksFolderScreen> {
   UserPlaylistCollection? playlist;
+  final _folderData = LibraryTracksFolderData();
 
   @override
   void initState() {
@@ -272,7 +274,8 @@ class _LibraryTracksFolderScreenState
         break;
     }
 
-    pruneSelection(entries.map((e) => e.key).toSet());
+    _folderData.update(entries);
+    pruneSelection(_folderData.keys);
 
     final title = switch (widget.mode) {
       LibraryTracksFolderMode.wishlist => context.l10n.collectionWishlist,
@@ -297,16 +300,10 @@ class _LibraryTracksFolderScreenState
       LibraryTracksFolderMode.playlist =>
         context.l10n.collectionPlaylistEmptySubtitle,
     };
-    final folderTracks = entries
-        .map((entry) => entry.track)
-        .toList(growable: false);
-    final historyLookups = folderTracks
-        .map(historyLookupForTrack)
-        .toList(growable: false);
+    final folderTracks = _folderData.tracks;
+    final historyLookups = _folderData.historyRequest.tracks;
     final existingHistoryKeys = ref.watch(
-      downloadHistoryVisibleBatchExistsProvider(
-        HistoryBatchLookupRequest(historyLookups),
-      ),
+      downloadHistoryVisibleBatchExistsProvider(_folderData.historyRequest),
     );
 
     final bottomPadding = MediaQuery.paddingOf(context).bottom;

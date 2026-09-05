@@ -48,6 +48,12 @@ class HistoryBatchLookupRequest {
 
   const HistoryBatchLookupRequest(this.tracks);
 
+  /// An immutable request whose hash is computed only once. Use for lists
+  /// retained across widget builds; the legacy constructor remains available.
+  factory HistoryBatchLookupRequest.snapshot(
+    Iterable<HistoryLookupRequest> tracks,
+  ) = _HistoryBatchLookupSnapshot;
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -63,6 +69,23 @@ class HistoryBatchLookupRequest {
 
   @override
   int get hashCode => Object.hashAll(tracks);
+}
+
+class _HistoryBatchLookupSnapshot extends HistoryBatchLookupRequest {
+  _HistoryBatchLookupSnapshot(Iterable<HistoryLookupRequest> tracks)
+    : super(List.unmodifiable(tracks));
+
+  late final int _hash = Object.hashAll(tracks);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HistoryBatchLookupRequest &&
+          hashCode == other.hashCode &&
+          super == other;
+
+  @override
+  int get hashCode => _hash;
 }
 
 class HistoryDatabase {
