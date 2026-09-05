@@ -7,6 +7,7 @@ import 'package:spotiflac_android/utils/logger.dart';
 import 'package:spotiflac_android/utils/audio_format_utils.dart';
 import 'package:spotiflac_android/utils/file_access.dart';
 import 'package:spotiflac_android/services/history_database.dart';
+import 'package:spotiflac_android/services/library_cleanup.dart';
 import 'package:spotiflac_android/services/sqlite_helpers.dart' as sqlite;
 
 part 'library_database_models.dart';
@@ -1944,57 +1945,16 @@ class LibraryDatabase {
     });
   }
 
-  Future<int> cleanupMissingFiles({String? sourceId}) async {
+  Future<int> cleanupMissingFiles({
+    String? sourceId,
+    Future<bool> Function()? canDelete,
+  }) async {
     final db = await database;
-    final rows = await db.query(
-      'library',
-      columns: ['id', 'file_path'],
-      where: sourceId == null ? null : 'source_id = ?',
-      whereArgs: sourceId == null ? null : [sourceId],
+    final removed = await cleanupMissingLibraryRows(
+      db,
+      sourceId: sourceId,
+      canDelete: canDelete,
     );
-
-    final missingIds = <String>[];
-    const checkChunkSize = 16;
-    for (var i = 0; i < rows.length; i += checkChunkSize) {
-      final end = (i + checkChunkSize < rows.length)
-          ? i + checkChunkSize
-          : rows.length;
-      final chunk = rows.sublist(i, end);
-      final checks = await Future.wait<MapEntry<String, bool>>(
-        chunk.map((row) async {
-          final id = row['id'] as String;
-          final filePath = row['file_path'] as String;
-          return MapEntry(id, await fileExists(filePath));
-        }),
-      );
-      for (final check in checks) {
-        if (!check.value) {
-          missingIds.add(check.key);
-        }
-      }
-    }
-
-    if (missingIds.isEmpty) {
-      return 0;
-    }
-
-    var removed = 0;
-    const deleteChunkSize = 500;
-    for (var i = 0; i < missingIds.length; i += deleteChunkSize) {
-      final end = (i + deleteChunkSize < missingIds.length)
-          ? i + deleteChunkSize
-          : missingIds.length;
-      final idChunk = missingIds.sublist(i, end);
-      final placeholders = List.filled(idChunk.length, '?').join(',');
-      await db.rawDelete(
-        'DELETE FROM library_path_keys WHERE item_id IN ($placeholders)',
-        idChunk,
-      );
-      removed += await db.rawDelete(
-        'DELETE FROM library WHERE id IN ($placeholders)',
-        idChunk,
-      );
-    }
 
     if (removed > 0) {
       _log.i('Cleaned up $removed missing files from library');

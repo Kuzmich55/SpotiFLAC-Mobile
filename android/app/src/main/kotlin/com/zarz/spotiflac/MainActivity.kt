@@ -1115,6 +1115,13 @@ class MainActivity: FlutterFragmentActivity() {
                             }
                             result.success(exists)
                         }
+                        "safExistsBatch" -> {
+                            val urisJson = call.argument<String>("uris_json") ?: "[]"
+                            val response = withContext(Dispatchers.IO) {
+                                safExistsBatch(urisJson)
+                            }
+                            result.success(response)
+                        }
                         "isSafTreeAccessible" -> {
                             val uriStr = call.argument<String>("tree_uri") ?: ""
                             val accessible = withContext(Dispatchers.IO) {

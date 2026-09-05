@@ -8,6 +8,7 @@ import 'package:spotiflac_android/services/library_database.dart';
 import 'package:spotiflac_android/services/notification_service.dart';
 import 'package:spotiflac_android/services/platform_bridge.dart';
 import 'package:spotiflac_android/utils/logger.dart';
+import 'package:spotiflac_android/utils/file_access.dart';
 import 'package:spotiflac_android/utils/local_library_scan_prefs.dart';
 import 'package:spotiflac_android/utils/progress_stream_poller.dart';
 
@@ -1143,7 +1144,20 @@ class LocalLibraryNotifier extends Notifier<LocalLibraryState> {
           );
           if (securityAccess == null) continue;
         }
-        removed += await _db.cleanupMissingFiles(sourceId: source.id);
+        removed += await _db.cleanupMissingFiles(
+          sourceId: source.id,
+          canDelete: () async {
+            if (isContentUri(source.path)) {
+              return PlatformBridge.isSafTreeAccessible(source.path);
+            }
+            // Recheck access after the file probes, before deleting a page.
+            // An empty but readable source is valid; an offline one throws.
+            await Directory(
+              securityAccess?.path ?? source.path,
+            ).list(followLinks: false).take(1).drain<void>();
+            return true;
+          },
+        );
       } finally {
         if (securityAccess != null) {
           await PlatformBridge.stopAccessingIosBookmark(securityAccess);

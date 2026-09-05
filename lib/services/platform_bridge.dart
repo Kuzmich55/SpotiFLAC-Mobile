@@ -750,6 +750,23 @@ class PlatformBridge {
     return result as bool;
   }
 
+  /// Exact-path checks. Only explicit `missing` results authorize cleanup;
+  /// absent responses and permission/provider failures remain unknown.
+  static Future<Map<String, bool?>> safExistsBatch(List<String> uris) async {
+    if (uris.isEmpty) return const {};
+    final result = await _invokeMap('safExistsBatch', {
+      'uris_json': jsonEncode(uris),
+    });
+    return {
+      for (final uri in uris)
+        uri: switch (result[uri]) {
+          'found' => true,
+          'missing' => false,
+          _ => null,
+        },
+    };
+  }
+
   /// Whether the persisted SAF grant for [treeUri] is still usable: the
   /// permission is present in the system's persisted list and the tree
   /// document still exists and is writable. Returns true on channel errors

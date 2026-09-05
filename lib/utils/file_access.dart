@@ -296,6 +296,56 @@ Future<bool> fileExists(String? path) async {
   return File(realPath).exists();
 }
 
+/// Bounded, tri-state checks for destructive library cleanup. Unknown results
+/// retain their database rows. CUE tracks are checked against the backing file.
+Future<Map<String, bool?>> fileExistenceByPath(List<String> paths) async {
+  final realPaths = {for (final path in paths) path: stripCueTrackSuffix(path)};
+  final results = <String, bool?>{};
+  final unique = realPaths.values.toSet();
+  final saf = unique.where(isContentUri).toList(growable: false);
+  const batchSize = 64;
+  for (var start = 0; start < saf.length; start += batchSize) {
+    final end = start + batchSize < saf.length ? start + batchSize : saf.length;
+    final batch = saf.sublist(start, end);
+    try {
+      results.addAll(await PlatformBridge.safExistsBatch(batch));
+    } catch (_) {
+      // Missing native method on an older build is also inconclusive.
+    }
+  }
+  final local = unique.where((path) => !isContentUri(path)).toList();
+  const concurrency = 16;
+  for (var start = 0; start < local.length; start += concurrency) {
+    final end = start + concurrency < local.length
+        ? start + concurrency
+        : local.length;
+    await Future.wait(
+      local.sublist(start, end).map((path) async {
+        if (path.isEmpty) return;
+        try {
+          final stat = await File(path).stat();
+          if (stat.type != FileSystemEntityType.notFound) {
+            results[path] = true;
+          } else {
+            // Dart's stat also returns notFound for permission errors. Opening
+            // exposes the OS error without reading the audio file's contents.
+            final handle = await File(path).open();
+            await handle.close();
+            results[path] = true;
+          }
+        } on FileSystemException catch (error) {
+          final code = error.osError?.errorCode;
+          final absent = code == 2 || code == (Platform.isWindows ? 3 : 20);
+          results[path] = absent ? false : null;
+        } catch (_) {
+          results[path] = null;
+        }
+      }),
+    );
+  }
+  return {for (final item in realPaths.entries) item.key: results[item.value]};
+}
+
 /// Deletes [path] and reports whether the file is confirmed absent afterward.
 ///
 /// SAF providers are allowed to reject a delete request by returning `false`.
