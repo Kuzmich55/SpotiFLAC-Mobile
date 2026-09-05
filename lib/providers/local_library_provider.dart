@@ -759,7 +759,7 @@ class LocalLibraryNotifier extends Notifier<LocalLibraryState> {
         final useSnapshotBridge =
             Platform.isAndroid && existingFiles.isNotEmpty;
         final snapshotPath = useSnapshotBridge
-            ? await _db.writeFileModTimesSnapshot(sourceId: activeSourceId)
+            ? await _db.writeFileModTimesSnapshot(existingFiles)
             : null;
 
         Map<String, dynamic> result;
@@ -1263,7 +1263,9 @@ class LocalLibraryNotifier extends Notifier<LocalLibraryState> {
     required Map<String, int> existingFiles,
   }) async {
     final legacyPaths = existingFiles.entries
-        .where((entry) => entry.value <= 0)
+        // Negative timestamps deliberately force a metadata-version rescan;
+        // only a missing timestamp (zero) may be filled from the filesystem.
+        .where((entry) => entry.value == 0)
         .map((entry) => entry.key)
         .toList();
     if (legacyPaths.isEmpty) {

@@ -2064,14 +2064,11 @@ class LibraryDatabase {
     return result;
   }
 
-  Future<String> writeFileModTimesSnapshot({String? sourceId}) async {
-    final db = await database;
-    final rows = await db.rawQuery(
-      'SELECT file_path, COALESCE(file_mod_time, 0) AS file_mod_time, '
-      'audio_metadata_scan_version FROM library '
-      '${sourceId == null ? '' : 'WHERE source_id = ?'}',
-      sourceId == null ? const [] : [sourceId],
-    );
+  /// Uses the already normalized, backfilled timestamps from the scan caller.
+  /// Bounded writes avoid a second query and a library-sized StringBuffer.
+  Future<String> writeFileModTimesSnapshot(
+    Map<String, int> fileModTimes,
+  ) async {
     final tempDir = await getTemporaryDirectory();
     final file = File(
       join(
@@ -2079,24 +2076,30 @@ class LibraryDatabase {
         'library_file_mod_times_${DateTime.now().microsecondsSinceEpoch}.tsv',
       ),
     );
-    final buffer = StringBuffer();
-    for (final row in rows) {
-      final path = row['file_path'] as String?;
-      if (path == null || path.isEmpty) continue;
-      final modTime = (row['file_mod_time'] as num?)?.toInt() ?? 0;
-      final scanVersion =
-          (row['audio_metadata_scan_version'] as num?)?.toInt() ?? 0;
-      buffer
-        ..write(
-          libraryIncrementalSnapshotModTime(
-            storedModTime: modTime,
-            storedScanVersion: scanVersion,
-          ),
-        )
-        ..write('\t')
-        ..writeln(path);
+    try {
+      final output = await file.open(mode: FileMode.write);
+      try {
+        final buffer = StringBuffer();
+        for (final entry in fileModTimes.entries) {
+          if (entry.key.isEmpty) continue;
+          buffer
+            ..write(entry.value)
+            ..write('\t')
+            ..writeln(entry.key);
+          if (buffer.length >= 64 * 1024) {
+            await output.writeString(buffer.toString());
+            buffer.clear();
+          }
+        }
+        if (buffer.isNotEmpty) await output.writeString(buffer.toString());
+        await output.flush();
+      } finally {
+        await output.close();
+      }
+    } catch (_) {
+      if (await file.exists()) await file.delete();
+      rethrow;
     }
-    await file.writeAsString(buffer.toString(), flush: true);
     return file.path;
   }
 
