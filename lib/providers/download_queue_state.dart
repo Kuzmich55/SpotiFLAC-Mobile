@@ -1,4 +1,41 @@
+import 'dart:collection';
+
 import 'package:spotiflac_android/models/download_item.dart';
+import 'package:spotiflac_android/utils/chunked_list.dart';
+
+/// Shares the stable key-to-position index across progress snapshots. Values
+/// come from the current immutable items, so old lookups keep their old values.
+class _IndexedQueueMap extends MapBase<String, DownloadItem> {
+  _IndexedQueueMap(this.index, this.items);
+  final Map<String, int> index;
+  final List<DownloadItem> items;
+
+  @override
+  DownloadItem? operator [](Object? key) {
+    final position = index[key];
+    return position == null ? null : items[position];
+  }
+
+  @override
+  Iterable<String> get keys => index.keys;
+
+  @override
+  int get length => index.length;
+
+  @override
+  bool containsKey(Object? key) => index.containsKey(key);
+
+  @override
+  void operator []=(String key, DownloadItem value) =>
+      throw UnsupportedError('Immutable queue lookup');
+
+  @override
+  void clear() => throw UnsupportedError('Immutable queue lookup');
+
+  @override
+  DownloadItem? remove(Object? key) =>
+      throw UnsupportedError('Immutable queue lookup');
+}
 
 /// Immutable queue state shared by the notifier and read-only UI consumers.
 ///
@@ -43,7 +80,9 @@ class DownloadQueueState {
     String? audioQuality,
     bool? autoFallback,
   }) {
-    final resolvedItems = items ?? this.items;
+    final resolvedItems = items == null
+        ? this.items
+        : ChunkedList<DownloadItem>.from(items);
     return DownloadQueueState(
       items: resolvedItems,
       lookup:
@@ -73,8 +112,8 @@ class DownloadQueueState {
 
 /// Precomputed queue indexes and counters.
 ///
-/// The lookup can update in O(changed items) when item identities are stable,
-/// avoiding full queue scans for every progress event.
+/// Stable identity indexes are shared across progress snapshots. Sparse item
+/// changes copy only affected storage chunks rather than two entire maps.
 class DownloadQueueLookup {
   final Map<String, DownloadItem> byTrackId;
   final Map<String, DownloadItem> byItemId;
@@ -113,8 +152,7 @@ class DownloadQueueLookup {
   });
 
   factory DownloadQueueLookup.fromItems(List<DownloadItem> items) {
-    final byTrackId = <String, DownloadItem>{};
-    final byItemId = <String, DownloadItem>{};
+    final byTrackIndex = <String, int>{};
     final indexByItemId = <String, int>{};
     final itemIds = <String>[];
     final notCompletedItemIds = <String>[];
@@ -125,8 +163,7 @@ class DownloadQueueLookup {
     var finalizingCount = 0;
     for (var index = 0; index < items.length; index++) {
       final item = items[index];
-      byTrackId.putIfAbsent(item.track.id, () => item);
-      byItemId[item.id] = item;
+      byTrackIndex.putIfAbsent(item.track.id, () => index);
       indexByItemId[item.id] = index;
       itemIds.add(item.id);
       if (item.status != DownloadStatus.completed) {
@@ -138,10 +175,12 @@ class DownloadQueueLookup {
       if (item.status == DownloadStatus.downloading) activeDownloadsCount++;
       if (item.status == DownloadStatus.finalizing) finalizingCount++;
     }
+    final snapshot = ChunkedList<DownloadItem>.from(items);
+    final itemIndex = Map<String, int>.unmodifiable(indexByItemId);
     return DownloadQueueLookup._(
-      byTrackId: Map.unmodifiable(byTrackId),
-      byItemId: Map.unmodifiable(byItemId),
-      indexByItemId: Map.unmodifiable(indexByItemId),
+      byTrackId: _IndexedQueueMap(Map.unmodifiable(byTrackIndex), snapshot),
+      byItemId: _IndexedQueueMap(itemIndex, snapshot),
+      indexByItemId: itemIndex,
       itemIds: List.unmodifiable(itemIds),
       notCompletedItemIds: List.unmodifiable(notCompletedItemIds),
       queuedCount: queuedCount,
@@ -179,7 +218,7 @@ class DownloadQueueLookup {
       return DownloadQueueLookup.fromItems(nextItems);
     }
 
-    final normalizedChanged = <int>[];
+    final normalizedChanged = <int>{};
     for (final index in changedIndices) {
       if (index < 0 || index >= nextItems.length) {
         return DownloadQueueLookup.fromItems(nextItems);
@@ -194,8 +233,6 @@ class DownloadQueueLookup {
     var nextActiveDownloadsCount = activeDownloadsCount;
     var nextFinalizingCount = finalizingCount;
     var notCompletedMembershipChanged = false;
-    Map<String, DownloadItem>? nextByItemId;
-    Map<String, DownloadItem>? nextByTrackId;
 
     for (final index in normalizedChanged) {
       final previous = previousItems[index];
@@ -209,12 +246,6 @@ class DownloadQueueLookup {
         notCompletedMembershipChanged = true;
       }
 
-      nextByItemId ??= Map<String, DownloadItem>.from(byItemId);
-      nextByItemId[next.id] = next;
-      if (byTrackId[next.track.id]?.id == previous.id) {
-        nextByTrackId ??= Map<String, DownloadItem>.from(byTrackId);
-        nextByTrackId[next.track.id] = next;
-      }
       nextQueuedCount += _deltaForStatus(
         previous: previous.status,
         next: next.status,
@@ -242,13 +273,16 @@ class DownloadQueueLookup {
       );
     }
 
+    if (byTrackId is! _IndexedQueueMap) {
+      return DownloadQueueLookup.fromItems(nextItems);
+    }
+    final snapshot = ChunkedList<DownloadItem>.from(nextItems);
     return DownloadQueueLookup._(
-      byTrackId: nextByTrackId == null
-          ? byTrackId
-          : Map.unmodifiable(nextByTrackId),
-      byItemId: nextByItemId == null
-          ? byItemId
-          : Map.unmodifiable(nextByItemId),
+      byTrackId: _IndexedQueueMap(
+        (byTrackId as _IndexedQueueMap).index,
+        snapshot,
+      ),
+      byItemId: _IndexedQueueMap(indexByItemId, snapshot),
       indexByItemId: indexByItemId,
       itemIds: itemIds,
       notCompletedItemIds: notCompletedMembershipChanged

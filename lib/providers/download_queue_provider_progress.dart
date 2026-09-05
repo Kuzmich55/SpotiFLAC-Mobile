@@ -266,14 +266,12 @@ extension _DownloadQueueProgress on DownloadQueueNotifier {
     }
 
     if (progressUpdates.isNotEmpty) {
-      var updatedItems = currentItems;
-      bool changed = false;
-      final changedIndices = <int>[];
+      final replacements = <int, DownloadItem>{};
 
       for (final entry in progressUpdates.entries) {
         final index = lookup.indexByItemId[entry.key];
         if (index == null) continue;
-        final current = updatedItems[index];
+        final current = currentItems[index];
         if (current.status == DownloadStatus.skipped ||
             current.status == DownloadStatus.completed ||
             current.status == DownloadStatus.failed) {
@@ -298,22 +296,20 @@ extension _DownloadQueueProgress on DownloadQueueNotifier {
             current.bytesReceived != next.bytesReceived ||
             current.bytesTotal != next.bytesTotal ||
             current.preparationStage != next.preparationStage) {
-          if (!changed) {
-            updatedItems = List<DownloadItem>.from(updatedItems);
-            changed = true;
-          }
-          updatedItems[index] = next;
-          changedIndices.add(index);
+          replacements[index] = next;
         }
       }
 
-      if (changed) {
+      if (replacements.isNotEmpty) {
+        final updatedItems = ChunkedList<DownloadItem>.from(
+          currentItems,
+        ).updated(replacements);
         state = state.copyWith(
           items: updatedItems,
           lookup: state.lookup.updatedForIndices(
             previousItems: currentItems,
             nextItems: updatedItems,
-            changedIndices: changedIndices,
+            changedIndices: replacements.keys,
           ),
         );
       }

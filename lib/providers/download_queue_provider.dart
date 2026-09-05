@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:convert';
 import 'dart:io';
+import 'package:spotiflac_android/utils/chunked_list.dart';
 import 'package:flutter/material.dart'
     show ScaffoldMessenger, SnackBar, SnackBarAction, Text;
 import 'package:flutter/widgets.dart';
@@ -1085,8 +1086,9 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
       return;
     }
 
-    final updatedItems = List<DownloadItem>.from(items);
-    updatedItems[index] = next;
+    final updatedItems = ChunkedList<DownloadItem>.from(
+      items,
+    ).updated({index: next});
     state = state.copyWith(
       items: updatedItems,
       lookup: state.lookup.updatedForIndices(
