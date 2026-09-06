@@ -197,6 +197,7 @@ extension _HomeTabCsvImport on _HomeTabState {
             this.context,
             trackName: l10n.csvImportTracks(tracksToQueue.length),
             artistName: l10n.dialogImportPlaylistTitle,
+            duration: totalDownloadDuration(tracksToQueue),
             onSelect: (quality, service) {
               ref
                   .read(downloadQueueProvider.notifier)

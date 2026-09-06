@@ -7,6 +7,7 @@ import 'package:spotiflac_android/providers/extension_provider.dart';
 import 'package:spotiflac_android/providers/library_collections_provider.dart';
 import 'package:spotiflac_android/providers/local_library_provider.dart';
 import 'package:spotiflac_android/providers/settings_provider.dart';
+import 'package:spotiflac_android/utils/download_size_estimate.dart';
 import 'package:spotiflac_android/utils/logger.dart';
 import 'package:spotiflac_android/widgets/download_service_picker.dart';
 import 'package:spotiflac_android/widgets/view_queue_snackbar_action.dart';
@@ -35,6 +36,7 @@ void downloadSingleTrack(
       trackName: track.name,
       artistName: track.artistName,
       coverUrl: track.coverUrl,
+      duration: Duration(seconds: track.duration),
       recommendedService: recommendedService,
       onSelect: (quality, service) {
         ref
@@ -218,6 +220,7 @@ Future<void> queueTracksSkippingDownloaded(
       context,
       trackName: '${tracksToQueue.length} tracks',
       artistName: artistNameForPicker,
+      duration: totalDownloadDuration(tracksToQueue),
       recommendedService: recommendedService,
       onSelect: (quality, service) {
         ref

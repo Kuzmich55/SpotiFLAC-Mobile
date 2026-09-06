@@ -6197,5 +6197,9 @@
   "nowPlayingRepeatAll": "Repeat all",
   "nowPlayingRepeatOne": "Repeat one",
   "queueNetworkFailedOffline": "{count} downloads failed while offline",
-  "libraryFilterMetadataMissingIsrc": "Missing ISRC"
+  "libraryFilterMetadataMissingIsrc": "Missing ISRC",
+  "downloadEstimatedSize": "≈ {size}",
+  "downloadSizeUnavailable": "Estimasi ukuran belum tersedia",
+  "downloadSizeEstimateNote": "Perkiraan ukuran audio sebelum konversi, tanpa sampul dan tag. Ukuran sebenarnya bergantung pada kualitas dan kompresi; penggunaan data bisa lebih besar.",
+  "downloadConvertedSizeEstimate": "Setelah konversi ke {format}: {size}"
 }

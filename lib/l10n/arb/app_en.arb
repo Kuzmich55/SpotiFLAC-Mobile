@@ -2127,6 +2127,29 @@
   "@downloadSelectQuality": {
     "description": "Dialog title - choose audio quality"
   },
+  "downloadEstimatedSize": "≈ {size}",
+  "@downloadEstimatedSize": {
+    "description": "Approximate audio file size, or total for all selected tracks; size includes units and may be a range",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadSizeUnavailable": "Size estimate unavailable",
+  "downloadSizeEstimateNote": "Estimated audio size before conversion, excluding artwork and tags. Actual size varies with quality and compression; data usage may be higher.",
+  "downloadConvertedSizeEstimate": "After conversion to {format}: {size}",
+  "@downloadConvertedSizeEstimate": {
+    "description": "Estimated size after the user's automatic conversion, excluding tags and artwork",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "downloadFrom": "Download From",
   "@downloadFrom": {
     "description": "Label - download source"

@@ -148,6 +148,46 @@ labels, with `downloadFallbackTier` helping classify `best` and `default`;
 explicit kinds avoid ambiguity for custom IDs. Descriptions are not used
 because they may describe other fallback formats.
 
+### Estimated download sizes
+
+The quality picker estimates audio size locally from the known track durations.
+An optional `sizeEstimate` object on a quality option supplies audio parameters
+for custom IDs without resolving streams or triggering verification:
+
+```json
+{
+  "id": "studio",
+  "label": "Best FLAC",
+  "kind": "lossless",
+  "sizeEstimate": {
+    "bitDepth": 24,
+    "sampleRate": 192000,
+    "channels": 2,
+    "isMaximum": true
+  }
+}
+```
+
+- For encoded audio, supply `bitrateKbps` (total target bitrate across channels).
+  For example, `"sizeEstimate": {"bitrateKbps": 256}`.
+- For compressed lossless audio, supply `bitDepth` and `sampleRate` in Hz.
+  `channels` defaults to 2. Do not use this model for uncompressed PCM.
+- Set `isMaximum: true` for a lossless tier that can return lower quality. Its
+  estimate spans CD quality through the declared maximum. A capped bitrate
+  alone cannot supply a useful range and is shown as unavailable.
+- Omitted parameters remain unknown. Older extensions retain estimates for
+  the picker's legacy `LOSSLESS`, `HI_RES`, and `HI_RES_LOSSLESS` tiers and
+  explicit codec/bitrate IDs or labels such as `opus_256` or `Opus 256kbps`.
+  Generic `best`, `high`, `low`, and spatial tiers need explicit parameters.
+
+Lossy estimates use duration × bitrate / 8. Lossless estimates use a rough
+50–80% of uncompressed PCM size; this is a heuristic, not a guaranteed range.
+Estimates exclude artwork, tags, and container overhead. They describe the
+selected quality before automatic conversion, with a separate converted-size
+estimate when enabled. Fallback quality and intermediate transfers can change
+both the final size and data usage. If any selected track lacks a duration,
+the picker does not show a partial sum as a complete total.
+
 ### Permissions
 
 ```json

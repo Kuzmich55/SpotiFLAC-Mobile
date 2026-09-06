@@ -253,6 +253,11 @@ extension _QueueTabSelectionActions on _QueueTabState {
         context,
         trackName: context.l10n.tracksCount(totalTracks),
         artistName: context.l10n.playlistsCount(selectedPlaylists.length),
+        duration: totalDownloadDuration(
+          selectedPlaylists.expand(
+            (playlist) => playlist.tracks.map((item) => item.track),
+          ),
+        ),
         onSelect: (quality, service) {
           enqueueAll(qualityOverride: quality, service: service);
           if (!mounted) return;
