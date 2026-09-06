@@ -13,6 +13,7 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
   final String? coverUrl;
   final void Function(String quality, String service) onSelect;
   final String? recommendedService;
+  final ScrollController? scrollController;
 
   const DownloadServicePicker({
     super.key,
@@ -21,6 +22,7 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
     this.coverUrl,
     required this.onSelect,
     this.recommendedService,
+    this.scrollController,
   });
 
   @override
@@ -42,15 +44,15 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
       useRootNavigator: true,
       backgroundColor: colorScheme.surfaceContainerHigh,
       isScrollControlled: true,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
-      ),
-      builder: (context) => DownloadServicePicker(
-        trackName: trackName,
-        artistName: artistName,
-        coverUrl: coverUrl,
-        onSelect: onSelect,
-        recommendedService: recommendedService,
+      builder: (context) => AppDraggableSheet(
+        builder: (context, scrollController) => DownloadServicePicker(
+          trackName: trackName,
+          artistName: artistName,
+          coverUrl: coverUrl,
+          onSelect: onSelect,
+          recommendedService: recommendedService,
+          scrollController: scrollController,
+        ),
       ),
     );
   }
@@ -122,7 +124,10 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
     final qualityOptions = _getQualityOptions(downloadExtensions);
 
     return SafeArea(
+      top: false,
       child: SingleChildScrollView(
+        controller: widget.scrollController,
+        physics: const ClampingScrollPhysics(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
