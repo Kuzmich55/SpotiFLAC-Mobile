@@ -1,7 +1,27 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spotiflac_android/utils/lyrics_metadata_helper.dart';
 
 void main() {
+  group('shared lyric usability cases', () {
+    final cases = File(
+      'android/app/src/test/resources/lyrics_usability_cases.tsv',
+    ).readAsLinesSync();
+    for (final line in cases) {
+      if (line.isEmpty || line.startsWith('#')) continue;
+      final fields = line.split('\t');
+      test(fields.first, () {
+        expect(fields, hasLength(3));
+        final lyrics = fields[2]
+            .replaceAll(r'\n', '\n')
+            .replaceAll(r'\r', '\r')
+            .replaceAll(r'\t', '\t');
+        expect(hasUsableLyricsContent(lyrics), fields[1] == 'true');
+      });
+    }
+  });
+
   group('lyrics display normalization', () {
     test('rejects metadata-only embedded LRC', () {
       const raw = '''

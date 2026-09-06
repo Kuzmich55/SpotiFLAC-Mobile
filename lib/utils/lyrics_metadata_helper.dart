@@ -48,7 +48,7 @@ String cleanLyricsForDisplay(String lyrics) {
     while (_lrcDisplayTimestampPattern.hasMatch(cleaned)) {
       cleaned = cleaned.replaceFirst(_lrcDisplayTimestampPattern, '').trim();
     }
-    cleaned = cleaned.replaceAll(_lrcDisplayInlineTimestampPattern, '');
+    cleaned = cleaned.replaceAll(_lrcDisplayInlineTimestampPattern, '').trim();
     cleaned = cleaned.replaceFirst(_lrcDisplaySpeakerPrefixPattern, '');
     cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
 

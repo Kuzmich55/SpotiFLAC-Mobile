@@ -8,6 +8,29 @@ import org.junit.Test
 
 class NativeFinalizationPolicyTest {
     @Test
+    fun matchesSharedLyricUsabilityCases() {
+        val stream = checkNotNull(
+            javaClass.getResourceAsStream("/lyrics_usability_cases.tsv"),
+        )
+        stream.bufferedReader().useLines { lines ->
+            for (line in lines) {
+                if (line.isBlank() || line.startsWith("#")) continue
+                val fields = line.split('\t')
+                assertEquals("invalid shared fixture: $line", 3, fields.size)
+                val lyrics = fields[2]
+                    .replace("\\n", "\n")
+                    .replace("\\r", "\r")
+                    .replace("\\t", "\t")
+                assertEquals(
+                    fields[0],
+                    fields[1].toBooleanStrict(),
+                    NativeFinalizationPolicy.hasUsableLyricsContent(lyrics),
+                )
+            }
+        }
+    }
+
+    @Test
     fun usableLyricsRejectsHeadersButKeepsRealAndInstrumentalContent() {
         assertFalse(
             NativeFinalizationPolicy.hasUsableLyricsContent(

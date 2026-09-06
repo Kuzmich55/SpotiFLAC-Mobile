@@ -32,6 +32,7 @@ jobs:
             dart:
               - 'lib/**'
               - 'test/**'
+              - 'android/app/src/test/resources/**'
               - 'assets/**'
               - 'pubspec.yaml'
               - 'pubspec.lock'
@@ -41,6 +42,7 @@ jobs:
               - '.github/workflows/ci.yml'
             go:
               - 'go_backend/**'
+              - 'android/app/src/test/resources/**'
               - '.github/workflows/ci.yml'
             android:
               - 'android/**'

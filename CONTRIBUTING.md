@@ -112,6 +112,10 @@ Dart should consume that declaration without knowing which extension uses it.
 Run checks that cover the code you changed. Before opening a PR, the relevant
 commands should pass.
 
+Cross-language lyric usability cases live in
+`android/app/src/test/resources/lyrics_usability_cases.tsv`. Dart, Go, and
+Android tests read the same cases; add a case there when changing that policy.
+
 Flutter and Dart:
 
 ```bash
