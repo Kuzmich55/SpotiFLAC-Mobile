@@ -768,11 +768,6 @@ class SettingsNotifier extends Notifier<AppSettings> {
     _saveSettings();
   }
 
-  void setTidalHighFormat(String format) {
-    state = state.copyWith(tidalHighFormat: format);
-    _saveSettings();
-  }
-
   void setAutoConvertDownloads(bool enabled) {
     state = state.copyWith(autoConvertDownloads: enabled);
     _saveSettings();

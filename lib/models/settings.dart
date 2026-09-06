@@ -74,8 +74,6 @@ class AppSettings {
   extensionVerificationBrowserMode; // 'external_first' or 'in_app_first'
   final String locale;
   final String lyricsMode;
-  final String
-  tidalHighFormat; // Legacy key for 320kbps lossy output format: 'mp3_320', 'aac_320', 'opus_256', or 'opus_128'
   final bool autoConvertDownloads;
   final String autoConvertFormat; // 'mp3', 'aac' (M4A), or 'opus'
   final String autoConvertBitrate; // '128k', '192k', '256k', or '320k'
@@ -169,7 +167,6 @@ class AppSettings {
     this.extensionVerificationBrowserMode = 'in_app_first',
     this.locale = 'system',
     this.lyricsMode = 'embed',
-    this.tidalHighFormat = 'mp3_320',
     this.autoConvertDownloads = false,
     this.autoConvertFormat = 'mp3',
     this.autoConvertBitrate = '320k',
@@ -247,7 +244,6 @@ class AppSettings {
     String? extensionVerificationBrowserMode,
     String? locale,
     String? lyricsMode,
-    String? tidalHighFormat,
     bool? autoConvertDownloads,
     String? autoConvertFormat,
     String? autoConvertBitrate,
@@ -339,7 +335,6 @@ class AppSettings {
           this.extensionVerificationBrowserMode,
       locale: locale ?? this.locale,
       lyricsMode: lyricsMode ?? this.lyricsMode,
-      tidalHighFormat: tidalHighFormat ?? this.tidalHighFormat,
       autoConvertDownloads: autoConvertDownloads ?? this.autoConvertDownloads,
       autoConvertFormat: autoConvertFormat ?? this.autoConvertFormat,
       autoConvertBitrate: autoConvertBitrate ?? this.autoConvertBitrate,

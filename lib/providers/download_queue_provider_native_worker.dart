@@ -1341,28 +1341,6 @@ extension _DownloadQueueNativeWorker on DownloadQueueNotifier {
       result,
       resolvedAlbumArtist,
     );
-    final convertedHighPath = await _finalizeNativeWorkerHighConversion(
-      context: context,
-      result: result,
-      settings: settings,
-      track: trackToDownload,
-      filePath: filePath,
-    );
-    if (convertedHighPath == null) {
-      updateItemStatus(
-        item.id,
-        DownloadStatus.failed,
-        error: 'Failed to convert HIGH quality download',
-        errorType: DownloadErrorType.unknown,
-      );
-      _failedInSession++;
-      return;
-    }
-    filePath = convertedHighPath;
-    final nativeActualQuality = result['_native_actual_quality'] as String?;
-    if (nativeActualQuality != null && nativeActualQuality.isNotEmpty) {
-      actualQuality = nativeActualQuality;
-    }
     final convertedContainerPath =
         await _finalizeNativeWorkerContainerConversion(
           context: context,
@@ -1413,6 +1391,46 @@ extension _DownloadQueueNativeWorker on DownloadQueueNotifier {
       actualSampleRate = null;
       actualFormat = normalizeAutoConvertFormat(settings.autoConvertFormat);
       actualBitrate = autoConvertBitrateKbps(settings.autoConvertBitrate);
+    } else if (settings.embedMetadata &&
+        _isMp4Container(result['file_name']?.toString() ?? filePath)) {
+      // Native lossy containers still need tags and lyrics even though their
+      // audio is no longer passed through the retired quality conversion.
+      Future<void> embedNativeMetadata(String path) async {
+        final lyrics = await _embedMetadataToFile(
+          path,
+          trackToDownload,
+          format: 'm4a',
+          genre: result['genre'] as String?,
+          label: result['label'] as String?,
+          copyright: result['copyright'] as String?,
+          comment: result['comment'] as String?,
+          downloadService: context.item.service,
+          writeExternalLrc: context.storageMode != 'saf',
+        );
+        if (lyrics != null && lyrics.isNotEmpty) result['lyrics_lrc'] = lyrics;
+      }
+
+      if (context.storageMode == 'saf' && isContentUri(filePath)) {
+        final treeUri = context.downloadTreeUri;
+        if (treeUri != null && treeUri.isNotEmpty) {
+          final fileName =
+              result['file_name']?.toString() ?? context.safFileName;
+          if (fileName != null && fileName.isNotEmpty) {
+            final updatedUri = await _replaceSafFileVia(
+              uri: filePath,
+              treeUri: treeUri,
+              relativeDir: context.safRelativeDir ?? '',
+              op: (tempPath, _) async {
+                await embedNativeMetadata(tempPath);
+                return (tempPath, fileName);
+              },
+            );
+            if (updatedUri != null) filePath = updatedUri;
+          }
+        }
+      } else {
+        await embedNativeMetadata(filePath);
+      }
     }
     await _writeNativeWorkerReplayGain(
       settings: settings,
@@ -1479,7 +1497,7 @@ extension _DownloadQueueNativeWorker on DownloadQueueNotifier {
 
     final resultSafFileName = result['file_name'] as String?;
     final lowerFilePath = filePath.toLowerCase();
-    // Recompute from the FINAL file path/result: the HIGH and container
+    // Recompute from the FINAL file path/result: automatic and container
     // conversions above may have changed the format since actualFormat was
     // derived from the pre-conversion output.
     final historyFormat =

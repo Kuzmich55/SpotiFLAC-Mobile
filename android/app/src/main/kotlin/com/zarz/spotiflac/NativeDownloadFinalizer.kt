@@ -228,8 +228,6 @@ object NativeDownloadFinalizer {
                 currentStatus("finalizing")
                 finalizeDecryption(context, effectiveInput, state, shouldCancel)
                 checkCancelled(shouldCancel)
-                finalizeHighConversion(context, effectiveInput, state, shouldCancel)
-                checkCancelled(shouldCancel)
                 finalizeContainerConversion(context, effectiveInput, state, shouldCancel)
                 checkCancelled(shouldCancel)
                 finalizeMetadata(context, effectiveInput, state)
@@ -491,12 +489,7 @@ object NativeDownloadFinalizer {
     private fun outputExt(input: FinalizeInput): String {
         val safExt = input.request.optString("saf_output_ext", "")
         val ext = safExt.ifBlank { input.request.optString("output_ext", "") }
-        return normalizeExt(ext.ifBlank {
-            when (requestQuality(input)) {
-                "HIGH" -> ".mp3"
-                else -> ".flac"
-            }
-        })
+        return normalizeExt(ext.ifBlank { ".flac" })
     }
 
     private fun finalizeDecryption(
@@ -619,77 +612,6 @@ object NativeDownloadFinalizer {
         return target.absolutePath
     }
 
-    private fun finalizeHighConversion(
-        context: Context,
-        input: FinalizeInput,
-        state: FinalizeState,
-        shouldCancel: () -> Boolean,
-    ) {
-        if (requestQuality(input) != "HIGH") return
-        if (!looksLikeM4a(state.filePath, state.fileName)) return
-
-        val autoTarget = NativeFinalizationPolicy.autoConversionTarget(
-            enabled = input.request.optBoolean("auto_convert_downloads", false),
-            format = input.request.optString("auto_convert_format", ""),
-            bitrate = input.request.optString("auto_convert_bitrate", ""),
-        )
-        val tidalHighFormat = input.request.optString("tidal_high_format", "").ifBlank { "mp3_320" }
-        val format = autoTarget?.codec ?: when {
-            tidalHighFormat.startsWith("opus") -> "opus"
-            tidalHighFormat.startsWith("aac") || tidalHighFormat.startsWith("m4a") -> "aac"
-            else -> "mp3"
-        }
-        val metadataFormat = if (format == "aac") "m4a" else format
-        val displayFormat = if (format == "aac") "AAC" else format.uppercase(Locale.ROOT)
-        val bitrate = if (autoTarget != null) {
-            "${autoTarget.bitrateKbps}k"
-        } else if (tidalHighFormat.contains("_")) {
-            "${tidalHighFormat.substringAfterLast("_")}k"
-        } else {
-            if (format == "opus") "128k" else "320k"
-        }
-        val ext = when (format) {
-            "opus" -> ".opus"
-            "aac" -> ".m4a"
-            else -> ".mp3"
-        }
-        val localInput = materializeForFFmpeg(context, input, state)
-        val deleteLocalInput = state.filePath.startsWith("content://")
-        val output = buildOutputPath(localInput, ext)
-        val stagedOutput = stagedConversionPath(output)
-        var adoptedOutput = false
-        try {
-            val command = if (format == "opus") {
-                "-v error -hide_banner -i ${q(localInput)} -codec:a libopus -b:a $bitrate -vbr on -compression_level 10 -map 0:a ${q(stagedOutput)} -y"
-            } else if (format == "aac") {
-                "-v error -hide_banner -i ${q(localInput)} -codec:a aac -b:a $bitrate -map 0:a -f mp4 ${q(stagedOutput)} -y"
-            } else {
-                "-v error -hide_banner -i ${q(localInput)} -codec:a libmp3lame -b:a $bitrate -map 0:a -id3v2_version 3 ${q(stagedOutput)} -y"
-            }
-            val result = runFFmpeg(command, shouldCancel)
-            if (!result.first || !File(stagedOutput).exists()) {
-                throw IllegalStateException("HIGH conversion failed: ${result.second}")
-            }
-            if (!promoteStagedConversion(stagedOutput, output)) {
-                throw IllegalStateException("failed to publish HIGH conversion output")
-            }
-            embedBasicMetadata(context, output, input, metadataFormat)
-            replaceStatePath(context, input, state, output, deleteOld = true)
-            adoptedOutput = true
-        } finally {
-            if (!adoptedOutput) {
-                File(stagedOutput).delete()
-                File(output).delete()
-            }
-            if (deleteLocalInput) File(localInput).delete()
-        }
-        state.quality = "$displayFormat ${bitrate.removeSuffix("k")}kbps"
-        state.bitDepth = null
-        state.sampleRate = null
-        state.bitrateKbps = bitrate.removeSuffix("k").toIntOrNull()
-        state.audioCodec = format
-    }
-
     private fun finalizeAutoConversion(
         context: Context,
         input: FinalizeInput,
@@ -799,7 +721,7 @@ object NativeDownloadFinalizer {
         state: FinalizeState,
         shouldCancel: () -> Boolean,
     ) {
-        if (requestQuality(input) == "HIGH" || outputExt(input) != ".flac") return
+        if (outputExt(input) != ".flac") return
         val requestedDecryptionExt = requestedDecryptionOutputExt(input)
         val forceContainerConversion = shouldForceContainerConversion(input, state)
         if (!forceContainerConversion && requestedDecryptionExt.isNotBlank() && requestedDecryptionExt != ".flac") return

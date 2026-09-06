@@ -717,60 +717,6 @@ class FFmpegService {
     }
   }
 
-  static Future<String?> convertM4aToLossy(
-    String inputPath, {
-    required String format,
-    String? bitrate,
-    bool deleteOriginal = true,
-  }) async {
-    final normalizedFormat = format.toLowerCase();
-    String bitrateValue = normalizedFormat == 'opus' ? '128k' : '320k';
-    if (bitrate != null && bitrate.contains('_')) {
-      final parts = bitrate.split('_');
-      if (parts.length == 2) {
-        bitrateValue = '${parts[1]}k';
-      }
-    }
-
-    final extension = switch (normalizedFormat) {
-      'opus' => '.opus',
-      'aac' || 'm4a' => '.m4a',
-      _ => '.mp3',
-    };
-    final outputPlan = await _conversionOutputPlan(
-      inputPath,
-      extension,
-      deleteOriginal: deleteOriginal,
-    );
-    final outputPath = outputPlan.workingPath;
-
-    String command;
-    if (normalizedFormat == 'opus') {
-      command =
-          '-v error -hide_banner -i "$inputPath" -codec:a libopus -b:a $bitrateValue -vbr on -compression_level 10 -map 0:a "$outputPath" -y';
-    } else if (normalizedFormat == 'aac' || normalizedFormat == 'm4a') {
-      command =
-          '-v error -hide_banner -i "$inputPath" -codec:a aac -b:a $bitrateValue -map 0:a -f mp4 "$outputPath" -y';
-    } else {
-      command =
-          '-v error -hide_banner -i "$inputPath" -codec:a libmp3lame -b:a $bitrateValue -map 0:a -id3v2_version 3 "$outputPath" -y';
-    }
-
-    final result = await _execute(command);
-
-    if (result.success) {
-      return _finalizeConversionOutput(
-        plan: outputPlan,
-        inputPath: inputPath,
-        deleteOriginal: deleteOriginal,
-      );
-    }
-
-    _log.e('M4A to $normalizedFormat conversion failed: ${result.output}');
-    await _cleanupConversionOutput(outputPlan);
-    return null;
-  }
-
   static Future<String?> decryptWithDescriptor({
     required String inputPath,
     required DownloadDecryptionDescriptor descriptor,

@@ -93,10 +93,6 @@ void main() {
       expect(normalizeAutoConvertFormat('unexpected'), 'mp3');
       expect(normalizeAutoConvertBitrate('256 kbps'), '256k');
       expect(normalizeAutoConvertBitrate('999k'), '320k');
-      expect(
-        autoConvertLossySetting(format: 'opus', bitrate: '192k'),
-        'opus_192',
-      );
     });
 
     test('skips only an output that already matches format and bitrate', () {

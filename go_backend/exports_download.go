@@ -31,7 +31,6 @@ type DownloadRequest struct {
 	EmbedLyrics                 bool   `json:"embed_lyrics"`
 	EmbedReplayGain             bool   `json:"embed_replaygain,omitempty"`
 	PostProcessingEnabled       bool   `json:"post_processing_enabled,omitempty"`
-	TidalHighFormat             string `json:"tidal_high_format,omitempty"`
 	TrackNumber                 int    `json:"track_number"`
 	PlaylistPosition            int    `json:"playlist_position,omitempty"`
 	DiscNumber                  int    `json:"disc_number"`

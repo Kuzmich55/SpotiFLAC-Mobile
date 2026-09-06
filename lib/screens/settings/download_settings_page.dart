@@ -42,14 +42,6 @@ class _DownloadSettingsPageState extends ConsumerState<DownloadSettingsPage> {
     final qualityOptions =
         selectedDownloadExtension?.qualityOptions ?? const <QualityOption>[];
     final canSelectQuality = qualityOptions.isNotEmpty;
-    final usesTidalCompatibilityOptions = selectedDownloadService.isNotEmpty
-        ? ref
-              .read(extensionProvider.notifier)
-              .downloadProviderReplacesLegacyProvider(
-                selectedDownloadService,
-                'tidal',
-              )
-        : false;
     final nativeWorkerAvailable = Platform.isAndroid && hasDownloadExtensions;
 
     return PopScope(
@@ -111,22 +103,6 @@ class _DownloadSettingsPageState extends ConsumerState<DownloadSettingsPage> {
                         onTap: () => ref
                             .read(settingsProvider.notifier)
                             .setAudioQuality(quality.id),
-                        showDivider: true,
-                      ),
-                    if (usesTidalCompatibilityOptions &&
-                        settings.audioQuality == 'HIGH')
-                      SettingsItem(
-                        icon: Icons.tune,
-                        title: context.l10n.downloadLossyFormat,
-                        subtitle: _getLossyCompatibilityFormatLabel(
-                          context,
-                          settings.tidalHighFormat,
-                        ),
-                        onTap: () => _showLossyCompatibilityFormatPicker(
-                          context,
-                          ref,
-                          settings.tidalHighFormat,
-                        ),
                         showDivider: true,
                       ),
                   ],
@@ -391,8 +367,6 @@ class _DownloadSettingsPageState extends ConsumerState<DownloadSettingsPage> {
         return context.l10n.qualityHiResFlac;
       case 'HI_RES_LOSSLESS':
         return context.l10n.qualityHiResFlacMax;
-      case 'HIGH':
-        return context.l10n.downloadLossy320;
       default:
         return quality.label;
     }
@@ -409,128 +383,9 @@ class _DownloadSettingsPageState extends ConsumerState<DownloadSettingsPage> {
         return context.l10n.qualityHiResFlacSubtitle;
       case 'HI_RES_LOSSLESS':
         return context.l10n.qualityHiResFlacMaxSubtitle;
-      case 'HIGH':
-        return _getLossyCompatibilityFormatLabel(
-          context,
-          ref.read(settingsProvider).tidalHighFormat,
-        );
       default:
         return quality.description ?? '';
     }
-  }
-
-  String _getLossyCompatibilityFormatLabel(
-    BuildContext context,
-    String format,
-  ) {
-    switch (format) {
-      case 'mp3_320':
-        return context.l10n.downloadLossyMp3;
-      case 'aac_320':
-        return context.l10n.downloadLossyAac;
-      case 'opus_256':
-        return context.l10n.downloadLossyOpus256;
-      case 'opus_128':
-        return context.l10n.downloadLossyOpus128;
-      default:
-        return context.l10n.downloadLossyMp3;
-    }
-  }
-
-  void _showLossyCompatibilityFormatPicker(
-    BuildContext context,
-    WidgetRef ref,
-    String current,
-  ) {
-    final colorScheme = Theme.of(context).colorScheme;
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      backgroundColor: colorScheme.surfaceContainerHigh,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-              child: Text(
-                context.l10n.downloadLossy320Format,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-              child: Text(
-                context.l10n.downloadLossy320FormatDesc,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.audiotrack),
-              title: Text(context.l10n.downloadLossyMp3),
-              subtitle: Text(context.l10n.downloadLossyMp3Subtitle),
-              trailing: current == 'mp3_320'
-                  ? Icon(Icons.check, color: colorScheme.primary)
-                  : null,
-              onTap: () {
-                ref
-                    .read(settingsProvider.notifier)
-                    .setTidalHighFormat('mp3_320');
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.album_outlined),
-              title: Text(context.l10n.downloadLossyAac),
-              subtitle: Text(context.l10n.downloadLossyAacSubtitle),
-              trailing: current == 'aac_320'
-                  ? Icon(Icons.check, color: colorScheme.primary)
-                  : null,
-              onTap: () {
-                ref
-                    .read(settingsProvider.notifier)
-                    .setTidalHighFormat('aac_320');
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.graphic_eq),
-              title: Text(context.l10n.downloadLossyOpus256),
-              subtitle: Text(context.l10n.downloadLossyOpus256Subtitle),
-              trailing: current == 'opus_256'
-                  ? Icon(Icons.check, color: colorScheme.primary)
-                  : null,
-              onTap: () {
-                ref
-                    .read(settingsProvider.notifier)
-                    .setTidalHighFormat('opus_256');
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.graphic_eq),
-              title: Text(context.l10n.downloadLossyOpus128),
-              subtitle: Text(context.l10n.downloadLossyOpus128Subtitle),
-              trailing: current == 'opus_128'
-                  ? Icon(Icons.check, color: colorScheme.primary)
-                  : null,
-              onTap: () {
-                ref
-                    .read(settingsProvider.notifier)
-                    .setTidalHighFormat('opus_128');
-                Navigator.pop(context);
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showAutoConvertFormatPicker(

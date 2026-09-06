@@ -304,23 +304,6 @@ String resolveQualityVariantFilename({
   );
 }
 
-String lossyFormatForSetting(String value) {
-  final normalized = value.trim().toLowerCase();
-  if (normalized.startsWith('opus')) return 'opus';
-  if (normalized.startsWith('aac') || normalized.startsWith('m4a')) {
-    return 'aac';
-  }
-  return 'mp3';
-}
-
-String lossyExtensionForFormat(String format) {
-  return switch (format) {
-    'opus' => '.opus',
-    'aac' => '.m4a',
-    _ => '.mp3',
-  };
-}
-
 String metadataFormatForLossyFormat(String format) {
   return format == 'aac' ? 'm4a' : format;
 }
@@ -346,15 +329,6 @@ String normalizeAutoConvertBitrate(String value) {
 
 int autoConvertBitrateKbps(String value) {
   return int.parse(normalizeAutoConvertBitrate(value).replaceAll('k', ''));
-}
-
-String autoConvertLossySetting({
-  required String format,
-  required String bitrate,
-}) {
-  final normalizedFormat = normalizeAutoConvertFormat(format);
-  final normalizedBitrate = autoConvertBitrateKbps(bitrate);
-  return '${normalizedFormat}_$normalizedBitrate';
 }
 
 String autoConvertFormatLabel(String format) {

@@ -873,7 +873,6 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
           !_shouldSkipLyrics(extensionState, track.source, item.service),
       embedReplayGain: settings.embedReplayGain,
       postProcessingEnabled: postProcessingEnabled,
-      tidalHighFormat: settings.tidalHighFormat,
       autoConvertDownloads: settings.autoConvertDownloads,
       autoConvertFormat: normalizeAutoConvertFormat(settings.autoConvertFormat),
       autoConvertBitrate: normalizeAutoConvertBitrate(

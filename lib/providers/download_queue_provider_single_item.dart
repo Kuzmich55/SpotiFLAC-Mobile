@@ -933,16 +933,12 @@ class _DownloadRun {
       if (isContentUriPath && effectiveSafMode) {
         if (shouldPreserveNativeM4a) {
           await _preserveSafNativeM4a(path);
-        } else if (quality == 'HIGH') {
-          await _convertSafM4aToLossy(path);
         } else {
           await _convertSafM4aToFlac(path);
         }
       } else {
         if (shouldPreserveNativeM4a) {
           await _preserveLocalNativeM4a(path);
-        } else if (quality == 'HIGH') {
-          await _convertLocalM4aToLossy(path);
         } else {
           await _convertLocalM4aToFlac(path);
         }
@@ -1110,91 +1106,6 @@ class _DownloadRun {
     return true;
   }
 
-  Future<void> _convertSafM4aToLossy(String currentFilePath) async {
-    final tidalHighFormat = settings.autoConvertDownloads
-        ? autoConvertLossySetting(
-            format: settings.autoConvertFormat,
-            bitrate: settings.autoConvertBitrate,
-          )
-        : settings.tidalHighFormat;
-    _log.i(
-      'Lossy 320kbps quality (SAF), converting M4A to $tidalHighFormat...',
-    );
-
-    final format = lossyFormatForSetting(tidalHighFormat);
-    final displayFormat = displayFormatForLossyFormat(format);
-    final newExt = lossyExtensionForFormat(format);
-    final newFileName = '${safBaseName ?? 'track'}$newExt';
-    var opStarted = false;
-    var convertFailed = false;
-    try {
-      final newUri = await n._replaceSafFileVia(
-        uri: currentFilePath,
-        treeUri: settings.downloadTreeUri,
-        relativeDir: effectiveOutputDir,
-        op: (tempPath, addCleanup) async {
-          opStarted = true;
-          n.updateItemStatus(
-            item.id,
-            DownloadStatus.finalizing,
-            progress: 0.95,
-          );
-          final convertedPath = await FFmpegService.convertM4aToLossy(
-            tempPath,
-            format: format,
-            bitrate: tidalHighFormat,
-            deleteOriginal: false,
-          );
-          if (convertedPath == null) {
-            convertFailed = true;
-            return null;
-          }
-          addCleanup(convertedPath);
-          _log.i(
-            'Successfully converted M4A to $format (temp): $convertedPath',
-          );
-          _log.i('Embedding metadata to $format...');
-          n.updateItemStatus(
-            item.id,
-            DownloadStatus.finalizing,
-            progress: 0.99,
-          );
-
-          await _embedFinalMetadata(
-            convertedPath,
-            format: metadataFormatForLossyFormat(format),
-            rebuildTrack: false,
-          );
-
-          return (convertedPath, newFileName);
-        },
-      );
-
-      if (newUri != null) {
-        filePath = newUri;
-        finalSafFileName = newFileName;
-        final bitrateDisplay = tidalHighFormat.contains('_')
-            ? '${tidalHighFormat.split('_').last}kbps'
-            : '320kbps';
-        actualQuality = '$displayFormat $bitrateDisplay';
-        result['audio_codec'] = format;
-        result['format'] = format;
-        result['bitrate'] = int.tryParse(tidalHighFormat.split('_').last);
-        result.remove('actual_bit_depth');
-        result.remove('actual_sample_rate');
-      } else if (convertFailed) {
-        _log.w('M4A to $format conversion failed, keeping M4A file');
-        actualQuality = 'AAC 320kbps';
-      } else if (opStarted) {
-        _log.w('Failed to write converted $format to SAF, keeping M4A');
-        actualQuality = 'AAC 320kbps';
-      }
-    } catch (e) {
-      _log.w('SAF M4A conversion failed: $e');
-      actualQuality = 'AAC 320kbps';
-    }
-  }
-
   Future<void> _preserveSafNativeM4a(String currentFilePath) async {
     // Decrypted streams are already in their final format.
     // Converting e.g. eac3 M4A to FLAC would produce fake upscaled output.
@@ -1325,61 +1236,6 @@ class _DownloadRun {
       }
     } catch (e) {
       _log.w('SAF M4A->FLAC conversion failed: $e');
-    }
-  }
-
-  Future<void> _convertLocalM4aToLossy(String currentFilePath) async {
-    final tidalHighFormat = settings.autoConvertDownloads
-        ? autoConvertLossySetting(
-            format: settings.autoConvertFormat,
-            bitrate: settings.autoConvertBitrate,
-          )
-        : settings.tidalHighFormat;
-    _log.i(
-      'Lossy 320kbps quality download, converting M4A to $tidalHighFormat...',
-    );
-
-    try {
-      n.updateItemStatus(item.id, DownloadStatus.finalizing, progress: 0.95);
-
-      final format = lossyFormatForSetting(tidalHighFormat);
-      final displayFormat = displayFormatForLossyFormat(format);
-      final convertedPath = await FFmpegService.convertM4aToLossy(
-        currentFilePath,
-        format: format,
-        bitrate: tidalHighFormat,
-        deleteOriginal: true,
-      );
-
-      if (convertedPath != null) {
-        filePath = convertedPath;
-        final bitrateDisplay = tidalHighFormat.contains('_')
-            ? '${tidalHighFormat.split('_').last}kbps'
-            : '320kbps';
-        actualQuality = '$displayFormat $bitrateDisplay';
-        result['audio_codec'] = format;
-        result['format'] = format;
-        result['bitrate'] = int.tryParse(tidalHighFormat.split('_').last);
-        result.remove('actual_bit_depth');
-        result.remove('actual_sample_rate');
-        _log.i('Successfully converted M4A to $format: $convertedPath');
-
-        _log.i('Embedding metadata to $format...');
-        n.updateItemStatus(item.id, DownloadStatus.finalizing, progress: 0.99);
-
-        await _embedFinalMetadata(
-          convertedPath,
-          format: metadataFormatForLossyFormat(format),
-          rebuildTrack: false,
-        );
-        _log.d('Metadata embedded successfully');
-      } else {
-        _log.w('M4A to $format conversion failed, keeping M4A file');
-        actualQuality = 'AAC 320kbps';
-      }
-    } catch (e) {
-      _log.w('M4A conversion process failed: $e, keeping M4A file');
-      actualQuality = 'AAC 320kbps';
     }
   }
 
@@ -1608,21 +1464,16 @@ class _DownloadRun {
 
   /// Final metadata embed shared by every publish branch. Backend-provided
   /// genre/label/copyright win over the Deezer extended-metadata lookup.
-  /// [rebuildTrack] is false only for the lossy-HIGH branches, which embed
-  /// the track as-is instead of re-merging the download result into it.
   Future<String?> _embedFinalMetadata(
     String path, {
     required String format,
     bool writeExternalLrc = true,
-    bool rebuildTrack = true,
   }) async {
-    final track = rebuildTrack
-        ? buildTrackForMetadataEmbedding(
-            trackToDownload,
-            result,
-            resolvedAlbumArtist,
-          )
-        : trackToDownload;
+    final track = buildTrackForMetadataEmbedding(
+      trackToDownload,
+      result,
+      resolvedAlbumArtist,
+    );
     final lrcContent = await n._embedMetadataToFile(
       path,
       track,

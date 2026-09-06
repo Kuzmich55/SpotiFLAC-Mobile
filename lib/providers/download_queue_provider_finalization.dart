@@ -992,114 +992,6 @@ extension _DownloadQueueFinalization on DownloadQueueNotifier {
     );
   }
 
-  Future<String?> _finalizeNativeWorkerHighConversion({
-    required _NativeWorkerRequestContext context,
-    required Map<String, dynamic> result,
-    required AppSettings settings,
-    required Track track,
-    required String filePath,
-  }) async {
-    if (context.quality != 'HIGH') {
-      return filePath;
-    }
-
-    final lowerPath = filePath.toLowerCase();
-    final resultFileName = (result['file_name'] as String?)?.toLowerCase();
-    final looksLikeM4a =
-        lowerPath.endsWith('.m4a') ||
-        lowerPath.endsWith('.mp4') ||
-        (resultFileName != null &&
-            (resultFileName.endsWith('.m4a') ||
-                resultFileName.endsWith('.mp4')));
-    if (!looksLikeM4a) {
-      return filePath;
-    }
-
-    final tidalHighFormat = settings.autoConvertDownloads
-        ? autoConvertLossySetting(
-            format: settings.autoConvertFormat,
-            bitrate: settings.autoConvertBitrate,
-          )
-        : settings.tidalHighFormat;
-    final format = lossyFormatForSetting(tidalHighFormat);
-    final newExt = lossyExtensionForFormat(format);
-    final displayFormat = displayFormatForLossyFormat(format);
-    final bitrateDisplay = tidalHighFormat.contains('_')
-        ? '${tidalHighFormat.split('_').last}kbps'
-        : '320kbps';
-
-    Future<void> embedConvertedMetadata(String convertedPath) async {
-      if (!settings.embedMetadata) return;
-      await _embedMetadataToFile(
-        convertedPath,
-        track,
-        format: metadataFormatForLossyFormat(format),
-        genre: result['genre'] as String?,
-        label: result['label'] as String?,
-        copyright: result['copyright'] as String?,
-        comment: result['comment'] as String?,
-        downloadService: context.item.service,
-      );
-    }
-
-    if (context.storageMode == 'saf' && isContentUri(filePath)) {
-      final treeUri = context.downloadTreeUri;
-      if (treeUri == null || treeUri.isEmpty) {
-        return null;
-      }
-      final rawFileName =
-          (result['file_name'] as String?) ?? context.safFileName ?? 'track';
-      final baseName = rawFileName.replaceFirst(RegExp(r'\.[^.]+$'), '');
-      final newFileName = '$baseName$newExt';
-      final newUri = await _replaceSafFileVia(
-        uri: filePath,
-        treeUri: treeUri,
-        relativeDir: context.safRelativeDir ?? '',
-        op: (tempPath, addCleanup) async {
-          final convertedPath = await FFmpegService.convertM4aToLossy(
-            tempPath,
-            format: format,
-            bitrate: tidalHighFormat,
-            deleteOriginal: false,
-          );
-          if (convertedPath == null) return null;
-          addCleanup(convertedPath);
-          await embedConvertedMetadata(convertedPath);
-          return (convertedPath, newFileName);
-        },
-      );
-      if (newUri == null) {
-        return null;
-      }
-      result['file_name'] = newFileName;
-      result['_native_actual_quality'] = '$displayFormat $bitrateDisplay';
-      result['audio_codec'] = format;
-      result['format'] = format;
-      result['bitrate'] = int.tryParse(tidalHighFormat.split('_').last);
-      result.remove('actual_bit_depth');
-      result.remove('actual_sample_rate');
-      return newUri;
-    }
-
-    final convertedPath = await FFmpegService.convertM4aToLossy(
-      filePath,
-      format: format,
-      bitrate: tidalHighFormat,
-      deleteOriginal: true,
-    );
-    if (convertedPath == null) {
-      return null;
-    }
-    await embedConvertedMetadata(convertedPath);
-    result['_native_actual_quality'] = '$displayFormat $bitrateDisplay';
-    result['audio_codec'] = format;
-    result['format'] = format;
-    result['bitrate'] = int.tryParse(tidalHighFormat.split('_').last);
-    result.remove('actual_bit_depth');
-    result.remove('actual_sample_rate');
-    return convertedPath;
-  }
-
   Future<String?> _finalizeNativeWorkerContainerConversion({
     required _NativeWorkerRequestContext context,
     required Map<String, dynamic> result,
@@ -1107,7 +999,7 @@ extension _DownloadQueueFinalization on DownloadQueueNotifier {
     required Track track,
     required String filePath,
   }) async {
-    if (context.quality == 'HIGH' || context.outputExt != '.flac') {
+    if (context.outputExt != '.flac') {
       return filePath;
     }
     final resultAudioFormat = normalizeAudioFormatValue(

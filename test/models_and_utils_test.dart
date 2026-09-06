@@ -23,6 +23,30 @@ import 'package:spotiflac_android/utils/path_match_keys.dart';
 import 'package:spotiflac_android/utils/string_utils.dart';
 
 void main() {
+  test(
+    'retired quality conversion settings do not enable automatic conversion',
+    () {
+      for (final format in ['mp3_320', 'aac_320', 'opus_256', 'opus_128']) {
+        final settings = AppSettings.fromJson({
+          'audioQuality': 'HIGH',
+          'tidalHighFormat': format,
+        });
+        expect(settings.audioQuality, 'HIGH');
+        expect(settings.autoConvertDownloads, isFalse);
+        expect(settings.toJson().containsKey('tidalHighFormat'), isFalse);
+      }
+      final settings = AppSettings.fromJson({
+        'tidalHighFormat': 'mp3_320',
+        'autoConvertDownloads': true,
+        'autoConvertFormat': 'opus',
+        'autoConvertBitrate': '192k',
+      });
+      expect(settings.autoConvertDownloads, isTrue);
+      expect(settings.autoConvertFormat, 'opus');
+      expect(settings.autoConvertBitrate, '192k');
+    },
+  );
+
   group('Finalized SAF audio names', () {
     for (final extension in ['mp3', 'opus', 'flac', 'ogg', 'm4a', 'mp4']) {
       test(
@@ -1112,7 +1136,6 @@ void main() {
         embedLyrics: false,
         embedReplayGain: true,
         postProcessingEnabled: true,
-        tidalHighFormat: 'opus_256',
         autoConvertDownloads: true,
         autoConvertFormat: 'opus',
         autoConvertBitrate: '192k',
@@ -1173,7 +1196,6 @@ void main() {
         'embed_lyrics': false,
         'embed_replaygain': true,
         'post_processing_enabled': true,
-        'tidal_high_format': 'opus_256',
         'auto_convert_downloads': true,
         'auto_convert_format': 'opus',
         'auto_convert_bitrate': '192k',
