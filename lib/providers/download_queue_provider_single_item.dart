@@ -931,18 +931,18 @@ class _DownloadRun {
 
     if (isM4aFile || shouldForceDashSafM4aHandling) {
       if (isContentUriPath && effectiveSafMode) {
-        if (quality == 'HIGH') {
-          await _convertSafM4aToLossy(path);
-        } else if (shouldPreserveNativeM4a) {
+        if (shouldPreserveNativeM4a) {
           await _preserveSafNativeM4a(path);
+        } else if (quality == 'HIGH') {
+          await _convertSafM4aToLossy(path);
         } else {
           await _convertSafM4aToFlac(path);
         }
       } else {
-        if (quality == 'HIGH') {
-          await _convertLocalM4aToLossy(path);
-        } else if (shouldPreserveNativeM4a) {
+        if (shouldPreserveNativeM4a) {
           await _preserveLocalNativeM4a(path);
+        } else if (quality == 'HIGH') {
+          await _convertLocalM4aToLossy(path);
         } else {
           await _convertLocalM4aToFlac(path);
         }
