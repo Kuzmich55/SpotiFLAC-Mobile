@@ -49,11 +49,16 @@ String? _libraryFileFormatLabel(String? format) {
 String? buildLibraryAudioQualityLabel({
   required String mode,
   String? format,
+  String? filePath,
+  String? fileName,
   int? bitrateKbps,
   int? bitDepth,
   int? sampleRate,
   String? storedQuality,
 }) {
+  final effectiveFormat =
+      normalizeOptionalString(format) ??
+      audioFormatForPath(filePath, fileName: fileName);
   final stored = normalizeOptionalString(storedQuality);
   final storedBitrate = _bitrateFromStoredQuality(stored);
   final storedBitDepth = _bitDepthFromStoredQuality(stored);
@@ -64,7 +69,10 @@ String? buildLibraryAudioQualityLabel({
       ? bitDepth
       : storedBitDepth;
   final bitrateLabel = effectiveBitrate != null
-      ? buildDisplayAudioQuality(bitrateKbps: effectiveBitrate, format: format)
+      ? buildDisplayAudioQuality(
+          bitrateKbps: effectiveBitrate,
+          format: effectiveFormat,
+        )
       : null;
   final bitDepthLabel =
       bitDepth != null && bitDepth > 0 && sampleRate != null && sampleRate > 0
@@ -76,11 +84,14 @@ String? buildLibraryAudioQualityLabel({
   final normalizedMode = normalizeLibraryQualityLabelMode(mode);
 
   if (normalizedMode == AppSettings.libraryQualityLabelFileFormat) {
-    return _libraryFileFormatLabel(format);
+    return _libraryFileFormatLabel(effectiveFormat);
   }
 
-  if (isLossyAudioFormat(format)) {
-    return bitrateLabel;
+  if (isLossyAudioFormat(effectiveFormat)) {
+    // Older rows may know the codec before their bitrate has been backfilled.
+    // Keep a useful badge without showing stale lossless specs or inventing a
+    // bitrate from the user's current download/conversion setting.
+    return bitrateLabel ?? _libraryFileFormatLabel(effectiveFormat);
   }
 
   return switch (normalizedMode) {

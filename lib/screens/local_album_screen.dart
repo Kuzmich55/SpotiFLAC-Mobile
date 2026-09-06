@@ -323,6 +323,7 @@ class _LocalAlbumScreenState extends ConsumerState<LocalAlbumScreen>
     String? label(LocalLibraryItem track) => buildLibraryAudioQualityLabel(
       mode: mode,
       format: track.format,
+      filePath: track.filePath,
       bitrateKbps: track.bitrate,
       bitDepth: track.bitDepth,
       sampleRate: track.sampleRate,

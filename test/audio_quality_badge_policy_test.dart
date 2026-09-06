@@ -1,8 +1,50 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spotiflac_android/models/settings.dart';
+import 'package:spotiflac_android/models/unified_library_item.dart';
+import 'package:spotiflac_android/providers/download_history_provider.dart';
+import 'package:spotiflac_android/services/library_database.dart';
 import 'package:spotiflac_android/utils/audio_quality_badge_policy.dart';
 
 void main() {
+  test(
+    'Library history and local cards retain labels for legacy Opus rows',
+    () {
+      final history = UnifiedLibraryItem.fromDownloadHistory(
+        DownloadHistoryItem(
+          id: 'history-song',
+          trackName: 'Song',
+          artistName: 'Artist',
+          albumName: 'Album',
+          filePath: 'content://music/document/42',
+          safFileName: 'Song.opus',
+          quality: '16-bit/44.1kHz',
+          service: 'example',
+          downloadedAt: DateTime(2026),
+        ),
+      );
+      final local = UnifiedLibraryItem.fromLocalLibrary(
+        LocalLibraryItem(
+          id: 'local-song',
+          trackName: 'Song',
+          artistName: 'Artist',
+          albumName: 'Album',
+          filePath: '/music/Song.opus',
+          scannedAt: DateTime(2026),
+        ),
+      );
+      for (final item in [history, local]) {
+        expect(
+          item.qualityForMode(AppSettings.libraryQualityLabelBitDepth),
+          'OPUS',
+        );
+        expect(
+          item.qualityForMode(AppSettings.libraryQualityLabelBitrate),
+          'OPUS',
+        );
+      }
+    },
+  );
+
   group('Library audio quality badge color', () {
     test('keeps legacy 24-bit labels highlighted', () {
       expect(shouldHighlightAudioQualityBadge('24-bit/96kHz'), isTrue);
@@ -25,6 +67,77 @@ void main() {
   });
 
   group('Library audio quality label mode', () {
+    test('keeps an Opus badge when bitrate has not been backfilled', () {
+      for (final mode in [
+        AppSettings.libraryQualityLabelBitrate,
+        AppSettings.libraryQualityLabelBitDepth,
+        AppSettings.libraryQualityLabelBitDepthOnly,
+        AppSettings.libraryQualityLabelBitDepthBitrate,
+        AppSettings.libraryQualityLabelFileFormat,
+      ]) {
+        expect(
+          buildLibraryAudioQualityLabel(
+            mode: mode,
+            format: 'opus',
+            bitDepth: 16,
+            sampleRate: 44100,
+            storedQuality: '16-bit/44.1kHz',
+          ),
+          'OPUS',
+          reason: mode,
+        );
+      }
+    });
+
+    test('uses stored Opus bitrate until measured bitrate is available', () {
+      expect(
+        buildLibraryAudioQualityLabel(
+          mode: AppSettings.libraryQualityLabelBitDepth,
+          format: 'opus',
+          storedQuality: 'OPUS 320kbps',
+        ),
+        'OPUS 320kbps',
+      );
+      expect(
+        buildLibraryAudioQualityLabel(
+          mode: AppSettings.libraryQualityLabelBitDepth,
+          format: 'opus',
+          bitrateKbps: 256,
+          storedQuality: 'OPUS 320kbps',
+        ),
+        'OPUS 256kbps',
+      );
+      expect(formatLibraryGridAudioQualityLabel('OPUS 320kbps'), '320k');
+      expect(formatLibraryGridAudioQualityLabel('OPUS'), 'OPUS');
+    });
+
+    test('uses the path or SAF name when a legacy row has no format', () {
+      expect(
+        buildLibraryAudioQualityLabel(
+          mode: AppSettings.libraryQualityLabelBitDepth,
+          filePath: '/music/Song.opus',
+          storedQuality: '16-bit/44.1kHz',
+        ),
+        'OPUS',
+      );
+      expect(
+        buildLibraryAudioQualityLabel(
+          mode: AppSettings.libraryQualityLabelBitrate,
+          filePath: 'content://music/document/42',
+          fileName: 'Song.OPUS',
+        ),
+        'OPUS',
+      );
+      expect(
+        buildLibraryAudioQualityLabel(
+          mode: AppSettings.libraryQualityLabelFileFormat,
+          format: 'alac',
+          filePath: '/music/Song.m4a',
+        ),
+        'ALAC',
+      );
+    });
+
     test('uses measured bitrate by default', () {
       expect(
         buildLibraryAudioQualityLabel(

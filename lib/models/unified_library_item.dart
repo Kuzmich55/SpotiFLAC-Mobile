@@ -110,6 +110,8 @@ class UnifiedLibraryItem {
       return buildLibraryAudioQualityLabel(
         mode: mode,
         format: history.format,
+        filePath: history.filePath,
+        fileName: history.safFileName,
         bitrateKbps: history.bitrate,
         bitDepth: history.bitDepth,
         sampleRate: history.sampleRate,
@@ -122,6 +124,7 @@ class UnifiedLibraryItem {
       return buildLibraryAudioQualityLabel(
         mode: mode,
         format: local.format,
+        filePath: local.filePath,
         bitrateKbps: local.bitrate,
         bitDepth: local.bitDepth,
         sampleRate: local.sampleRate,

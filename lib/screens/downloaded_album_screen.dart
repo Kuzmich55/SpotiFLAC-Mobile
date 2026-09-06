@@ -495,6 +495,8 @@ class _DownloadedAlbumScreenState extends ConsumerState<DownloadedAlbumScreen>
     String? label(DownloadHistoryItem track) => buildLibraryAudioQualityLabel(
       mode: mode,
       format: track.format,
+      filePath: track.filePath,
+      fileName: track.safFileName,
       bitrateKbps: track.bitrate,
       bitDepth: track.bitDepth,
       sampleRate: track.sampleRate,
