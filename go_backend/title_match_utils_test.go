@@ -171,6 +171,65 @@ func TestTitlesMatch_SeparatorVariants(t *testing.T) {
 	}
 }
 
+func TestTrackMatchingPreservesArtistCreditBoundaries(t *testing.T) {
+	req := DownloadRequest{
+		TrackName: "Signal - Remix", ArtistName: "Composer, Lead Singer & Lyric Writer",
+		AlbumName: "Original Soundtrack", DurationMS: 234000,
+	}
+	for _, artist := range []string{
+		"Composer, Lead Singer, Guest Writer",
+		"Lead Singer & Composer",
+		"GUEST WRITER; LEAD SINGER",
+	} {
+		t.Run(artist, func(t *testing.T) {
+			resolved := resolvedTrackInfo{
+				Title: "Signal (Remix)", ArtistName: artist,
+				AlbumName: "Original Soundtrack", Duration: 234,
+			}
+			if !trackMatchesRequest(req, resolved, "test") {
+				t.Fatal("matching recording rejected because contributor credits differ")
+			}
+			tracks := []ExtTrackMetadata{{
+				Name: resolved.Title, Artists: artist, AlbumName: "Collection",
+				DurationMS: 234000, ProviderID: "provider",
+			}}
+			if selectBestMetadataEnrichmentTrack(req, tracks) == nil {
+				t.Fatal("matching recording rejected during metadata enrichment")
+			}
+		})
+	}
+}
+
+func TestTrackMetadataTolerancePreservesRecordingIdentity(t *testing.T) {
+	req := DownloadRequest{
+		TrackName: "Signal - Remix", ArtistName: "Composer, Lead Singer & Lyric Writer",
+		AlbumName: "Original Soundtrack", DurationMS: 234000,
+	}
+	for _, tc := range []struct {
+		name     string
+		title    string
+		artist   string
+		duration int
+		want     bool
+	}{
+		{"punctuation", "Signal (Remix)", req.ArtistName, 234, true},
+		{"original", "Signal", req.ArtistName, 234, false},
+		{"named mix", "Signal (Club Mix)", req.ArtistName, 234, false},
+		{"live remix", "Signal (Remix Live)", req.ArtistName, 234, false},
+		{"other artist", "Signal (Remix)", "Unrelated Singer", 234, false},
+		{"other duration", "Signal (Remix)", "Composer, Lead Singer, Guest Writer", 305, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := trackMatchesRequest(req, resolvedTrackInfo{
+				Title: tc.title, ArtistName: tc.artist, AlbumName: req.AlbumName, Duration: tc.duration,
+			}, "test")
+			if got != tc.want {
+				t.Fatalf("trackMatchesRequest = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestTitlesMatch_EmojiStrict(t *testing.T) {
 	if titlesMatch("🪐", "Higher Power") {
 		t.Fatal("expected emoji title not to match unrelated textual title")

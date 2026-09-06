@@ -120,8 +120,8 @@ func artistsMatch(expectedArtist, foundArtist string) bool {
 		return true
 	}
 
-	expectedArtists := splitArtists(normExpected)
-	foundArtists := splitArtists(normFound)
+	expectedArtists := splitArtists(expectedArtist)
+	foundArtists := splitArtists(foundArtist)
 
 	for _, expected := range expectedArtists {
 		for _, found := range foundArtists {
@@ -142,20 +142,21 @@ func artistsMatch(expectedArtist, foundArtist string) bool {
 }
 
 func splitArtists(artists string) []string {
-	normalized := artists
+	normalized := strings.ToLower(artists)
 	normalized = strings.ReplaceAll(normalized, " feat. ", "|")
 	normalized = strings.ReplaceAll(normalized, " feat ", "|")
 	normalized = strings.ReplaceAll(normalized, " ft. ", "|")
 	normalized = strings.ReplaceAll(normalized, " ft ", "|")
 	normalized = strings.ReplaceAll(normalized, " & ", "|")
 	normalized = strings.ReplaceAll(normalized, " and ", "|")
-	normalized = strings.ReplaceAll(normalized, ", ", "|")
+	normalized = strings.ReplaceAll(normalized, ",", "|")
+	normalized = strings.ReplaceAll(normalized, ";", "|")
 	normalized = strings.ReplaceAll(normalized, " x ", "|")
 
 	parts := strings.Split(normalized, "|")
 	result := make([]string, 0, len(parts))
 	for _, part := range parts {
-		trimmed := strings.TrimSpace(part)
+		trimmed := normalizeLooseArtistName(part)
 		if trimmed != "" {
 			result = append(result, trimmed)
 		}
@@ -251,6 +252,26 @@ func titlesMatch(expectedTitle, foundTitle string) bool {
 	}
 
 	return false
+}
+
+func trackTitlesMatch(expectedTitle, foundTitle string) bool {
+	expected := normalizeLooseTitle(expectedTitle)
+	found := normalizeLooseTitle(foundTitle)
+	if expected != "" && expected == found {
+		return true
+	}
+
+	// Version words identify recordings; punctuation around them does not.
+	for _, title := range []string{expected, found} {
+		for _, word := range strings.Fields(title) {
+			switch word {
+			case "mix", "remix", "live", "acoustic", "demo", "instrumental",
+				"karaoke", "edit", "extended", "slowed", "sped":
+				return false
+			}
+		}
+	}
+	return titlesMatch(expectedTitle, foundTitle)
 }
 
 func extractCoreTitle(title string) string {
@@ -425,7 +446,7 @@ func trackMatchesRequest(req DownloadRequest, resolved resolvedTrackInfo, logPre
 		}
 
 		if req.TrackName != "" && resolved.Title != "" &&
-			!titlesMatch(req.TrackName, resolved.Title) {
+			!trackTitlesMatch(req.TrackName, resolved.Title) {
 			GoLog("[%s] Verification failed: title mismatch — expected '%s', got '%s'\n",
 				logPrefix, req.TrackName, resolved.Title)
 			return false
