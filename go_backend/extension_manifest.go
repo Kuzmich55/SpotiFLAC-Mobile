@@ -48,22 +48,11 @@ type ExtensionSetting struct {
 }
 
 type QualityOption struct {
-	ID           string                   `json:"id"`
-	Kind         string                   `json:"kind,omitempty"`
-	Label        string                   `json:"label"`
-	Description  string                   `json:"description"`
-	SizeEstimate *QualitySizeEstimate     `json:"sizeEstimate,omitempty"`
-	Settings     []QualitySpecificSetting `json:"settings,omitempty"`
-}
-
-// QualitySizeEstimate describes audio parameters, not an exact file size.
-// BitrateKbps is for encoded audio; BitDepth/SampleRate are for compressed lossless.
-type QualitySizeEstimate struct {
-	BitrateKbps int  `json:"bitrateKbps,omitempty"`
-	BitDepth    int  `json:"bitDepth,omitempty"`
-	SampleRate  int  `json:"sampleRate,omitempty"`
-	Channels    int  `json:"channels,omitempty"`
-	IsMaximum   bool `json:"isMaximum,omitempty"`
+	ID          string                   `json:"id"`
+	Kind        string                   `json:"kind,omitempty"`
+	Label       string                   `json:"label"`
+	Description string                   `json:"description"`
+	Settings    []QualitySpecificSetting `json:"settings,omitempty"`
 }
 
 type QualitySpecificSetting struct {

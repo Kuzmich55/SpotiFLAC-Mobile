@@ -321,9 +321,6 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen>
           _albumTotalTracks,
       composer: data['composer']?.toString(),
       audioQuality: data['audio_quality']?.toString(),
-      source:
-          (data['source'] ?? data['provider_id'])?.toString() ??
-          _directMetadataProviderId(),
       audioModes: data['audio_modes']?.toString(),
       previewUrl: data['preview_url']?.toString(),
       explicit: parseExplicitFlag(data['explicit']),

@@ -479,7 +479,6 @@ extension _HomeTabExploreUI on _HomeTabState {
         trackName: track.name,
         artistName: track.artistName,
         coverUrl: track.coverUrl,
-        tracks: [track],
         onSelect: (quality, service) {
           ref
               .read(downloadQueueProvider.notifier)

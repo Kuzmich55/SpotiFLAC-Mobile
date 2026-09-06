@@ -6,17 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spotiflac_android/providers/extension_provider.dart';
 import 'package:spotiflac_android/providers/settings_provider.dart';
 import 'package:spotiflac_android/l10n/l10n.dart';
-import 'package:spotiflac_android/models/track.dart';
-import 'package:spotiflac_android/utils/audio_format_utils.dart';
-import 'package:spotiflac_android/utils/download_size_estimate.dart';
-import 'package:spotiflac_android/utils/string_utils.dart';
 
 class DownloadServicePicker extends ConsumerStatefulWidget {
   final String? trackName;
   final String? artistName;
   final String? coverUrl;
-
-  final List<Track> tracks;
   final void Function(String quality, String service) onSelect;
   final String? recommendedService;
 
@@ -25,7 +19,6 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
     this.trackName,
     this.artistName,
     this.coverUrl,
-    this.tracks = const [],
     required this.onSelect,
     this.recommendedService,
   });
@@ -39,7 +32,6 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
     String? trackName,
     String? artistName,
     String? coverUrl,
-    List<Track> tracks = const [],
     String? recommendedService,
     required void Function(String quality, String service) onSelect,
   }) {
@@ -57,7 +49,6 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
         trackName: trackName,
         artistName: artistName,
         coverUrl: coverUrl,
-        tracks: tracks,
         onSelect: onSelect,
         recommendedService: recommendedService,
       ),
@@ -129,22 +120,6 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
     final downloadExtensions = _downloadExtensions();
     final hasProviders = downloadExtensions.isNotEmpty;
     final qualityOptions = _getQualityOptions(downloadExtensions);
-    final settings = ref.watch(settingsProvider);
-    final duration = totalDownloadDuration(widget.tracks);
-    final convertedSize = settings.autoConvertDownloads
-        ? estimateDownloadSize(
-            duration: duration,
-            quality: QualityOption(
-              id: 'converted',
-              label: '',
-              sizeEstimate: QualitySizeEstimate(
-                bitrateKbps: autoConvertBitrateKbps(
-                  settings.autoConvertBitrate,
-                ),
-              ),
-            ),
-          )
-        : null;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -216,41 +191,11 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
                 _QualityOption(
                   title: _localizedQualityLabel(context, quality),
                   subtitle: _localizedQualityDescription(context, quality),
-                  estimatedSize: _sizeLabel(
-                    context,
-                    estimateDownloadSize(
-                      duration: duration,
-                      quality: quality,
-                      tracks: widget.tracks,
-                      providerId: _selectedService,
-                    ),
-                  ),
                   icon: _getQualityIcon(quality.id),
                   onTap: () {
                     Navigator.pop(context);
                     widget.onSelect(quality.id, _selectedService);
                   },
-                ),
-              if (qualityOptions.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-                  child: Text(
-                    [
-                      context.l10n.downloadSizeEstimateNote,
-                      if (convertedSize != null)
-                        context.l10n.downloadConvertedSizeEstimate(
-                          displayFormatForLossyFormat(
-                            normalizeAutoConvertFormat(
-                              settings.autoConvertFormat,
-                            ),
-                          ),
-                          _sizeLabel(context, convertedSize),
-                        ),
-                    ].join('\n\n'),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
                 ),
             ],
 
@@ -259,12 +204,6 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
         ),
       ),
     );
-  }
-
-  String _sizeLabel(BuildContext context, DownloadSizeEstimate? estimate) {
-    if (estimate == null) return context.l10n.downloadSizeUnavailable;
-    final size = formatBytes(estimate.bytes);
-    return context.l10n.downloadEstimatedSize(size);
   }
 
   IconData _getQualityIcon(String qualityId) {
@@ -321,14 +260,12 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
 class _QualityOption extends StatelessWidget {
   final String title;
   final String subtitle;
-  final String estimatedSize;
   final IconData icon;
   final VoidCallback onTap;
 
   const _QualityOption({
     required this.title,
     required this.subtitle,
-    required this.estimatedSize,
     required this.icon,
     required this.onTap,
   });
@@ -347,20 +284,12 @@ class _QualityOption extends StatelessWidget {
         child: Icon(icon, color: colorScheme.onPrimaryContainer, size: 20),
       ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (subtitle.isNotEmpty)
-            Text(
+      subtitle: subtitle.isNotEmpty
+          ? Text(
               subtitle,
               style: TextStyle(color: colorScheme.onSurfaceVariant),
-            ),
-          Text(
-            estimatedSize,
-            style: TextStyle(color: colorScheme.onSurfaceVariant),
-          ),
-        ],
-      ),
+            )
+          : null,
       onTap: onTap,
     );
   }

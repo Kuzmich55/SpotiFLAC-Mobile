@@ -689,32 +689,22 @@ class PostProcessingHook {
 
 class QualityOption {
   final String id;
-  final String? kind;
   final String label;
   final String? description;
-  final QualitySizeEstimate? sizeEstimate;
   final List<QualitySpecificSetting> settings;
 
   const QualityOption({
     required this.id,
-    this.kind,
     required this.label,
     this.description,
-    this.sizeEstimate,
     this.settings = const [],
   });
 
   factory QualityOption.fromJson(Map<String, dynamic> json) {
     return QualityOption(
       id: json['id'] as String? ?? '',
-      kind: json['kind'] as String?,
       label: json['label'] as String? ?? '',
       description: json['description'] as String?,
-      sizeEstimate: json['sizeEstimate'] is Map<String, dynamic>
-          ? QualitySizeEstimate.fromJson(
-              json['sizeEstimate'] as Map<String, dynamic>,
-            )
-          : null,
       settings:
           (json['settings'] as List<dynamic>?)
               ?.map(
@@ -723,33 +713,6 @@ class QualityOption {
               )
               .toList() ??
           [],
-    );
-  }
-}
-
-/// Optional audio parameters for local estimates, not a resolved file size.
-class QualitySizeEstimate {
-  final int? bitrateKbps;
-  final int? bitDepth;
-  final int? sampleRate;
-  final int channels;
-  final bool isMaximum;
-
-  const QualitySizeEstimate({
-    this.bitrateKbps,
-    this.bitDepth,
-    this.sampleRate,
-    this.channels = 2,
-    this.isMaximum = false,
-  });
-
-  factory QualitySizeEstimate.fromJson(Map<String, dynamic> json) {
-    return QualitySizeEstimate(
-      bitrateKbps: (json['bitrateKbps'] as num?)?.toInt(),
-      bitDepth: (json['bitDepth'] as num?)?.toInt(),
-      sampleRate: (json['sampleRate'] as num?)?.toInt(),
-      channels: (json['channels'] as num?)?.toInt() ?? 2,
-      isMaximum: json['isMaximum'] as bool? ?? false,
     );
   }
 }

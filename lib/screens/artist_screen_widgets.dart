@@ -583,7 +583,6 @@ extension _ArtistScreenSections on _ArtistScreenState {
     if (settings.askQualityBeforeDownload || settings.allowQualityVariants) {
       DownloadServicePicker.show(
         context,
-        tracks: [track],
         recommendedService: _recommendedDownloadService(),
         onSelect: (quality, service) {
           if (!mounted) return;

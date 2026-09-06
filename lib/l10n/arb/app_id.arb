@@ -6197,9 +6197,5 @@
   "nowPlayingRepeatAll": "Repeat all",
   "nowPlayingRepeatOne": "Repeat one",
   "queueNetworkFailedOffline": "{count} downloads failed while offline",
-  "libraryFilterMetadataMissingIsrc": "Missing ISRC",
-  "downloadEstimatedSize": "≈ {size}",
-  "downloadSizeUnavailable": "Estimasi ukuran belum tersedia",
-  "downloadSizeEstimateNote": "Estimasi lossless memakai kualitas lagu dari provider yang dipilih. Ukuran sebenarnya bergantung pada kompresi; tanpa sampul dan tag. Penggunaan data bisa lebih besar.",
-  "downloadConvertedSizeEstimate": "Setelah konversi ke {format}: {size}"
+  "libraryFilterMetadataMissingIsrc": "Missing ISRC"
 }

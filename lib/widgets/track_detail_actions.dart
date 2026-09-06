@@ -35,7 +35,6 @@ void downloadSingleTrack(
       trackName: track.name,
       artistName: track.artistName,
       coverUrl: track.coverUrl,
-      tracks: [track],
       recommendedService: recommendedService,
       onSelect: (quality, service) {
         ref
@@ -219,7 +218,6 @@ Future<void> queueTracksSkippingDownloaded(
       context,
       trackName: '${tracksToQueue.length} tracks',
       artistName: artistNameForPicker,
-      tracks: tracksToQueue,
       recommendedService: recommendedService,
       onSelect: (quality, service) {
         ref

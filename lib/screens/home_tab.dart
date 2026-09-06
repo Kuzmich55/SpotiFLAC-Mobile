@@ -652,7 +652,6 @@ class _HomeTabState extends ConsumerState<HomeTab>
           trackName: track.name,
           artistName: track.artistName,
           coverUrl: track.coverUrl,
-          tracks: [track],
           recommendedService:
               trackState.searchExtensionId ?? trackState.searchSource,
           onSelect: (quality, service) {
