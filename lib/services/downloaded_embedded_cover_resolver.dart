@@ -87,7 +87,8 @@ class DownloadedEmbeddedCoverResolver {
   static bool _drainScheduled = false;
   static final Map<String, int> _cacheGeneration = <String, int>{};
   static final Set<String> _pendingRefresh = <String>{};
-  static final _pendingPreviewValidation = <String, _PendingPreviewValidation>{};
+  static final _pendingPreviewValidation =
+      <String, _PendingPreviewValidation>{};
   static Future<void>? _previewValidationFuture;
   static const _previewValidationInterval = Duration(seconds: 5);
   static const _previewValidationBatchSize = 8;

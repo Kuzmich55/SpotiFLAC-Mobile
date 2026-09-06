@@ -296,26 +296,32 @@ void main() {
       );
     });
 
-    test('waits on one progress delta stream and preserves concurrent items', () {
-      expect(
-        RegExp(
-          r'Gobackend\.waitForAllDownloadProgressDelta\(',
-        ).allMatches(workerSnapshotSource),
-        hasLength(1),
-      );
-      expect(
-        workerSnapshotSource,
-        isNot(contains('Gobackend.getAllDownloadProgress()')),
-      );
-      expect(workerSnapshotSource, contains('"item_deltas"'));
-      expect(
-        workerSnapshotSource,
-        contains('progressItemIds = orderedItemIds'),
-      );
-      expect(workerSnapshotSource, contains('progressCoordinatorEpoch'));
-      expect(workerSnapshotSource, contains('nativeWorkerProgressEpoch.get()'));
-      expect(nativeWorkerProviderSource, contains("snapshot['item_deltas']"));
-    });
+    test(
+      'waits on one progress delta stream and preserves concurrent items',
+      () {
+        expect(
+          RegExp(
+            r'Gobackend\.waitForAllDownloadProgressDelta\(',
+          ).allMatches(workerSnapshotSource),
+          hasLength(1),
+        );
+        expect(
+          workerSnapshotSource,
+          isNot(contains('Gobackend.getAllDownloadProgress()')),
+        );
+        expect(workerSnapshotSource, contains('"item_deltas"'));
+        expect(
+          workerSnapshotSource,
+          contains('progressItemIds = orderedItemIds'),
+        );
+        expect(workerSnapshotSource, contains('progressCoordinatorEpoch'));
+        expect(
+          workerSnapshotSource,
+          contains('nativeWorkerProgressEpoch.get()'),
+        );
+        expect(nativeWorkerProviderSource, contains("snapshot['item_deltas']"));
+      },
+    );
 
     Set<String> historyTableColumns(String source) {
       final match = RegExp(

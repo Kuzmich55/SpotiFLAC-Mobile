@@ -47,14 +47,11 @@ void main() {
       normalized.map((track) => track.albumArtist),
       everyElement('Falling In Reverse'),
     );
-    expect(
-      normalized.map((track) => track.artistName),
-      <String>[
-        'Falling In Reverse',
-        'Falling In Reverse, Jelly Roll',
-        'Falling In Reverse, Marilyn Manson',
-      ],
-    );
+    expect(normalized.map((track) => track.artistName), <String>[
+      'Falling In Reverse',
+      'Falling In Reverse, Jelly Roll',
+      'Falling In Reverse, Marilyn Manson',
+    ]);
   });
 
   test('preserves a stable joint album credit', () {
