@@ -310,116 +310,7 @@ class LibraryCollectionsDatabase {
 
   Future<List<PlaylistPickerSummaryRow>> loadPlaylistPickerSummaries(
     List<String> requestedTrackKeys,
-  ) async {
-    final db = await database;
-    final uniqueTrackKeys = requestedTrackKeys
-        .where((key) => key.trim().isNotEmpty)
-        .toSet()
-        .toList(growable: false);
-
-    final playlistRows = await db.rawQuery('''
-      SELECT
-        p.id,
-        p.name,
-        p.cover_image_path,
-        p.created_at,
-        p.updated_at,
-        COUNT(pt.track_key) AS track_count
-      FROM $_tablePlaylists p
-      LEFT JOIN $_tablePlaylistTracks pt ON pt.playlist_id = p.id
-      GROUP BY p.id
-      ORDER BY p.created_at DESC, p.rowid DESC
-    ''');
-
-    final matchedCountsByPlaylistId = <String, int>{};
-    if (uniqueTrackKeys.isNotEmpty) {
-      final placeholders = List.filled(uniqueTrackKeys.length, '?').join(', ');
-      final matchedRows = await db.rawQuery('''
-          SELECT playlist_id, COUNT(*) AS matched_count
-          FROM $_tablePlaylistTracks
-          WHERE track_key IN ($placeholders)
-          GROUP BY playlist_id
-        ''', uniqueTrackKeys);
-      for (final row in matchedRows) {
-        final playlistId = row['playlist_id']?.toString();
-        if (playlistId == null || playlistId.isEmpty) continue;
-        matchedCountsByPlaylistId[playlistId] =
-            (row['matched_count'] as num?)?.toInt() ?? 0;
-      }
-    }
-
-    final playlistIdsNeedingPreview = playlistRows
-        .where((row) {
-          final coverPath = row['cover_image_path']?.toString();
-          return coverPath == null || coverPath.isEmpty;
-        })
-        .map((row) => row['id']?.toString() ?? '')
-        .where((id) => id.isNotEmpty)
-        .toList(growable: false);
-
-    final previewCoverByPlaylistId = <String, String?>{};
-    if (playlistIdsNeedingPreview.isNotEmpty) {
-      final placeholders = List.filled(
-        playlistIdsNeedingPreview.length,
-        '?',
-      ).join(', ');
-      final previewRows = await db.rawQuery('''
-          SELECT outer_tracks.playlist_id, outer_tracks.track_json
-          FROM $_tablePlaylistTracks outer_tracks
-          WHERE outer_tracks.playlist_id IN ($placeholders)
-            AND outer_tracks.rowid = (
-              SELECT inner_tracks.rowid
-              FROM $_tablePlaylistTracks inner_tracks
-              WHERE inner_tracks.playlist_id = outer_tracks.playlist_id
-              ORDER BY inner_tracks.added_at ASC, inner_tracks.rowid ASC
-              LIMIT 1
-            )
-        ''', playlistIdsNeedingPreview);
-
-      for (final row in previewRows) {
-        final playlistId = row['playlist_id']?.toString();
-        final trackJson = row['track_json'] as String?;
-        if (playlistId == null ||
-            playlistId.isEmpty ||
-            trackJson == null ||
-            trackJson.isEmpty) {
-          continue;
-        }
-        try {
-          final decoded = jsonDecode(trackJson);
-          if (decoded is! Map) continue;
-          final coverUrl = decoded['coverUrl']?.toString();
-          if (coverUrl != null && coverUrl.isNotEmpty) {
-            previewCoverByPlaylistId[playlistId] = coverUrl;
-          }
-        } catch (_) {}
-      }
-    }
-
-    return playlistRows
-        .map((row) {
-          final id = row['id']?.toString() ?? '';
-          final createdAt =
-              DateTime.tryParse(row['created_at']?.toString() ?? '') ??
-              DateTime.now();
-          final updatedAt =
-              DateTime.tryParse(row['updated_at']?.toString() ?? '') ??
-              createdAt;
-          return PlaylistPickerSummaryRow(
-            id: id,
-            name: row['name']?.toString() ?? '',
-            coverImagePath: row['cover_image_path'] as String?,
-            previewCover: previewCoverByPlaylistId[id],
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            trackCount: (row['track_count'] as num?)?.toInt() ?? 0,
-            containsAllRequestedTracks:
-                uniqueTrackKeys.isNotEmpty &&
-                matchedCountsByPlaylistId[id] == uniqueTrackKeys.length,
-          );
-        })
-        .toList(growable: false);
-  }
+  ) async => readPlaylistPickerSummaries(await database, requestedTrackKeys);
 
   Future<void> _upsertEntry(
     String table,
@@ -702,4 +593,93 @@ class LibraryCollectionsDatabase {
 
     _log.i('Restored collections from backup');
   }
+}
+
+/// Reads picker rows with bounded selection queries, preserving playlist order.
+Future<List<PlaylistPickerSummaryRow>> readPlaylistPickerSummaries(
+  DatabaseExecutor db,
+  List<String> requestedTrackKeys,
+) async {
+  final uniqueTrackKeys = requestedTrackKeys
+      .where((key) => key.trim().isNotEmpty)
+      .toSet()
+      .toList(growable: false);
+
+  final playlistRows = await db.rawQuery('''
+      SELECT
+        p.id,
+        p.name,
+        p.cover_image_path,
+        p.created_at,
+        p.updated_at,
+        COUNT(pt.track_key) AS track_count,
+        CASE WHEN p.cover_image_path IS NULL OR p.cover_image_path = '' THEN (
+          SELECT preview.track_json
+          FROM $_tablePlaylistTracks preview
+          WHERE preview.playlist_id = p.id
+          ORDER BY preview.added_at ASC, preview.rowid ASC
+          LIMIT 1
+        ) END AS preview_track_json
+      FROM $_tablePlaylists p
+      LEFT JOIN $_tablePlaylistTracks pt ON pt.playlist_id = p.id
+      GROUP BY p.id
+      ORDER BY p.created_at DESC, p.rowid DESC
+    ''');
+
+  final matchedCountsByPlaylistId = <String, int>{};
+  const chunkSize = 500;
+  for (var offset = 0; offset < uniqueTrackKeys.length; offset += chunkSize) {
+    final chunk = uniqueTrackKeys.sublist(
+      offset,
+      (offset + chunkSize).clamp(0, uniqueTrackKeys.length),
+    );
+    final placeholders = List.filled(chunk.length, '?').join(', ');
+    final matchedRows = await db.rawQuery('''
+          SELECT playlist_id, COUNT(*) AS matched_count
+          FROM $_tablePlaylistTracks
+          WHERE track_key IN ($placeholders)
+          GROUP BY playlist_id
+        ''', chunk);
+    for (final row in matchedRows) {
+      final playlistId = row['playlist_id']?.toString();
+      if (playlistId == null || playlistId.isEmpty) continue;
+      matchedCountsByPlaylistId[playlistId] =
+          (matchedCountsByPlaylistId[playlistId] ?? 0) +
+          ((row['matched_count'] as num?)?.toInt() ?? 0);
+    }
+  }
+
+  return playlistRows
+      .map((row) {
+        final id = row['id']?.toString() ?? '';
+        final createdAt =
+            DateTime.tryParse(row['created_at']?.toString() ?? '') ??
+            DateTime.now();
+        final updatedAt =
+            DateTime.tryParse(row['updated_at']?.toString() ?? '') ?? createdAt;
+        String? previewCover;
+        final previewJson = row['preview_track_json'] as String?;
+        if (previewJson != null && previewJson.isNotEmpty) {
+          try {
+            final decoded = jsonDecode(previewJson);
+            if (decoded is Map) {
+              final cover = decoded['coverUrl']?.toString();
+              if (cover != null && cover.isNotEmpty) previewCover = cover;
+            }
+          } catch (_) {}
+        }
+        return PlaylistPickerSummaryRow(
+          id: id,
+          name: row['name']?.toString() ?? '',
+          coverImagePath: row['cover_image_path'] as String?,
+          previewCover: previewCover,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+          trackCount: (row['track_count'] as num?)?.toInt() ?? 0,
+          containsAllRequestedTracks:
+              uniqueTrackKeys.isNotEmpty &&
+              matchedCountsByPlaylistId[id] == uniqueTrackKeys.length,
+        );
+      })
+      .toList(growable: false);
 }
