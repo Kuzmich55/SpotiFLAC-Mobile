@@ -265,6 +265,7 @@ func (r *extensionRuntime) fileDownloadChunked(
 			}
 			request, watchdog := bindStallWatchdog(request, downloadStallTimeout)
 			response, responseErr := client.Do(request)
+			r.trackResolutionTransfer(response)
 			if responseErr != nil {
 				stalled := watchdog.stalled.Load()
 				watchdog.stop()

@@ -1,6 +1,7 @@
 package gobackend
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"sync"
@@ -75,6 +76,13 @@ func (r *extensionRuntime) ffmpegExecute(call goja.FunctionCall) goja.Value {
 }
 
 func (r *extensionRuntime) executeFFmpegCommand(arguments []string, inputPath, outputPath string) goja.Value {
+	ctx := r.activeOperationContext(context.Background())
+	if budget := r.currentResolutionBudget(); budget != nil {
+		defer budget.pause()()
+	}
+	if ctx.Err() != nil {
+		return r.jsError("FFmpeg command cancelled: %v", context.Cause(ctx))
+	}
 
 	ffmpegCommandsMu.Lock()
 	ffmpegCommandID++
@@ -106,6 +114,9 @@ func (r *extensionRuntime) executeFFmpegCommand(arguments []string, inputPath, o
 		delete(ffmpegCommands, cmdID)
 		ffmpegCommandsMu.Unlock()
 		return r.vm.ToValue(result)
+	case <-ctx.Done():
+		ClearFFmpegCommand(cmdID)
+		return r.jsError("FFmpeg command cancelled: %v", context.Cause(ctx))
 	case <-time.After(5 * time.Minute):
 		ClearFFmpegCommand(cmdID)
 		return r.jsError("FFmpeg command timed out")

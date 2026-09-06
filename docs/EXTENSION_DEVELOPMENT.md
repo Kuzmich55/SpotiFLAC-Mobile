@@ -171,6 +171,20 @@ storage, and file access.
 
 ## Downloading files
 
+Each `download(trackID, quality, outputPath, onProgress, options)` call has a
+cumulative 60-second stream-resolution allowance. It covers metadata/ticket
+requests, URL resolution, retry waits, and refreshes, including HTTP headers
+and the first audio byte. Native audio reads after the first byte and bounded
+native FFmpeg conversion pause this clock; transfer stall limits and the
+overall download timeout still apply. Progress callbacks do not reset it.
+
+`options.resolutionTimeoutMs` reports the initial allowance, while
+`utils.getResolutionRemainingMs()` reports the remaining allowance. Check for
+the function before using it on older hosts. Stop with `error_type: "timeout"`
+if a server's required retry delay cannot fit; do not shorten `Retry-After`
+to force another request. The host also enforces the deadline for extensions
+that do not check it themselves.
+
 Extensions with `permissions.file: true` can stream a remote file into their
 allowed output path:
 

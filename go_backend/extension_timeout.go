@@ -89,9 +89,17 @@ func runGojaCallWithTimeoutContext(ctx context.Context, vm *goja.Runtime, call f
 
 	select {
 	case res := <-resultCh:
+		// A host call may return as cancellation fires. Do not let a swallowed
+		// native timeout become a script error (or even success).
+		if ctx.Err() != nil {
+			if errors.Is(context.Cause(ctx), context.Canceled) {
+				return nil, ErrExtensionRequestCancelled
+			}
+			return nil, &JSExecutionError{Message: "execution timeout exceeded", IsTimeout: true}
+		}
 		return res.value, res.err
 	case <-ctx.Done():
-		cancelled := ctx.Err() == context.Canceled
+		cancelled := errors.Is(context.Cause(ctx), context.Canceled)
 		interruptMu.Lock()
 		interrupted = true
 		interruptMu.Unlock()

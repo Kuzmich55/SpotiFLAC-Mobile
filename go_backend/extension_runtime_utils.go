@@ -1,6 +1,7 @@
 package gobackend
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/md5"
 	"crypto/rand"
@@ -285,24 +286,27 @@ func (r *extensionRuntime) sleep(call goja.FunctionCall) goja.Value {
 		sleepMs = 5 * 60 * 1000
 	}
 
+	ctx := r.activeOperationContext(context.Background())
+	timer := time.NewTimer(time.Duration(sleepMs) * time.Millisecond)
+	defer timer.Stop()
+	// A pending cancellation sentinel can precede context initialization.
+	// Preserve its visibility for utility callers outside DownloadPrepared.
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
 	itemID := r.getActiveDownloadItemID()
-	deadline := time.Now().Add(time.Duration(sleepMs) * time.Millisecond)
-
+	requestID := r.getActiveRequestID()
 	for {
-		if itemID != "" && isDownloadCancelled(itemID) {
+		if (itemID != "" && isDownloadCancelled(itemID)) ||
+			(requestID != "" && isExtensionRequestCancelled(requestID)) {
 			return r.vm.ToValue(false)
 		}
-
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
+		select {
+		case <-ctx.Done():
+			return r.vm.ToValue(false)
+		case <-timer.C:
 			return r.vm.ToValue(true)
+		case <-ticker.C:
 		}
-
-		step := 100 * time.Millisecond
-		if remaining < step {
-			step = remaining
-		}
-		time.Sleep(step)
 	}
 }
 

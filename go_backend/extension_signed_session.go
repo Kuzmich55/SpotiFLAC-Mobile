@@ -639,11 +639,7 @@ func (r *extensionRuntime) exchangeSignedSessionGrant(grant string) error {
 func (r *extensionRuntime) signedSessionExchangeContext() (context.Context, context.CancelFunc) {
 	parent := context.Background()
 	if r != nil {
-		if itemID := r.getActiveDownloadItemID(); itemID != "" {
-			parent = downloadCancelContext(itemID)
-		} else if requestID := r.getActiveRequestID(); requestID != "" {
-			parent = extensionRequestCancelContext(requestID)
-		}
+		parent = r.activeOperationContext(parent)
 	}
 	return context.WithTimeout(parent, signedSessionExchangeTimeout)
 }

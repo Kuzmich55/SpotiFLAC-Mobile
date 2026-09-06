@@ -635,6 +635,12 @@ func (p *extensionProviderWrapper) DownloadPrepared(
 		SetItemPreparing(itemID)
 	}
 
+	if runtime != nil {
+		var finishResolution func()
+		downloadCtx, finishResolution = runtime.beginResolutionBudget(downloadCtx, extensionResolutionTimeout)
+		defer finishResolution()
+	}
+
 	progressCallback := vm.ToValue(func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) > 0 {
 			percent := int(call.Arguments[0].ToInteger())
@@ -658,7 +664,7 @@ func (p *extensionProviderWrapper) DownloadPrepared(
 	}
 
 	jsStartedAt := time.Now()
-	downloadOptions := map[string]any{}
+	downloadOptions := map[string]any{"resolutionTimeoutMs": extensionResolutionTimeout.Milliseconds()}
 	if len(preparedContext) > 0 {
 		downloadOptions["preparedContext"] = preparedContext
 	}
@@ -686,6 +692,9 @@ func (p *extensionProviderWrapper) DownloadPrepared(
 		errType := "script_error"
 		if IsTimeoutError(err) {
 			errMsg = "download timeout: extension took too long to complete"
+			if context.Cause(downloadCtx) == context.DeadlineExceeded {
+				errMsg = "stream resolution timeout: extension took too long to resolve an audio stream"
+			}
 			errType = "timeout"
 		}
 		return &ExtDownloadResult{

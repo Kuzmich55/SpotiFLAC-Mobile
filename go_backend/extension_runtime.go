@@ -245,6 +245,9 @@ type extensionRuntime struct {
 	activeDownloadMu     sync.RWMutex
 	activeDownloadItemID string
 
+	resolutionMu     sync.RWMutex
+	resolutionBudget *resolutionBudget
+
 	activeRequestMu sync.RWMutex
 	activeRequestID string
 
@@ -420,6 +423,9 @@ func (r *extensionRuntime) bindDownloadCancelContext(req *http.Request) *http.Re
 // cancels it when that response body closes, so that request context must not
 // be reused for provider retry delays between requests.
 func (r *extensionRuntime) activeOperationContext(fallback context.Context) context.Context {
+	if budget := r.currentResolutionBudget(); budget != nil {
+		return budget.ctx
+	}
 	itemID := r.getActiveDownloadItemID()
 	if itemID == "" {
 		requestID := r.getActiveRequestID()
@@ -791,6 +797,7 @@ func (r *extensionRuntime) RegisterAPIs(vm *goja.Runtime) {
 	utilsObj.Set("appVersion", r.appVersion)
 	utilsObj.Set("appUserAgent", r.appUserAgent)
 	utilsObj.Set("sleep", r.sleep)
+	utilsObj.Set("getResolutionRemainingMs", r.getResolutionRemainingMs)
 	utilsObj.Set("isDownloadCancelled", r.isDownloadCancelled)
 	utilsObj.Set("isRequestCancelled", r.isRequestCancelled)
 	utilsObj.Set("setDownloadStatus", r.setDownloadStatus)

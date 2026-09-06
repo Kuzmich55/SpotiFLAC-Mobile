@@ -219,6 +219,7 @@ func (r *extensionRuntime) fetchSegmentToTemp(
 		}
 		req, watchdog := bindStallWatchdog(req, downloadStallTimeout)
 		resp, err := client.Do(req)
+		r.trackResolutionTransfer(resp)
 		if err != nil {
 			stalled := watchdog.stalled.Load()
 			watchdog.stop()
