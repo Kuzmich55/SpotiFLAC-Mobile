@@ -597,7 +597,7 @@ import Gobackend
         case "readFileMetadata":
             let args = call.arguments as! [String: Any]
             let filePath = args["file_path"] as! String
-            let response = GobackendReadFileMetadata(filePath, &error)
+            let response = GobackendReadFileMetadataWithHint(filePath, args["display_name"] as? String ?? "", &error)
             if let error = error { throw error }
             return response
             

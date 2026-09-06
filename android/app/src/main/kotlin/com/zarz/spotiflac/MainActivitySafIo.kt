@@ -301,6 +301,13 @@ internal fun MainActivity.readAudioMetadataFromUri(
     obj.takeUnless { it.has("error") }
 }
 
+internal fun MainActivity.readCompleteMetadataFromUri(
+    uri: Uri,
+    displayNameHint: String? = null,
+): JSONObject? = readMetadataFromUri(uri, displayNameHint) { path, name ->
+    JSONObject(Gobackend.readFileMetadataWithHint(path, name)).takeUnless { it.has("error") }
+}
+
 internal fun MainActivity.writeUriFromPath(uri: Uri, srcPath: String): Boolean {
         val srcFile = File(srcPath)
         if (!srcFile.exists()) return false

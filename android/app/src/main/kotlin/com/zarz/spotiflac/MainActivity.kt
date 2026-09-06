@@ -1495,23 +1495,17 @@ class MainActivity: FlutterFragmentActivity() {
                         }
                         "readFileMetadata" -> {
                             val filePath = call.argument<String>("file_path") ?: ""
+                            val displayName = call.argument<String>("display_name") ?: ""
                             val response = withContext(Dispatchers.IO) {
                                 try {
                                     if (filePath.startsWith("content://")) {
-                                        val uri = Uri.parse(filePath)
-                                        val tempPath = copyUriToTemp(uri)
-                                            ?: return@withContext """{"error":"Failed to copy SAF file to temp"}"""
-                                        try {
-                                            Gobackend.readFileMetadata(tempPath)
-                                        } finally {
-                                            try { File(tempPath).delete() } catch (_: Exception) {}
-                                        }
+                                        readCompleteMetadataFromUri(Uri.parse(filePath), displayName)
+                                            ?.toString() ?: errorJson("Failed to read SAF metadata")
                                     } else {
-                                        Gobackend.readFileMetadata(filePath)
+                                        Gobackend.readFileMetadataWithHint(filePath, displayName)
                                     }
                                 } catch (e: Exception) {
-                                    android.util.Log.e("SpotiFLAC", "readFileMetadata failed: ${e.message}", e)
-                                    """{"error":${org.json.JSONObject.quote(e.message ?: "unknown")}}"""
+                                    errorJson(e.message ?: "Failed to read metadata")
                                 }
                             }
                             result.success(response)

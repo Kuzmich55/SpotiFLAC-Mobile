@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -43,7 +42,13 @@ func successMethodJSON(method string) (string, error) {
 }
 
 func ReadFileMetadata(filePath string) (string, error) {
-	lower := strings.ToLower(filePath)
+	return ReadFileMetadataWithHint(filePath, "")
+}
+
+// ReadFileMetadataWithHint reads complete tags from extensionless descriptor
+// paths without changing their identity or requiring an audio-file copy.
+func ReadFileMetadataWithHint(filePath, displayNameHint string) (string, error) {
+	lower := resolveLibraryAudioExt(filePath, displayNameHint)
 	isFlac := strings.HasSuffix(lower, ".flac")
 	isM4A := strings.HasSuffix(lower, ".m4a") || strings.HasSuffix(lower, ".mp4") || strings.HasSuffix(lower, ".aac")
 	isMp3 := strings.HasSuffix(lower, ".mp3")
@@ -202,7 +207,7 @@ func ReadFileMetadata(filePath string) (string, error) {
 			}
 		}
 	} else if isApe || isWv || isMpc {
-		result["format"] = strings.TrimPrefix(filepath.Ext(filePath), ".")
+		result["format"] = strings.TrimPrefix(lower, ".")
 		result["audio_codec"] = result["format"]
 		apeTag, apeErr := ReadAPETags(filePath)
 		if apeErr == nil && apeTag != nil {

@@ -1080,8 +1080,14 @@ class PlatformBridge {
     return _invokeMap('reEnrichFile', {'request_json': jsonEncode(request)});
   }
 
-  static Future<Map<String, dynamic>> readFileMetadata(String filePath) {
-    return _invokeMap('readFileMetadata', {'file_path': filePath});
+  static Future<Map<String, dynamic>> readFileMetadata(
+    String filePath, {
+    String? displayName,
+  }) {
+    return _invokeMap('readFileMetadata', {
+      'file_path': filePath,
+      'display_name': ?displayName,
+    });
   }
 
   /// Reads the tags and quality fields used for automatic Library display.
