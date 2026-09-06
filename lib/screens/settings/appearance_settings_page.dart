@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spotiflac_android/l10n/l10n.dart';
-import 'package:spotiflac_android/l10n/supported_locales.dart';
+import 'package:spotiflac_android/constants/language_choices.dart';
 import 'package:spotiflac_android/providers/settings_provider.dart';
 import 'package:spotiflac_android/providers/theme_provider.dart';
 import 'package:spotiflac_android/utils/adaptive_layout.dart';
@@ -552,39 +552,8 @@ class _LanguageSelector extends StatelessWidget {
     required this.onChanged,
   });
 
-  static const _allLanguages = [
-    ('system', 'System Default', Icons.phone_android),
-    ('en', 'English', Icons.language),
-    ('ar', 'العربية', Icons.language),
-    ('id', 'Bahasa Indonesia', Icons.language),
-    ('de', 'Deutsch', Icons.language),
-    ('es', 'Español', Icons.language),
-    ('es_ES', 'Español (España)', Icons.language),
-    ('fr', 'Français', Icons.language),
-    ('hi', 'हिन्दी', Icons.language),
-    ('it', 'Italiano', Icons.language),
-    ('ja', '日本語', Icons.language),
-    ('ko', '한국어', Icons.language),
-    ('nl', 'Nederlands', Icons.language),
-    ('pt', 'Português', Icons.language),
-    ('pt_PT', 'Português (Brasil)', Icons.language),
-    ('ru', 'Русский', Icons.language),
-    ('tr', 'Türkçe', Icons.language),
-    ('uk', 'Українська', Icons.language),
-    ('zh_CN', '简体中文', Icons.language),
-    ('zh_TW', '繁體中文', Icons.language),
-  ];
-
-  /// Uses filteredLocaleCodes from supported_locales.dart (generated file).
-  List<(String, String, IconData)> get _languages {
-    return _allLanguages.where((lang) {
-      if (lang.$1 == 'system') return true;
-      return filteredLocaleCodes.contains(lang.$1);
-    }).toList();
-  }
-
   String _getLanguageName(String code) {
-    for (final lang in _allLanguages) {
+    for (final lang in appLanguageChoices) {
       if (lang.$1 == code) return lang.$2;
     }
     return code;
@@ -629,9 +598,9 @@ class _LanguageSelector extends StatelessWidget {
             Flexible(
               child: ListView.builder(
                 shrinkWrap: true,
-                itemCount: _languages.length,
+                itemCount: supportedLanguageChoices.length,
                 itemBuilder: (context, index) {
-                  final lang = _languages[index];
+                  final lang = supportedLanguageChoices[index];
                   final isSelected = currentLocale == lang.$1;
                   return ListTile(
                     leading: Icon(

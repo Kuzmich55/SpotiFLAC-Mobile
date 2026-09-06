@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:spotiflac_android/providers/settings_provider.dart';
 import 'package:spotiflac_android/l10n/l10n.dart';
-import 'package:spotiflac_android/l10n/supported_locales.dart';
+import 'package:spotiflac_android/constants/language_choices.dart';
 import 'package:spotiflac_android/services/platform_bridge.dart';
 import 'package:spotiflac_android/utils/adaptive_layout.dart';
 import 'package:spotiflac_android/utils/file_access.dart';
@@ -710,43 +710,13 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     );
   }
 
-  static const _allLanguages = [
-    ('system', 'System Default', Icons.phone_android),
-    ('en', 'English', Icons.language),
-    ('ar', 'العربية', Icons.language),
-    ('id', 'Bahasa Indonesia', Icons.language),
-    ('de', 'Deutsch', Icons.language),
-    ('es', 'Español', Icons.language),
-    ('es_ES', 'Español (España)', Icons.language),
-    ('fr', 'Français', Icons.language),
-    ('hi', 'हिन्दी', Icons.language),
-    ('it', 'Italiano', Icons.language),
-    ('ja', '日本語', Icons.language),
-    ('ko', '한국어', Icons.language),
-    ('nl', 'Nederlands', Icons.language),
-    ('pt', 'Português', Icons.language),
-    ('pt_PT', 'Português (Brasil)', Icons.language),
-    ('ru', 'Русский', Icons.language),
-    ('tr', 'Türkçe', Icons.language),
-    ('uk', 'Українська', Icons.language),
-    ('zh_CN', '简体中文', Icons.language),
-    ('zh_TW', '繁體中文', Icons.language),
-  ];
-
-  List<(String, String, IconData)> get _filteredLanguages {
-    return _allLanguages.where((lang) {
-      if (lang.$1 == 'system') return true;
-      return filteredLocaleCodes.contains(lang.$1);
-    }).toList();
-  }
-
   void _onLanguageSelected(String locale) {
     setState(() => _selectedLocale = locale);
     ref.read(settingsProvider.notifier).setLocale(locale);
   }
 
   Widget _buildLanguageStep(ColorScheme colorScheme) {
-    final languages = _filteredLanguages;
+    final languages = supportedLanguageChoices;
 
     return LayoutBuilder(
       builder: (context, constraints) {
