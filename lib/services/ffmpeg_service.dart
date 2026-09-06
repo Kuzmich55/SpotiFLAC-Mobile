@@ -1499,10 +1499,14 @@ class FFmpegService {
     Map<String, String>? metadata,
     String artistTagMode = artistTagModeJoined,
     bool preserveMetadata = false,
+    @visibleForTesting Future<FFmpegResult> Function(List<String>)? execute,
   }) async {
     final tempDir = await getTemporaryDirectory();
     final tempOutput = _nextTempEmbedPath(tempDir.path, '.opus');
-    final mapMetaValue = preserveMetadata ? '0' : '-1';
+    // Opus tags belong to the audio stream, not the input's global metadata.
+    // Copy them to output globals so selected -metadata values override them,
+    // then let the Opus muxer write those globals into the output stream.
+    final mapMetaValue = preserveMetadata ? '0:s:a:0' : '-1';
     final arguments = <String>[
       '-v',
       'error',
@@ -1514,7 +1518,7 @@ class FFmpegService {
       '-map_metadata',
       mapMetaValue,
       '-map_metadata:s:a',
-      mapMetaValue,
+      '-1',
       '-c:a',
       'copy',
     ];
@@ -1550,7 +1554,7 @@ class FFmpegService {
       ..add('-y');
     _log.d('Executing FFmpeg Opus embed command');
 
-    final result = await _executeWithArguments(arguments);
+    final result = await (execute ?? _executeWithArguments)(arguments);
 
     if (result.success) {
       final promoted = await _promoteTempOutput(
