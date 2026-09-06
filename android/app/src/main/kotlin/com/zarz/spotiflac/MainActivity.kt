@@ -93,10 +93,6 @@ class MainActivity: FlutterFragmentActivity() {
     private val playbackLeases = LinkedHashMap<String, ParcelFileDescriptor>()
     @Volatile internal var safScanCancel = false
     @Volatile internal var safScanActive = false
-    /** Tri-state: null = untested, true = works, false = fails (Samsung SELinux). */
-    @Volatile internal var procSelfFdReadable: Boolean? = null
-    @Volatile internal var procSelfFdFallbacks: Int = 0
-    internal val procSelfFdStateLock = Any()
     private val safTreeLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { activityResult ->

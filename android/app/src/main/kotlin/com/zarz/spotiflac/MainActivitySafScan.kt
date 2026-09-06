@@ -57,11 +57,6 @@ internal fun MainActivity.resetSafScanProgress() {
         synchronized(safScanLock) {
             safScanProgress = MainActivity.SafScanProgress()
         }
-        // Allow re-probing /proc/self/fd readability on every new scan session.
-        synchronized(procSelfFdStateLock) {
-            procSelfFdReadable = null
-            procSelfFdFallbacks = 0
-        }
     }
 
 internal fun MainActivity.updateSafScanProgress(block: (MainActivity.SafScanProgress) -> Unit) {

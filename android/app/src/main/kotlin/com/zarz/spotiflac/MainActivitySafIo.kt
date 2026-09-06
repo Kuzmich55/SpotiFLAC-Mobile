@@ -258,100 +258,48 @@ private fun isSeekableSafDescriptor(descriptor: ParcelFileDescriptor): Boolean {
     }
 }
 
-internal fun MainActivity.readAudioMetadataFromUri(
-        uri: Uri,
-        displayNameHint: String? = null,
-        fallbackExt: String? = null,
-        coverCacheKey: String = "",
-    ): JSONObject? {
-        val displayName = buildUriDisplayName(uri, displayNameHint, fallbackExt)
-
-        // Skip /proc/self/fd/ attempt when known to fail (e.g. Samsung SELinux).
-        if (procSelfFdReadable != false) {
-            try {
-                contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
-                    if (!isSeekableSafDescriptor(pfd)) {
-                        synchronized(procSelfFdStateLock) {
-                            procSelfFdReadable = false
-                            procSelfFdFallbacks = 0
-                        }
-                        return@use
-                    }
-                    val directPath = "/proc/self/fd/${pfd.fd}"
-                    val metadataJson = Gobackend.readAudioMetadataWithHintAndCoverCacheKeyJSON(
-                        directPath,
-                        displayName,
-                        coverCacheKey,
-                    )
-                    if (metadataJson.isNotBlank()) {
-                        val obj = JSONObject(metadataJson)
-                        val filenameFallback = obj.optBoolean("metadataFromFilename", false)
-                        if (!obj.has("error") && !filenameFallback) {
-                            synchronized(procSelfFdStateLock) {
-                                procSelfFdReadable = true
-                                procSelfFdFallbacks = 0
-                            }
-                            return obj
-                        }
-                        // One filename fallback should not disable descriptors for all files.
-                        synchronized(procSelfFdStateLock) {
-                            procSelfFdFallbacks++
-                            if (procSelfFdFallbacks >= 3 && procSelfFdReadable == null) {
-                                procSelfFdReadable = false
-                                android.util.Log.d(
-                                    "SpotiFLAC",
-                                    "Direct /proc/self/fd read not usable for this provider, " +
-                                        "using temp-file fallback",
-                                )
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                synchronized(procSelfFdStateLock) {
-                    if (procSelfFdReadable == null) {
-                        procSelfFdReadable = false
-                        android.util.Log.d(
-                            "SpotiFLAC",
-                            "Direct /proc/self/fd read not usable on this device, " +
-                                "using temp-file fallback for remaining files",
-                        )
-                    }
-                }
+/** Read-only metadata uses a seekable descriptor first. Capability belongs to
+ * this descriptor: a pipe or revoked URI must not disable other providers. */
+private fun MainActivity.readMetadataFromUri(
+    uri: Uri,
+    displayNameHint: String? = null,
+    fallbackExt: String? = null,
+    acceptDirect: (JSONObject) -> Boolean = { true },
+    read: (String, String) -> JSONObject?,
+): JSONObject? {
+    val displayName = buildUriDisplayName(uri, displayNameHint, fallbackExt)
+    return readSafMetadataWithFallback(
+        directRead = {
+            contentResolver.openFileDescriptor(uri, "r")?.use { descriptor ->
+                if (!isSeekableSafDescriptor(descriptor)) return@use null
+                read("/proc/self/fd/${descriptor.fd}", displayName)?.takeIf(acceptDirect)
             }
-        }
+        },
+        fallbackRead = {
+            val tempPath = copyUriToTemp(uri, fallbackExt)
+            if (tempPath == null) null else try {
+                read(tempPath, displayName)
+            } finally {
+                try { File(tempPath).delete() } catch (_: Exception) {}
+            }
+        },
+    )
+}
 
-        val tempPath = try {
-            copyUriToTemp(uri, fallbackExt)
-        } catch (e: Exception) {
-            android.util.Log.w(
-                "SpotiFLAC",
-                "SAF metadata fallback copy failed for $uri: ${e.message}",
-            )
-            null
-        } ?: return null
-
-        try {
-            val metadataJson = Gobackend.readAudioMetadataWithHintAndCoverCacheKeyJSON(
-                tempPath,
-                displayName,
-                coverCacheKey,
-            )
-            if (metadataJson.isBlank()) return null
-            val obj = JSONObject(metadataJson)
-            return if (obj.has("error")) null else obj
-        } catch (e: Exception) {
-            android.util.Log.w(
-                "SpotiFLAC",
-                "SAF metadata temp read failed for $uri: ${e.message}",
-            )
-            return null
-        } finally {
-            try {
-                File(tempPath).delete()
-            } catch (_: Exception) {}
-        }
-    }
+internal fun MainActivity.readAudioMetadataFromUri(
+    uri: Uri,
+    displayNameHint: String? = null,
+    fallbackExt: String? = null,
+    coverCacheKey: String = "",
+): JSONObject? = readMetadataFromUri(
+    uri, displayNameHint, fallbackExt,
+    acceptDirect = { !it.optBoolean("metadataFromFilename", false) },
+) { path, name ->
+    val obj = JSONObject(Gobackend.readAudioMetadataWithHintAndCoverCacheKeyJSON(
+        path, name, coverCacheKey,
+    ))
+    obj.takeUnless { it.has("error") }
+}
 
 internal fun MainActivity.writeUriFromPath(uri: Uri, srcPath: String): Boolean {
         val srcFile = File(srcPath)
