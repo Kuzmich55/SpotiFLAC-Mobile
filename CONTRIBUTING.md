@@ -73,11 +73,16 @@ exact Flutter version declared in `.fvmrc` and replace `fvm flutter` with
 4. Run the app:
 
    ```bash
-   fvm flutter run
+   fvm flutter run --dart-define="GIT_COMMIT=$(git rev-parse --short=8 HEAD)"
    ```
 
 For iOS, run `scripts/build_ios.sh` on macOS before opening
 `ios/Runner.xcworkspace`.
+
+The About footer shows the short commit supplied through `GIT_COMMIT` at
+compile time. The Android build script and iOS release workflow supply it
+automatically. Include the same `--dart-define` when running Flutter build
+commands directly; without it, the footer shows only the copyright.
 
 ## Project Boundaries
 

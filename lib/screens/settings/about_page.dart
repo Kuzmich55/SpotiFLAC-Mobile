@@ -223,7 +223,10 @@ class AboutPage extends StatelessWidget {
                 padding: const EdgeInsets.all(24),
                 child: Center(
                   child: Text(
-                    AppInfo.copyright,
+                    AppInfo.shortGitCommit.isEmpty
+                        ? AppInfo.copyright
+                        : '${AppInfo.copyright} · ${AppInfo.shortGitCommit}',
+                    textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),

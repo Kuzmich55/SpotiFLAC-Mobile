@@ -279,7 +279,8 @@ jobs:
       - name: Build iOS (unsigned)
         run: |
           # Build Flutter iOS without codesigning
-          flutter build ios --release --no-codesign --config-only
+          flutter build ios --release --no-codesign --config-only \
+            --dart-define="GIT_COMMIT=$(git rev-parse --short=8 HEAD)"
 
           # Use xcodebuild with code signing disabled
           cd ios

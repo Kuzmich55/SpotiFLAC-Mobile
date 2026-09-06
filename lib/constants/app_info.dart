@@ -5,6 +5,10 @@ class AppInfo {
   static const String buildNumber = '143';
   static const String fullVersion = '$version+$buildNumber';
 
+  static const String gitCommit = String.fromEnvironment('GIT_COMMIT');
+  static String get shortGitCommit =>
+      gitCommit.length > 8 ? gitCommit.substring(0, 8) : gitCommit;
+
   static String get displayVersion => kDebugMode ? 'Internal' : version;
 
   static const String appName = 'SpotiFLAC Mobile';

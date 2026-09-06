@@ -8,10 +8,12 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 OUTPUT_DIR="$PROJECT_DIR/build/app/outputs/flutter-apk"
 
 cd "$PROJECT_DIR"
+BUILD_GIT_COMMIT="$(git rev-parse --short=8 HEAD)"
 flutter build apk \
   --release \
   --split-per-abi \
   --target-platform android-arm,android-arm64 \
+  --dart-define="GIT_COMMIT=$BUILD_GIT_COMMIT" \
   "$@"
 
 for apk in app-armeabi-v7a-release.apk app-arm64-v8a-release.apk; do
