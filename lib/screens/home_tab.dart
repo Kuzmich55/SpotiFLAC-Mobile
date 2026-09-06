@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:spotiflac_android/screens/track_history_snapshot.dart';
 import 'package:spotiflac_android/theme/app_tokens.dart';
 import 'package:spotiflac_android/widgets/app_bottom_sheet.dart';
 import 'package:spotiflac_android/widgets/app_sliver_header.dart';
@@ -60,6 +61,7 @@ class HomeTab extends ConsumerStatefulWidget {
 
 class _HomeTabState extends ConsumerState<HomeTab>
     with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+  final _historySnapshot = TrackHistorySnapshot();
   final _urlController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String? _lastSearchQuery;

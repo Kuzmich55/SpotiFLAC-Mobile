@@ -403,13 +403,10 @@ extension _HomeTabSearchResultsUI on _HomeTabState {
     }
 
     if (sortedTracks.isNotEmpty) {
-      final historyLookups = sortedTracks
-          .map(historyLookupForTrack)
-          .toList(growable: false);
+      _historySnapshot.update(sortedTracks);
+      final historyLookups = _historySnapshot.lookups;
       final existingHistoryKeys = ref.watch(
-        downloadHistoryVisibleBatchExistsProvider(
-          HistoryBatchLookupRequest(historyLookups),
-        ),
+        downloadHistoryVisibleBatchExistsProvider(_historySnapshot.request),
       );
       slivers.addAll(
         _buildVirtualizedResultSection(

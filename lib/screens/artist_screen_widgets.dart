@@ -311,13 +311,10 @@ extension _ArtistScreenSections on _ArtistScreenState {
     }
 
     final tracks = _topTracks!;
-    final historyLookups = tracks
-        .map(historyLookupForTrack)
-        .toList(growable: false);
+    _historySnapshot.update(tracks);
+    final historyLookups = _historySnapshot.lookups;
     final existingHistoryKeys = ref.watch(
-      downloadHistoryVisibleBatchExistsProvider(
-        HistoryBatchLookupRequest(historyLookups),
-      ),
+      downloadHistoryVisibleBatchExistsProvider(_historySnapshot.request),
     );
     const tracksPerPage = 5;
     final pageCount = (tracks.length / tracksPerPage).ceil();

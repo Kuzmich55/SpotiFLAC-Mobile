@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spotiflac_android/screens/track_history_snapshot.dart';
 import 'package:spotiflac_android/widgets/album_detail_header.dart';
 import 'package:spotiflac_android/theme/cover_palette.dart';
 import 'package:spotiflac_android/widgets/app_bottom_sheet.dart';
@@ -120,6 +121,7 @@ class ArtistScreen extends ConsumerStatefulWidget {
 class _ArtistScreenState extends ConsumerState<ArtistScreen>
     with SelectionModeMixin<ArtistScreen> {
   bool _isLoadingDiscography = false;
+  final _historySnapshot = TrackHistorySnapshot();
   List<ArtistAlbum>? _albums;
   List<ArtistAlbum>? _releases;
   List<Track>? _topTracks;

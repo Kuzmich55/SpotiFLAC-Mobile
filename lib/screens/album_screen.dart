@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spotiflac_android/screens/track_history_snapshot.dart';
 import 'package:spotiflac_android/widgets/collection_scaffold.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -78,6 +79,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen>
     with
         SelectionModeMixin<AlbumScreen>,
         CollapsingHeaderScrollMixin<AlbumScreen> {
+  final _historySnapshot = TrackHistorySnapshot();
   List<Track>? _tracks;
   bool _isLoading = false;
   String? _error;
@@ -543,13 +545,10 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen>
     ColorScheme colorScheme,
     List<Track> tracks,
   ) {
-    final historyLookups = tracks
-        .map(historyLookupForTrack)
-        .toList(growable: false);
+    _historySnapshot.update(tracks);
+    final historyLookups = _historySnapshot.lookups;
     final existingHistoryKeys = ref.watch(
-      downloadHistoryVisibleBatchExistsProvider(
-        HistoryBatchLookupRequest(historyLookups),
-      ),
+      downloadHistoryVisibleBatchExistsProvider(_historySnapshot.request),
     );
     return SliverPadding(
       padding: EdgeInsets.symmetric(horizontal: wideListInset(context)),

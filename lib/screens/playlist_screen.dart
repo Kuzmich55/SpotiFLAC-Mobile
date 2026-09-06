@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spotiflac_android/screens/track_history_snapshot.dart';
 import 'package:spotiflac_android/widgets/album_detail_header.dart';
 import 'package:spotiflac_android/screens/selection_mode_mixin.dart';
 import 'package:spotiflac_android/widgets/collection_scaffold.dart';
@@ -54,6 +55,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen>
     with
         SelectionModeMixin<PlaylistScreen>,
         CollapsingHeaderScrollMixin<PlaylistScreen> {
+  final _historySnapshot = TrackHistorySnapshot();
   List<Track>? _fetchedTracks;
   bool _isLoading = false;
   String? _error;
@@ -396,13 +398,10 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen>
       );
     }
 
-    final historyLookups = _tracks
-        .map(historyLookupForTrack)
-        .toList(growable: false);
+    _historySnapshot.update(_tracks);
+    final historyLookups = _historySnapshot.lookups;
     final existingHistoryKeys = ref.watch(
-      downloadHistoryVisibleBatchExistsProvider(
-        HistoryBatchLookupRequest(historyLookups),
-      ),
+      downloadHistoryVisibleBatchExistsProvider(_historySnapshot.request),
     );
     return SliverPadding(
       padding: EdgeInsets.symmetric(horizontal: wideListInset(context)),
