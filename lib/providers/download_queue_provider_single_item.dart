@@ -1459,19 +1459,10 @@ class _DownloadRun {
               'Native FLAC payload detected; ensuring .flac '
               'extension and embedding metadata.',
             );
-            var flacPath = currentFilePath;
-            if (!currentFilePath.toLowerCase().endsWith('.flac')) {
-              final renamedPath = currentFilePath.replaceAll(
-                RegExp(r'\.[^.]+$'),
-                '.flac',
-              );
-              final targetPath = renamedPath == currentFilePath
-                  ? '$currentFilePath.flac'
-                  : renamedPath;
-              await File(currentFilePath).rename(targetPath);
-              flacPath = targetPath;
-              filePath = targetPath;
-            }
+            final flacPath = await FFmpegService.ensureNativeFlacExtension(
+              currentFilePath,
+            );
+            filePath = flacPath;
 
             await _embedFinalMetadata(flacPath, format: 'flac');
             _markFinalOutputAsFlac();

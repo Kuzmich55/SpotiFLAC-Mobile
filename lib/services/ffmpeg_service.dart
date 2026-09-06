@@ -103,17 +103,27 @@ class FFmpegService {
         : firstPath == secondPath;
   }
 
-  static Future<String> _uniqueConversionPath(String requestedPath) async {
-    if (!await File(requestedPath).exists()) return requestedPath;
+  // Reserve names atomically: concurrent conversions may choose the same
+  // sibling basename before either FFmpeg process has created its output.
+  static Future<String> _reserveConversionPath(String requestedPath) async {
     final file = File(requestedPath);
     final fileName = file.uri.pathSegments.last;
     final dotIndex = fileName.lastIndexOf('.');
     final baseName = dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
     final extension = dotIndex > 0 ? fileName.substring(dotIndex) : '';
-    for (var index = 2; ; index++) {
-      final candidate =
-          '${file.parent.path}${Platform.pathSeparator}$baseName ($index)$extension';
-      if (!await File(candidate).exists()) return candidate;
+    for (var index = 1; ; index++) {
+      final candidate = index == 1
+          ? requestedPath
+          : '${file.parent.path}${Platform.pathSeparator}$baseName ($index)$extension';
+      try {
+        await File(candidate).create(exclusive: true);
+        return candidate;
+      } on FileSystemException {
+        if (await FileSystemEntity.type(candidate, followLinks: false) ==
+            FileSystemEntityType.notFound) {
+          rethrow;
+        }
+      }
     }
   }
 
@@ -133,13 +143,14 @@ class FFmpegService {
     if (_sameLocalPath(requestedPath, inputPath) && deleteOriginal) {
       final token = DateTime.now().microsecondsSinceEpoch;
       return _ConversionOutputPlan(
-        workingPath:
-            '${inputFile.parent.path}${Platform.pathSeparator}.$baseName.spotiflac-$token$normalizedExt',
+        workingPath: await _reserveConversionPath(
+          '${inputFile.parent.path}${Platform.pathSeparator}.$baseName.spotiflac-$token$normalizedExt',
+        ),
         finalPath: inputPath,
       );
     }
 
-    final finalPath = await _uniqueConversionPath(requestedPath);
+    final finalPath = await _reserveConversionPath(requestedPath);
     return _ConversionOutputPlan(workingPath: finalPath, finalPath: finalPath);
   }
 
@@ -159,8 +170,10 @@ class FFmpegService {
     required String inputPath,
     required bool deleteOriginal,
   }) async {
-    if (!await File(plan.workingPath).exists()) {
-      _log.e('Converted output is missing: ${plan.workingPath}');
+    final workingFile = File(plan.workingPath);
+    if (!await workingFile.exists() || await workingFile.length() == 0) {
+      _log.e('Converted output is missing or empty: ${plan.workingPath}');
+      await _cleanupConversionOutput(plan);
       return null;
     }
 
@@ -665,23 +678,59 @@ class FFmpegService {
       ..add('aresample=${options.join(':')}');
   }
 
-  static Future<String?> convertM4aToFlac(String inputPath) async {
-    final outputPath = _buildOutputPath(inputPath, '.flac');
-
-    final command =
-        '-v error -xerror -i "$inputPath" -c:a flac -compression_level 8 "$outputPath" -y';
-
-    final result = await _execute(command);
-
-    if (result.success) {
-      try {
-        await File(inputPath).delete();
-      } catch (_) {}
-      return outputPath;
+  static Future<String?> convertM4aToFlac(
+    String inputPath, {
+    @visibleForTesting Future<FFmpegResult> Function(List<String>)? execute,
+  }) async {
+    final plan = await _conversionOutputPlan(
+      inputPath,
+      '.flac',
+      deleteOriginal: true,
+    );
+    try {
+      final result = await (execute ?? _executeWithArguments)([
+        '-v',
+        'error',
+        '-xerror',
+        '-i',
+        inputPath,
+        '-c:a',
+        'flac',
+        '-compression_level',
+        '8',
+        plan.workingPath,
+        '-y',
+      ]);
+      if (result.success) {
+        return await _finalizeConversionOutput(
+          plan: plan,
+          inputPath: inputPath,
+          deleteOriginal: true,
+        );
+      }
+      _log.e('M4A to FLAC conversion failed: ${result.output}');
+    } catch (e) {
+      _log.e('M4A to FLAC conversion failed: $e');
     }
-
-    _log.e('M4A to FLAC conversion failed: ${result.output}');
+    await _cleanupConversionOutput(plan);
     return null;
+  }
+
+  /// Corrects a native FLAC payload's suffix without replacing a sibling file.
+  static Future<String> ensureNativeFlacExtension(String inputPath) async {
+    if (inputPath.toLowerCase().endsWith('.flac')) return inputPath;
+    final plan = await _conversionOutputPlan(
+      inputPath,
+      '.flac',
+      deleteOriginal: true,
+    );
+    try {
+      await File(inputPath).rename(plan.finalPath);
+      return plan.finalPath;
+    } catch (_) {
+      await _cleanupConversionOutput(plan);
+      rethrow;
+    }
   }
 
   static Future<String?> convertM4aToLossy(

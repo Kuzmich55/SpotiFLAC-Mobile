@@ -1276,15 +1276,7 @@ extension _DownloadQueueFinalization on DownloadQueueNotifier {
       return filePath;
     }
     if (isAlreadyNativeFlac) {
-      var flacPath = filePath;
-      if (!filePath.toLowerCase().endsWith('.flac')) {
-        final renamedPath = filePath.replaceAll(RegExp(r'\.[^.]+$'), '.flac');
-        final targetPath = renamedPath == filePath
-            ? '$filePath.flac'
-            : renamedPath;
-        await File(filePath).rename(targetPath);
-        flacPath = targetPath;
-      }
+      final flacPath = await FFmpegService.ensureNativeFlacExtension(filePath);
       await embedFlacMetadata(flacPath);
       markFinalOutputAsFlac();
       return flacPath;
