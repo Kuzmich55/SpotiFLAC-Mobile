@@ -36,6 +36,8 @@ func scanAudioFileWithKnownModTimeAndDisplayNameAndCoverCacheKey(filePath, displ
 		scanned, scanErr = scanFLACFileWithCoverCache(filePath, result, displayNameHint, coverCacheDir, coverCacheKey)
 	} else if ext == ".m4a" || ext == ".mp4" || ext == ".aac" {
 		scanned, scanErr = scanM4AFileWithCoverCache(filePath, result, displayNameHint, coverCacheDir, coverCacheKey)
+	} else if ext == ".mp3" {
+		scanned, scanErr = scanMP3FileWithCoverCache(filePath, result, displayNameHint, coverCacheDir, coverCacheKey)
 	} else {
 		if coverCacheDir != "" {
 			coverPath, err := SaveCoverToCacheWithHintAndKey(
@@ -50,8 +52,6 @@ func scanAudioFileWithKnownModTimeAndDisplayNameAndCoverCacheKey(filePath, displ
 		}
 
 		switch ext {
-		case ".mp3":
-			scanned, scanErr = scanMP3File(filePath, result, displayNameHint)
 		case ".opus", ".ogg":
 			scanned, scanErr = scanOggFile(filePath, result, displayNameHint)
 		case ".ape", ".wv", ".mpc":
@@ -277,7 +277,20 @@ func isLosslessLibraryFormat(format string) bool {
 }
 
 func scanMP3File(filePath string, result *LibraryScanResult, displayNameHint string) (*LibraryScanResult, error) {
-	metadata, err := ReadID3Tags(filePath)
+	return scanMP3FileWithCoverCache(filePath, result, displayNameHint, "", "")
+}
+
+func scanMP3FileWithCoverCache(filePath string, result *LibraryScanResult, displayNameHint, cacheDir, cacheKey string) (*LibraryScanResult, error) {
+	wantCover := cacheDir != ""
+	if wantCover {
+		cacheKey = resolveLibraryCoverCacheKey(filePath, cacheKey)
+		result.CoverPath = existingLibraryCoverCachePath(cacheDir, cacheKey)
+		wantCover = result.CoverPath == ""
+	}
+	metadata, cover, mime, err := readID3TagsAndCover(filePath, wantCover)
+	if wantCover && len(cover) > 0 {
+		result.CoverPath, _ = saveLibraryCoverDataToCache(cacheDir, cacheKey, cover, mime)
+	}
 	if err != nil {
 		GoLog("[LibraryScan] ID3 read error for %s: %v\n", filePath, err)
 		return scanFromFilename(filePath, displayNameHint, result)

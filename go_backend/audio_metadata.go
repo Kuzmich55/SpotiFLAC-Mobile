@@ -53,16 +53,21 @@ type OggQuality struct {
 }
 
 func ReadID3Tags(filePath string) (*AudioMetadata, error) {
+	metadata, _, _, err := readID3TagsAndCover(filePath, false)
+	return metadata, err
+}
+
+func readID3TagsAndCover(filePath string, includeCover bool) (*AudioMetadata, []byte, string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		return nil, nil, "", err
 	}
 	defer file.Close()
 
 	metadata := &AudioMetadata{}
 
-	id3v2, err := readID3v2(file)
-	if err == nil && id3v2 != nil {
+	id3v2, cover, mime, err := readID3v2WithCover(file, includeCover)
+	if id3v2 != nil {
 		metadata = id3v2
 	}
 
@@ -88,80 +93,33 @@ func ReadID3Tags(filePath string) (*AudioMetadata, error) {
 	}
 
 	if metadata.Title == "" && metadata.Artist == "" {
-		return nil, fmt.Errorf("no ID3 tags found")
+		return nil, cover, mime, fmt.Errorf("no ID3 tags found")
 	}
 
-	return metadata, nil
+	return metadata, cover, mime, nil
 }
 
 func readID3v2(file *os.File) (*AudioMetadata, error) {
-	file.Seek(0, io.SeekStart)
-
-	header := make([]byte, 10)
-	if _, err := io.ReadFull(file, header); err != nil {
-		return nil, err
-	}
-
-	if string(header[0:3]) != "ID3" {
-		return nil, fmt.Errorf("no ID3v2 header")
-	}
-
-	majorVersion := header[3]
-	flags := header[5]
-	unsync := (flags & 0x80) != 0
-	extendedHeader := (flags & 0x40) != 0
-	footerPresent := (flags & 0x10) != 0
-
-	size := int(header[6])<<21 | int(header[7])<<14 | int(header[8])<<7 | int(header[9])
-
-	tagData := make([]byte, size)
-	if _, err := io.ReadFull(file, tagData); err != nil {
-		return nil, err
-	}
-
-	if footerPresent && len(tagData) >= 10 {
-		footerStart := len(tagData) - 10
-		if footerStart >= 0 && string(tagData[footerStart:footerStart+3]) == "3DI" {
-			tagData = tagData[:footerStart]
-		}
-	}
-
-	if extendedHeader {
-		if skip := extendedHeaderSize(tagData, majorVersion); skip > 0 && skip < len(tagData) {
-			tagData = tagData[skip:]
-		}
-	}
-
-	metadata := &AudioMetadata{}
-
-	if majorVersion == 2 {
-		parseID3v22Frames(tagData, metadata, unsync)
-	} else {
-		parseID3v23Frames(tagData, metadata, majorVersion, unsync)
-	}
-
-	return metadata, nil
+	metadata, _, _, err := readID3v2WithCover(file, false)
+	return metadata, err
 }
 
 func parseID3v22Frames(data []byte, metadata *AudioMetadata, tagUnsync bool) {
-	pos := 0
-	for pos+6 < len(data) {
-		frameID := string(data[pos : pos+3])
-		if frameID[0] == 0 {
-			break
-		}
+	parseID3Frames(data, metadata, 2, tagUnsync)
+}
 
-		frameSize := int(data[pos+3])<<16 | int(data[pos+4])<<8 | int(data[pos+5])
-		if frameSize <= 0 || pos+6+frameSize > len(data) {
-			break
-		}
+func parseID3v23Frames(data []byte, metadata *AudioMetadata, version byte, tagUnsync bool) {
+	parseID3Frames(data, metadata, version, tagUnsync)
+}
 
-		frameData := data[pos+6 : pos+6+frameSize]
-		if tagUnsync {
-			frameData = removeUnsync(frameData)
-		}
-		value := firstTextValue(extractTextFrame(frameData))
+func parseID3Frames(data []byte, metadata *AudioMetadata, version byte, tagUnsync bool) {
+	_ = walkID3Frames(bytes.NewReader(data), int64(len(data)), version, tagUnsync, nil,
+		func(id string, payload []byte) { applyID3Frame(metadata, version, id, payload) })
+}
 
+func applyID3Frame(metadata *AudioMetadata, version byte, frameID string, frameData []byte) {
+	value := firstTextValue(extractTextFrame(frameData))
+	if version == 2 {
 		switch frameID {
 		case "TT2":
 			metadata.Title = value
@@ -203,154 +161,70 @@ func parseID3v22Frames(data []byte, metadata *AudioMetadata, tagUnsync bool) {
 				metadata.UPC = userValue
 			}
 		}
-
-		pos += 6 + frameSize
+		return
 	}
-}
-
-func parseID3v23Frames(data []byte, metadata *AudioMetadata, version byte, tagUnsync bool) {
-	pos := 0
-	for pos+10 < len(data) {
-		frameID := string(data[pos : pos+4])
-		if frameID[0] == 0 {
-			break
+	switch frameID {
+	case "TIT2":
+		metadata.Title = value
+	case "TPE1":
+		metadata.Artist = value
+	case "TPE2":
+		metadata.AlbumArtist = value
+	case "TALB":
+		metadata.Album = value
+	case "TYER", "TDRC":
+		metadata.Year = value
+		if len(value) >= 4 {
+			metadata.Date = value
 		}
-
-		var frameSize int
-		if version == 4 {
-			frameSize = int(data[pos+4])<<21 | int(data[pos+5])<<14 | int(data[pos+6])<<7 | int(data[pos+7])
-		} else {
-			frameSize = int(data[pos+4])<<24 | int(data[pos+5])<<16 | int(data[pos+6])<<8 | int(data[pos+7])
+	case "TCON":
+		metadata.Genre = cleanGenre(value)
+	case "TRCK":
+		metadata.TrackNumber, metadata.TotalTracks = parseIndexPair(value)
+	case "TPOS":
+		metadata.DiscNumber, metadata.TotalDiscs = parseIndexPair(value)
+	case "TSRC":
+		metadata.ISRC = value
+	case "TCOM":
+		metadata.Composer = value
+	case "TPUB":
+		metadata.Label = value
+	case "TCOP":
+		metadata.Copyright = value
+	case "TCMP":
+		if isTruthyTagValue(value) && metadata.AlbumType == "" {
+			metadata.AlbumType = "compilation"
 		}
-
-		if frameSize <= 0 || pos+10+frameSize > len(data) {
-			break
+	case "COMM":
+		if v := extractLangTextFrame(frameData); v != "" {
+			metadata.Comment = v
 		}
-
-		frameData := data[pos+10 : pos+10+frameSize]
-
-		statusFlags := data[pos+8]
-		_ = statusFlags
-		formatFlags := data[pos+9]
-
-		if version == 3 {
-			const (
-				id3v23FlagCompression = 0x80
-				id3v23FlagEncryption  = 0x40
-				id3v23FlagGrouping    = 0x20
-			)
-			if formatFlags&(id3v23FlagCompression|id3v23FlagEncryption) != 0 {
-				pos += 10 + frameSize
-				continue
-			}
-			if formatFlags&id3v23FlagGrouping != 0 {
-				if len(frameData) < 1 {
-					pos += 10 + frameSize
-					continue
-				}
-				frameData = frameData[1:]
-			}
-			if tagUnsync {
-				frameData = removeUnsync(frameData)
-			}
-		} else if version == 4 {
-			const (
-				id3v24FlagGrouping    = 0x40
-				id3v24FlagCompression = 0x08
-				id3v24FlagEncryption  = 0x04
-				id3v24FlagUnsync      = 0x02
-				id3v24FlagDataLen     = 0x01
-			)
-			if formatFlags&id3v24FlagGrouping != 0 {
-				if len(frameData) < 1 {
-					pos += 10 + frameSize
-					continue
-				}
-				frameData = frameData[1:]
-			}
-			if formatFlags&id3v24FlagDataLen != 0 {
-				if len(frameData) < 4 {
-					pos += 10 + frameSize
-					continue
-				}
-				frameData = frameData[4:]
-			}
-			if formatFlags&id3v24FlagUnsync != 0 || tagUnsync {
-				frameData = removeUnsync(frameData)
-			}
-			if formatFlags&(id3v24FlagCompression|id3v24FlagEncryption) != 0 {
-				pos += 10 + frameSize
-				continue
-			}
+	case "USLT":
+		if v := extractLangTextFrame(frameData); v != "" && metadata.Lyrics == "" {
+			metadata.Lyrics = v
 		}
-
-		value := firstTextValue(extractTextFrame(frameData))
-
-		switch frameID {
-		case "TIT2":
-			metadata.Title = value
-		case "TPE1":
-			metadata.Artist = value
-		case "TPE2":
-			metadata.AlbumArtist = value
-		case "TALB":
-			metadata.Album = value
-		case "TYER", "TDRC":
-			metadata.Year = value
-			if len(value) >= 4 {
-				metadata.Date = value
-			}
-		case "TCON":
-			metadata.Genre = cleanGenre(value)
-		case "TRCK":
-			metadata.TrackNumber, metadata.TotalTracks = parseIndexPair(value)
-		case "TPOS":
-			metadata.DiscNumber, metadata.TotalDiscs = parseIndexPair(value)
-		case "TSRC":
-			metadata.ISRC = value
-		case "TCOM":
-			metadata.Composer = value
-		case "TPUB":
-			metadata.Label = value
-		case "TCOP":
-			metadata.Copyright = value
-		case "TCMP":
-			if isTruthyTagValue(value) && metadata.AlbumType == "" {
-				metadata.AlbumType = "compilation"
-			}
-		case "COMM":
-			if v := extractLangTextFrame(frameData); v != "" {
-				metadata.Comment = v
-			}
-		case "USLT":
-			if v := extractLangTextFrame(frameData); v != "" && metadata.Lyrics == "" {
-				metadata.Lyrics = v
-			}
-		case "TXXX":
-			desc, userValue := extractUserTextFrame(frameData)
-			if isLyricsDescription(desc) && userValue != "" && metadata.Lyrics == "" {
-				metadata.Lyrics = userValue
-			}
-			upperDesc := strings.ToUpper(desc)
-			switch upperDesc {
-			case "REPLAYGAIN_TRACK_GAIN":
-				metadata.ReplayGainTrackGain = userValue
-			case "REPLAYGAIN_TRACK_PEAK":
-				metadata.ReplayGainTrackPeak = userValue
-			case "REPLAYGAIN_ALBUM_GAIN":
-				metadata.ReplayGainAlbumGain = userValue
-			case "REPLAYGAIN_ALBUM_PEAK":
-				metadata.ReplayGainAlbumPeak = userValue
-			case "ITUNESADVISORY":
-				metadata.Explicit = isTruthyTagValue(userValue)
-			case "RELEASETYPE":
-				metadata.AlbumType = userValue
-			case "BARCODE", "UPC":
-				metadata.UPC = userValue
-			}
+	case "TXXX":
+		desc, userValue := extractUserTextFrame(frameData)
+		if isLyricsDescription(desc) && userValue != "" && metadata.Lyrics == "" {
+			metadata.Lyrics = userValue
 		}
-
-		pos += 10 + frameSize
+		upperDesc := strings.ToUpper(desc)
+		switch upperDesc {
+		case "REPLAYGAIN_TRACK_GAIN":
+			metadata.ReplayGainTrackGain = userValue
+		case "REPLAYGAIN_TRACK_PEAK":
+			metadata.ReplayGainTrackPeak = userValue
+		case "REPLAYGAIN_ALBUM_GAIN":
+			metadata.ReplayGainAlbumGain = userValue
+		case "REPLAYGAIN_ALBUM_PEAK":
+			metadata.ReplayGainAlbumPeak = userValue
+		case "ITUNESADVISORY":
+			metadata.Explicit = isTruthyTagValue(userValue)
+		case "RELEASETYPE":
+			metadata.AlbumType = userValue
+		case "BARCODE", "UPC":
+			metadata.UPC = userValue
+		}
 	}
 }
 

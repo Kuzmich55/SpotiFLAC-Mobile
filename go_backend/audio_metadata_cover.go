@@ -17,65 +17,13 @@ func extractMP3CoverArt(filePath string) ([]byte, string, error) {
 		return nil, "", err
 	}
 	defer file.Close()
-
-	header := make([]byte, 10)
-	if _, err := io.ReadFull(file, header); err != nil {
+	_, cover, mime, err := readID3v2WithCover(file, true)
+	if len(cover) > 0 {
+		return cover, mime, nil
+	}
+	if err != nil {
 		return nil, "", err
 	}
-
-	if string(header[0:3]) != "ID3" {
-		return nil, "", fmt.Errorf("no ID3v2 header")
-	}
-
-	majorVersion := header[3]
-	size := int(header[6])<<21 | int(header[7])<<14 | int(header[8])<<7 | int(header[9])
-
-	tagData := make([]byte, size)
-	if _, err := io.ReadFull(file, tagData); err != nil {
-		return nil, "", err
-	}
-
-	pos := 0
-	var frameIDLen, headerLen int
-	if majorVersion == 2 {
-		frameIDLen = 3
-		headerLen = 6
-	} else {
-		frameIDLen = 4
-		headerLen = 10
-	}
-
-	for pos+headerLen < len(tagData) {
-		frameID := string(tagData[pos : pos+frameIDLen])
-		if frameID[0] == 0 {
-			break
-		}
-
-		var frameSize int
-		switch majorVersion {
-		case 2:
-			frameSize = int(tagData[pos+3])<<16 | int(tagData[pos+4])<<8 | int(tagData[pos+5])
-		case 4:
-			frameSize = int(tagData[pos+4])<<21 | int(tagData[pos+5])<<14 | int(tagData[pos+6])<<7 | int(tagData[pos+7])
-		default:
-			frameSize = int(tagData[pos+4])<<24 | int(tagData[pos+5])<<16 | int(tagData[pos+6])<<8 | int(tagData[pos+7])
-		}
-
-		if frameSize <= 0 || pos+headerLen+frameSize > len(tagData) {
-			break
-		}
-
-		if (frameIDLen == 4 && frameID == "APIC") || (frameIDLen == 3 && frameID == "PIC") {
-			frameData := tagData[pos+headerLen : pos+headerLen+frameSize]
-			imageData, mimeType := parseAPICFrame(frameData, majorVersion)
-			if len(imageData) > 0 {
-				return imageData, mimeType, nil
-			}
-		}
-
-		pos += headerLen + frameSize
-	}
-
 	return nil, "", fmt.Errorf("no cover art found")
 }
 
