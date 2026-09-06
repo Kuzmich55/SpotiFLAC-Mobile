@@ -11,9 +11,9 @@ import (
 // output path, reports progress, and on success assembles the full
 // DownloadResponse (overlay, request fallbacks, optional title/artist/composer
 // fallback, metadata embed, ISRC index). On failure it writes into
-// lastErr/lastErrType/lastRetryAfterSeconds exactly as the inline code did
-// (leaving them untouched when neither branch applies) so callers can keep
-// their own verification_required/stop-fallback handling and error messages.
+// lastErr/lastErrType/lastRetryAfterSeconds for the current attempt so callers
+// can handle verification_required/stop-fallback without inheriting another
+// provider's error or retry delay.
 // cancelledOuter true means the caller must return (nil, ErrDownloadCancelled).
 func attemptExtensionDownload(
 	req DownloadRequest,
@@ -26,6 +26,9 @@ func attemptExtensionDownload(
 	lastErrType *string,
 	lastRetryAfterSeconds *int,
 ) (resp *DownloadResponse, cancelledOuter bool) {
+	*lastErr = nil
+	*lastErrType = ""
+	*lastRetryAfterSeconds = 0
 	resolvedQuality, qualityErr := resolveExtensionDownloadQuality(
 		quality, requestedQualityManifest(req, getExtensionManager()), ext.Manifest,
 	)
@@ -176,11 +179,11 @@ func attemptExtensionDownload(
 		}
 		*lastErr = err
 		*lastErrType = ""
-	} else if result != nil && result.ErrorMessage != "" {
-		*lastErr = fmt.Errorf("%s", result.ErrorMessage)
-		*lastErrType = normalizeExtensionDownloadErrorType(result.ErrorType, result.ErrorMessage)
+	} else if result != nil {
+		*lastErr = errors.New(firstNonEmptyTrimmed(result.ErrorMessage, "extension download failed without an error message"))
+		*lastErrType = firstNonEmptyTrimmed(normalizeExtensionDownloadErrorType(result.ErrorType, result.ErrorMessage), "extension_error")
 		*lastRetryAfterSeconds = result.RetryAfterSeconds
-	} else if result == nil {
+	} else {
 		*lastErr = fmt.Errorf("extension returned no download result")
 		*lastErrType = "extension_error"
 	}
@@ -434,6 +437,7 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 
 	var lastErr error
 	var lastErrType string
+	var lastErrorService string
 	var lastRetryAfterSeconds int
 	var stopProviderFallback bool
 	var sourceExtensionLocked bool
@@ -599,6 +603,7 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 			if resp != nil {
 				return resp, nil
 			}
+			lastErrorService = req.Source
 			GoLog("[DownloadWithExtensionFallback] Source extension %s failed: %v\n", req.Source, lastErr)
 
 			sourceErrType := lastErrType
@@ -691,10 +696,13 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 			}
 			terminalAvailability := shouldStopProviderFallback(availability)
 			if err != nil || !availability.Available {
-				GoLog("[DownloadWithExtensionFallback] %s: not available\n", providerID)
 				if err != nil {
 					lastErr = err
-					if strings.EqualFold(classifyDownloadErrorType(err.Error()), "verification_required") {
+					lastErrType = classifyDownloadErrorType(err.Error())
+					lastErrorService = providerID
+					lastRetryAfterSeconds = 0
+					GoLog("[DownloadWithExtensionFallback] %s availability failed: %v\n", providerID, err)
+					if strings.EqualFold(lastErrType, "verification_required") {
 						GoLog("[DownloadWithExtensionFallback] %s requires verification (availability); pausing fallback to open the challenge\n", providerID)
 						cachePreparedDownloadRequest(preparationKey, req)
 						return &DownloadResponse{
@@ -704,6 +712,8 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 							Service:   providerID,
 						}, nil
 					}
+				} else {
+					GoLog("[DownloadWithExtensionFallback] %s: not available\n", providerID)
 				}
 				if terminalAvailability {
 					GoLog("[DownloadWithExtensionFallback] %s requested skip_fallback after availability check\n", providerID)
@@ -721,6 +731,7 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 			if resp != nil {
 				return resp, nil
 			}
+			lastErrorService = providerID
 			GoLog("[DownloadWithExtensionFallback] %s failed: %v\n", providerID, lastErr)
 
 			if lastErr != nil {
@@ -766,6 +777,7 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 			Error:             "All providers failed. Last error: " + lastErr.Error(),
 			ErrorType:         errorType,
 			RetryAfterSeconds: lastRetryAfterSeconds,
+			Service:           lastErrorService,
 		}, nil
 	}
 

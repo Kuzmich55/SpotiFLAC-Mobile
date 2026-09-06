@@ -105,7 +105,11 @@ func callExtension[T any](p *extensionProviderWrapper, opts extCallOpts, parse f
 
 	jsStartedAt := time.Now()
 	result, err := runGojaCallWithTimeoutContextAndRecover(ctx, p.vm, func() (goja.Value, error) {
-		return opts.invoke(p.vm)
+		result, err := opts.invoke(p.vm)
+		if err != nil {
+			err = p.normalizePendingVerificationError(err)
+		}
+		return result, err
 	}, opts.timeout)
 	perf.recordJS(time.Since(jsStartedAt))
 	perf.recordPayload(result)
@@ -141,6 +145,40 @@ func callExtension[T any](p *extensionProviderWrapper, opts extCallOpts, parse f
 	}
 
 	return parse(perf, result)
+}
+
+func (p *extensionProviderWrapper) normalizePendingVerificationError(err error) error {
+	var exception *goja.Exception
+	if !errors.As(err, &exception) {
+		return err
+	}
+	// A script may rethrow an earlier challenge after the per-call runtime
+	// marker was cleared. Only trust an existing, fresh challenge for this
+	// extension; the exception alone must not start verification.
+	pending := GetPendingAuthRequest(p.extension.ID)
+	if pending == nil || pending.ExtensionID != p.extension.ID || strings.TrimSpace(pending.AuthURL) == "" {
+		return err
+	}
+	if age := time.Since(pending.CreatedAt); age < 0 || age >= pendingAuthRequestTTL {
+		return err
+	}
+	value := exception.Value()
+	if gojaValueIsEmpty(value) {
+		return err
+	}
+	var message string
+	if extractionErr := p.vm.Try(func() {
+		if object, ok := value.(*goja.Object); ok {
+			if field := object.Get("message"); !gojaValueIsEmpty(field) {
+				message = field.String()
+			}
+		} else {
+			message = value.String()
+		}
+	}); extractionErr != nil || strings.TrimSpace(message) != "VERIFY_REQUIRED" {
+		return err
+	}
+	return fmt.Errorf("verification_required: extension '%s' needs signed-session verification: %w", p.extension.ID, err)
 }
 
 func invokeExtensionMethod(vm *goja.Runtime, method string, args ...any) (goja.Value, error) {
