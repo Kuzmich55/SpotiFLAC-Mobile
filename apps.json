@@ -5,7 +5,7 @@
   "apps": [
     {
       "name": "SpotiFLAC Mobile",
-      "bundleIdentifier": "com.zarzet.spotiflac",
+      "bundleIdentifier": "com.zarz.spotiflacAndroid",
       "developerName": "zarzet",
       "version": "4.9.5",
       "versionDate": "2026-09-01",
