@@ -529,21 +529,47 @@ func (p *extensionProviderWrapper) CheckAvailabilityForItemID(isrc, trackName, a
 		availabilityOptions["track"] = trackContexts[0]
 	}
 
+	var availabilityRuntime *extensionRuntime
+	consumeVerificationError := func() error {
+		if availabilityRuntime != nil && availabilityRuntime.consumeVerificationRequired() != "" {
+			return fmt.Errorf(
+				"verification_required: extension '%s' needs signed-session verification",
+				p.extension.ID,
+			)
+		}
+		return nil
+	}
+
 	return callExtension(p, extCallOpts{
 		perfName: "checkAvailability",
-		invoke:   extensionMethodInvocation("checkAvailability", isrc, trackName, artistName, availabilityOptions),
-		timeout:  DefaultJSTimeout,
-		itemID:   itemID,
+		invoke: func(vm *goja.Runtime) (goja.Value, error) {
+			result, err := invokeExtensionMethod(vm, "checkAvailability", isrc, trackName, artistName, availabilityOptions)
+			// A thrown JS error must preserve the same canonical runtime evidence
+			// as a returned unavailable result. Cancellation and timeout still
+			// take precedence in callExtension.
+			if err != nil {
+				if verificationErr := consumeVerificationError(); verificationErr != nil {
+					return nil, verificationErr
+				}
+			}
+			return result, err
+		},
+		timeout: DefaultJSTimeout,
+		itemID:  itemID,
 		beforeRun: func() func() {
 			// Drop any stale flag so the post-run check below only sees
 			// verification requested by THIS call.
-			if p.extension.runtime != nil {
-				p.extension.runtime.consumeVerificationRequired()
+			availabilityRuntime = p.extension.runtime
+			if availabilityRuntime != nil {
+				availabilityRuntime.consumeVerificationRequired()
 			}
 			return nil
 		},
 	}, func(perf *extensionCallPerf, result goja.Value) (*ExtAvailabilityResult, error) {
 		if result == nil || goja.IsUndefined(result) || goja.IsNull(result) {
+			if err := consumeVerificationError(); err != nil {
+				return nil, err
+			}
 			return &ExtAvailabilityResult{Available: false, Reason: "not implemented"}, nil
 		}
 		parseStartedAt := time.Now()
@@ -555,12 +581,9 @@ func (p *extensionProviderWrapper) CheckAvailabilityForItemID(isrc, trackName, a
 		// "not available", which would silently skip this provider's
 		// challenge; surface it as an error so the fallback loop pauses and
 		// opens the challenge instead.
-		if !availability.Available && p.extension.runtime != nil {
-			if p.extension.runtime.consumeVerificationRequired() != "" {
-				return nil, fmt.Errorf(
-					"verification_required: extension '%s' needs signed-session verification",
-					p.extension.ID,
-				)
+		if !availability.Available {
+			if err := consumeVerificationError(); err != nil {
+				return nil, err
 			}
 		}
 		return &availability, nil
