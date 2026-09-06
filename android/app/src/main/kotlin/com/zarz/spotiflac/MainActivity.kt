@@ -838,6 +838,7 @@ class MainActivity: FlutterFragmentActivity() {
         return mapOf(
             "token" to token,
             "path" to "/proc/self/fd/${descriptor.fd}",
+            "display_name" to buildUriDisplayName(Uri.parse(uriStr)),
         )
     }
 

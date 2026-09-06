@@ -88,7 +88,13 @@ class ContentUriPlaybackLease {
   final String path;
   final String token;
 
-  const ContentUriPlaybackLease({required this.path, required this.token});
+  final String? displayName;
+
+  const ContentUriPlaybackLease({
+    required this.path,
+    required this.token,
+    this.displayName,
+  });
 }
 
 class InstallationState {
@@ -845,7 +851,11 @@ class PlatformBridge {
     final path = map['path']?.toString() ?? '';
     final token = map['token']?.toString() ?? '';
     if (path.isEmpty || token.isEmpty) return null;
-    return ContentUriPlaybackLease(path: path, token: token);
+    return ContentUriPlaybackLease(
+      path: path,
+      token: token,
+      displayName: result['display_name'] as String?,
+    );
   }
 
   static Future<void> closeContentUriPlaybackLease(String token) async {

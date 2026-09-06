@@ -8,6 +8,7 @@ import 'package:audio_session/audio_session.dart'
 import 'package:audioplayers/audioplayers.dart';
 import 'package:spotiflac_android/services/app_state_database.dart';
 import 'package:spotiflac_android/services/platform_bridge.dart';
+import 'package:spotiflac_android/services/playback_normalization.dart';
 import 'package:spotiflac_android/utils/int_utils.dart';
 import 'package:spotiflac_android/utils/logger.dart';
 import 'package:spotiflac_android/utils/string_utils.dart';
@@ -550,46 +551,23 @@ class MusicPlayerHandler extends BaseAudioHandler
     unawaited(_persistSession(position: position));
   }
 
-  // ReplayGain normalization: resolved path -> volume multiplier.
-  final Map<String, double> _normalizationVolumeCache = {};
+  final _normalizationCache = PlaybackNormalizationCache(
+    readMetadata: PlatformBridge.readFileMetadata,
+    onReadError: (error) =>
+        _log.w('Failed to read gain tags for normalization: $error'),
+  );
 
-  /// Volume multiplier from the file's ReplayGain/R128 tags (track gain,
-  /// album gain fallback; Opus R128 tags are converted to ReplayGain dB by
-  /// the Go reader). 1.0 when disabled, untagged, or unreadable. Positive
-  /// gains clamp at 1.0 — setVolume can only attenuate.
   Future<double> _normalizationVolumeFor(
     String path, {
     String? cacheKey,
+    String? displayName,
   }) async {
     if (!_playbackNormalizationEnabled) return 1.0;
-    final effectiveCacheKey = cacheKey ?? path;
-    final cached = _normalizationVolumeCache[effectiveCacheKey];
-    if (cached != null) return cached;
-
-    var volume = 1.0;
-    try {
-      final metadata = await PlatformBridge.readFileMetadata(path);
-      final gainDb =
-          _parseGainDb(metadata['replaygain_track_gain']) ??
-          _parseGainDb(metadata['replaygain_album_gain']);
-      if (gainDb != null) {
-        volume = pow(10.0, gainDb / 20.0).toDouble().clamp(0.0, 1.0);
-      }
-    } catch (e) {
-      _log.w('Failed to read gain tags for normalization: $e');
-    }
-    if (_normalizationVolumeCache.length > 128) {
-      _normalizationVolumeCache.clear();
-    }
-    _normalizationVolumeCache[effectiveCacheKey] = volume;
-    return volume;
-  }
-
-  static double? _parseGainDb(Object? raw) {
-    final text = raw?.toString();
-    if (text == null || text.isEmpty) return null;
-    final match = RegExp(r'-?\d+(\.\d+)?').firstMatch(text);
-    return match == null ? null : double.tryParse(match.group(0)!);
+    return _normalizationCache.volumeFor(
+      path,
+      cacheKey: cacheKey,
+      displayName: displayName,
+    );
   }
 
   /// Re-applies normalization to the playing track when the setting flips.
@@ -616,6 +594,7 @@ class MusicPlayerHandler extends BaseAudioHandler
       final volume = await _normalizationVolumeFor(
         resolved,
         cacheKey: media.isContentUri ? media.source : null,
+        displayName: playbackLease?.displayName,
       );
       if (playbackLease != null) {
         await PlatformBridge.closeContentUriPlaybackLease(playbackLease.token);
@@ -1072,6 +1051,7 @@ class MusicPlayerHandler extends BaseAudioHandler
       var normalizationVolume = await _normalizationVolumeFor(
         resolved,
         cacheKey: media.isContentUri ? media.source : null,
+        displayName: playbackLease?.displayName,
       );
       if (!_isCurrentPlayRequest(generation, media)) return;
       await _player.setAudioContext(_musicAudioContext);
