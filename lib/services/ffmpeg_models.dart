@@ -1,5 +1,3 @@
-import 'package:ffmpeg_kit_flutter_new_full/ffmpeg_session.dart';
-
 /// Describes an extension-requested decryption step without coupling callers
 /// to the FFmpeg execution service.
 class DownloadDecryptionDescriptor {
@@ -113,18 +111,6 @@ class FFmpegResult {
     required this.success,
     required this.returnCode,
     required this.output,
-  });
-}
-
-class LiveDecryptedStreamResult {
-  final String localUrl;
-  final String format;
-  final FFmpegSession session;
-
-  LiveDecryptedStreamResult({
-    required this.localUrl,
-    required this.format,
-    required this.session,
   });
 }
 
