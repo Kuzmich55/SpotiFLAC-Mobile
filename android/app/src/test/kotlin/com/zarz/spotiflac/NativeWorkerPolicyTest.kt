@@ -106,6 +106,17 @@ class NativeWorkerPolicyTest {
 
     @Test
     fun verificationDetectionUsesTypeAndMessageFallback() {
+        for (errorType in listOf(
+            "authentication_error", "provider_auth_failed",
+            "request_auth_invalid", "provider_reauth_required",
+        )) {
+            assertFalse(
+                NativeWorkerPolicy.isVerificationRequired(
+                    errorType = errorType,
+                    errorMessage = "Provider unauthorized; verification required upstream",
+                ),
+            )
+        }
         assertTrue(
             NativeWorkerPolicy.isVerificationRequired(
                 errorType = "verification_required",

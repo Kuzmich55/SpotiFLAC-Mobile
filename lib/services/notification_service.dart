@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:spotiflac_android/constants/app_info.dart';
 import 'package:spotiflac_android/l10n/app_localizations.dart';
+import 'package:spotiflac_android/services/verification_notification.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -15,6 +16,8 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
+  Future<void>? _initialization;
+  final verificationNotifications = VerificationNotificationRouter();
   bool _notificationPermissionRequested = false;
   AppLocalizations? _l10n;
 
@@ -43,9 +46,14 @@ class NotificationService {
   static const String libraryChannelDescription =
       'Shows local library scan progress';
 
-  Future<void> initialize() async {
-    if (_isInitialized) return;
+  Future<void> initialize() {
+    if (_isInitialized) return Future.value();
+    return _initialization ??= _initialize().whenComplete(() {
+      _initialization = null;
+    });
+  }
 
+  Future<void> _initialize() async {
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
@@ -60,7 +68,16 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _notifications.initialize(settings: initSettings);
+    await _notifications.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        verificationNotifications.receive(response.payload);
+      },
+    );
+    final launch = await _notifications.getNotificationAppLaunchDetails();
+    if (launch?.didNotificationLaunchApp == true) {
+      verificationNotifications.receive(launch?.notificationResponse?.payload);
+    }
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       final androidImpl = _notifications
@@ -126,6 +143,7 @@ class NotificationService {
     required String title,
     required String body,
     required NotificationDetails details,
+    String? payload,
   }) async {
     if (!await _ensureNotificationPermission()) return;
 
@@ -135,6 +153,7 @@ class NotificationService {
         title: title,
         body: body,
         notificationDetails: details,
+        payload: payload,
       );
     } on PlatformException catch (e) {
       final isNotificationsNotAllowed =
@@ -305,7 +324,10 @@ class NotificationService {
     );
   }
 
-  Future<void> showVerificationRequired() async {
+  Future<void> showVerificationRequired({
+    required String extensionId,
+    required String itemId,
+  }) async {
     if (!_isInitialized) await initialize();
     unawaited(HapticFeedback.mediumImpact());
 
@@ -319,6 +341,11 @@ class NotificationService {
       id: verificationRequiredId,
       title: title,
       body: body,
+      payload: VerificationNotification(
+        extensionId: extensionId,
+        itemId: itemId,
+        tapId: 'dart:${DateTime.now().microsecondsSinceEpoch}',
+      ).encode(),
       details: _details(
         playSound: true,
         presentBadge: true,

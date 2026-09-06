@@ -20,6 +20,7 @@ import 'package:spotiflac_android/services/app_state_database.dart';
 import 'package:spotiflac_android/services/extension_storage_service.dart';
 import 'package:spotiflac_android/utils/local_library_scan_prefs.dart';
 import 'package:spotiflac_android/utils/logger.dart';
+import 'package:spotiflac_android/utils/extension_auth_launcher.dart';
 
 final _log = AppLogger('Main');
 
@@ -235,6 +236,7 @@ class _EagerInitializationState extends ConsumerState<_EagerInitialization>
   Timer? _localLibraryWarmupTimer;
   bool _localLibraryWarmupScheduled = false;
   bool _autoScanTriggeredOnLaunch = false;
+  StreamSubscription<void>? _verificationNotificationSubscription;
 
   @override
   void initState() {
@@ -242,6 +244,10 @@ class _EagerInitializationState extends ConsumerState<_EagerInitialization>
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _verificationNotificationSubscription =
+          PlatformBridge.verificationNotificationEvents().listen(
+            (_) => unawaited(_consumeVerificationNotification()),
+          );
       _initializeAppServices();
       _initializeExtensions();
       _initializeDeferredProviders();
@@ -255,12 +261,15 @@ class _EagerInitializationState extends ConsumerState<_EagerInitialization>
     _localLibraryEnabledSub?.close();
     _downloadHistoryWarmupTimer?.cancel();
     _localLibraryWarmupTimer?.cancel();
+    _verificationNotificationSubscription?.cancel();
+    NotificationService().verificationNotifications.setHandler(null);
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      unawaited(_consumeVerificationNotification());
       CoverCacheManager.scheduleMaintenance();
       _maybeAutoScanLocalLibrary();
       if (ref.exists(localLibraryProvider)) {
@@ -414,8 +423,35 @@ class _EagerInitializationState extends ConsumerState<_EagerInitialization>
             storage.dataDir,
             masterKey: storage.masterKey,
           );
+      if (!mounted) return;
+      NotificationService().verificationNotifications.setHandler((
+        target,
+      ) async {
+        if (!mounted) return;
+        try {
+          await ref
+              .read(downloadQueueProvider.notifier)
+              .handleVerificationNotificationTap(target);
+        } catch (error) {
+          _log.w('Could not open verification notification: $error');
+          if (mounted) showExtensionVerificationUnavailable(target.extensionId);
+        }
+      });
+      await _consumeVerificationNotification();
     } catch (e) {
       debugPrint('Failed to initialize extensions: $e');
+    }
+  }
+
+  Future<void> _consumeVerificationNotification() async {
+    if (!mounted || !Platform.isAndroid) return;
+    try {
+      final payload = await PlatformBridge.consumeVerificationNotification();
+      if (mounted) {
+        NotificationService().verificationNotifications.receive(payload);
+      }
+    } catch (error) {
+      _log.w('Could not read pending verification notification: $error');
     }
   }
 

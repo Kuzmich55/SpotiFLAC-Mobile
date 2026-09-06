@@ -1873,10 +1873,9 @@ class _DownloadRun {
       return false;
     }
 
-    final backendErrorType = n._downloadErrorTypeFromBackend(errorTypeStr);
-    final errorType = backendErrorType == DownloadErrorType.unknown
-        ? n._downloadErrorTypeFromMessage(errorMsg)
-        : backendErrorType;
+    final backendErrorType = downloadErrorTypeFromBackend(errorTypeStr);
+    final errorType =
+        backendErrorType ?? n._downloadErrorTypeFromMessage(errorMsg);
 
     if (errorType == DownloadErrorType.verificationRequired) {
       await n._handleVerificationRequiredDownload(

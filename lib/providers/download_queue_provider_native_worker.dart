@@ -1106,13 +1106,12 @@ extension _DownloadQueueNativeWorker on DownloadQueueNotifier {
               ? (resultMap?['error']?.toString() ?? 'Download failed')
               : error;
           final backendErrorType = resultMap == null
-              ? DownloadErrorType.unknown
-              : _downloadErrorTypeFromBackend(
+              ? null
+              : downloadErrorTypeFromBackend(
                   resultMap['error_type']?.toString(),
                 );
-          final errorType = backendErrorType == DownloadErrorType.unknown
-              ? _downloadErrorTypeFromMessage(errorMsg)
-              : backendErrorType;
+          final errorType =
+              backendErrorType ?? _downloadErrorTypeFromMessage(errorMsg);
           try {
             if (await _recoverNativeWorkerStorageFailure(
               context: context,

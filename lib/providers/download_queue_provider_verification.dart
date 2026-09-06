@@ -2,6 +2,41 @@
 part of 'download_queue_provider.dart';
 
 extension _DownloadQueueVerificationGate on DownloadQueueNotifier {
+  Future<void> _handleVerificationNotificationTap(
+    VerificationNotification target,
+  ) async {
+    await _queueRestored.future;
+    if (!ref.mounted) return;
+    final item = _findItemById(target.itemId);
+    if (item != null &&
+        (item.status == DownloadStatus.completed ||
+            item.status == DownloadStatus.skipped ||
+            _isLocallyCancelled(item.id, item: item))) {
+      return;
+    }
+    // Foregrounding wakes an existing queue waiter. Do not replace it or
+    // reopen a browser that the queue already owns.
+    if ((item != null &&
+            _verificationWaitCoordinator.hasActiveWaiter(item.id)) ||
+        _verificationWaitCoordinator.hasActiveFlow(target.extensionId)) {
+      return;
+    }
+    // Failed items may not survive queue restoration. The notification still
+    // identifies the owning extension, but cannot restart a missing item.
+    final verified = await _openVerificationAndWait(
+      item?.id ?? 'notification:${target.tapId}',
+      target.extensionId,
+    );
+    if (!ref.mounted || !verified || state.isPaused) return;
+    final current = _findItemById(target.itemId);
+    if (current != null &&
+        current.status == DownloadStatus.failed &&
+        current.errorType == DownloadErrorType.verificationRequired &&
+        !_isLocallyCancelled(current.id, item: current)) {
+      await retryItem(current.id);
+    }
+  }
+
   /// Completes when the app is in the foreground. Verification challenges
   /// can only be handled there: launching a browser from the background is
   /// blocked by the OS and the challenge would expire unseen.
@@ -97,7 +132,10 @@ extension _DownloadQueueVerificationGate on DownloadQueueNotifier {
     );
 
     try {
-      await _notificationService.showVerificationRequired();
+      await _notificationService.showVerificationRequired(
+        extensionId: targetService,
+        itemId: item.id,
+      );
     } catch (error) {
       _log.w('Failed to show the verification-required notification: $error');
     }

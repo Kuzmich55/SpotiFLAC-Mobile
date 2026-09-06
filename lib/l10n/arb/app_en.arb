@@ -6470,6 +6470,15 @@
   "@extensionVerificationBrowserInApp": {
     "description": "Chip label for in-app browser verification mode"
   },
+  "extensionVerificationUnavailable": "No verification page is available for {extension}. Retry the download to request a new challenge.",
+  "@extensionVerificationUnavailable": {
+    "description": "Shown when the app cannot retrieve a pending verification challenge",
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      }
+    }
+  },
   "extensionVerificationHelpTitleManual": "Open verification manually",
   "@extensionVerificationHelpTitleManual": {
     "description": "Dialog title when automatic browser launch for verification fails"

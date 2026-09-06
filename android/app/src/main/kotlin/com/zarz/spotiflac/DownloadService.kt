@@ -1255,7 +1255,7 @@ class DownloadService : Service() {
                             settingsJson = settingsJson,
                             includeItems = true,
                         )
-                        showNativeVerificationRequired()
+                        showNativeVerificationRequired(request, result)
                         updateNotification(0L, 0L)
                         retryCurrentRequest = true
                     } else {
@@ -1622,7 +1622,7 @@ class DownloadService : Service() {
                             // replace this same notification ID while owning
                             // the interactive challenge; if Flutter is
                             // suspended, the native alert remains visible.
-                            showNativeVerificationRequired()
+                            showNativeVerificationRequired(request, result)
                             updateNotification(0L, 0L)
                             retryCurrentRequest = true
                         } else {
@@ -1987,11 +1987,14 @@ class DownloadService : Service() {
         }
     }
 
-    private fun showNativeVerificationRequired() {
+    private fun showNativeVerificationRequired(request: NativeDownloadRequest, result: JSONObject) {
+        val extensionId = result.optString("service").trim().ifEmpty {
+            JSONObject(request.requestJson).optString("service").trim()
+        }
         val pendingIntent = PendingIntent.getActivity(
             this,
-            0,
-            Intent(this, MainActivity::class.java),
+            VERIFICATION_REQUIRED_NOTIFICATION_ID,
+            VerificationNotificationIntent.create(this, extensionId, request.itemId),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val builder = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)

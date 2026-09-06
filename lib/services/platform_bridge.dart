@@ -203,6 +203,8 @@ class PlatformBridge {
       StreamController<ExtensionSessionGrantEvent>.broadcast();
   static final StreamController<void> _libraryStorageEvents =
       StreamController<void>.broadcast();
+  static final StreamController<void> _verificationNotificationEvents =
+      StreamController<void>.broadcast();
   static final StreamController<List<String>>
   _iosBackgroundDownloadExpirationEvents =
       StreamController<List<String>>.broadcast();
@@ -222,6 +224,14 @@ class PlatformBridge {
     _ensureBackendEventHandler();
     return _libraryStorageEvents.stream;
   }
+
+  static Stream<void> verificationNotificationEvents() {
+    _ensureBackendEventHandler();
+    return _verificationNotificationEvents.stream;
+  }
+
+  static Future<String?> consumeVerificationNotification() =>
+      _channel.invokeMethod<String>('consumeVerificationNotification');
 
   static Stream<List<String>> iosBackgroundDownloadExpirationEvents() {
     _ensureBackendEventHandler();
@@ -249,6 +259,9 @@ class PlatformBridge {
           return null;
         case 'libraryStorageChanged':
           _libraryStorageEvents.add(null);
+          return null;
+        case 'extensionVerificationNotificationTapped':
+          _verificationNotificationEvents.add(null);
           return null;
         case 'iosBackgroundDownloadExpired':
           final raw = call.arguments;

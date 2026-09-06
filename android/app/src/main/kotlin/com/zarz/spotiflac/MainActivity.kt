@@ -78,6 +78,7 @@ class MainActivity: FlutterFragmentActivity() {
     private var backendChannel: MethodChannel? = null
     private var libraryStorageReceiver: BroadcastReceiver? = null
     private val pendingSessionGrantEvents = mutableListOf<Map<String, Any>>()
+    private var pendingVerificationNotification: String? = null
     private var pendingSafTreeResult: MethodChannel.Result? = null
     internal val safScanLock = Any()
     internal var safScanProgress = SafScanProgress()
@@ -697,13 +698,25 @@ class MainActivity: FlutterFragmentActivity() {
         // delegate looks it up by cached id (see getCachedEngineId above).
         AudioServicePlugin.getFlutterEngine(this)
         super.onCreate(savedInstanceState)
+        handleVerificationNotificationIntent(intent)
         handleExtensionOAuthIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handleVerificationNotificationIntent(intent)
         handleExtensionOAuthIntent(intent)
+    }
+
+    private fun handleVerificationNotificationIntent(intent: Intent?) {
+        if (intent?.action != VerificationNotificationIntent.ACTION) return
+        val payload = intent.getStringExtra(VerificationNotificationIntent.PAYLOAD)
+            ?.takeIf { it.isNotBlank() } ?: return
+        pendingVerificationNotification = payload
+        intent.removeExtra(VerificationNotificationIntent.PAYLOAD)
+        // Keep the payload until Dart is initialized and explicitly consumes it.
+        backendChannel?.invokeMethod("extensionVerificationNotificationTapped", null)
     }
 
     /**
@@ -951,6 +964,11 @@ class MainActivity: FlutterFragmentActivity() {
             scope.launch {
                 try {
                     when (call.method) {
+                        "consumeVerificationNotification" -> {
+                            val payload = pendingVerificationNotification
+                            pendingVerificationNotification = null
+                            result.success(payload)
+                        }
                         "ensureInstallMarker" -> {
                             val installState = withContext(Dispatchers.IO) {
                                 ensureInstallMarker()

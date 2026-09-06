@@ -45,6 +45,9 @@ class DownloadVerificationWaitCoordinator {
   bool hasActiveFlow(String service) =>
       _flowsByService.containsKey(_serviceKey(service));
 
+  bool hasActiveWaiter(String itemId) =>
+      _cancellationsByItem.containsKey(itemId);
+
   Future<bool> waitForGrant({
     required String itemId,
     required String service,

@@ -50,6 +50,10 @@ internal object NativeWorkerPolicy {
         if (errorType.equals("verification_required", ignoreCase = true)) {
             return true
         }
+        when (errorType?.trim()?.lowercase()) {
+            "authentication_error", "provider_auth_failed",
+            "request_auth_invalid", "provider_reauth_required" -> return false
+        }
         val message = errorMessage.orEmpty()
         return message.contains("verification required", ignoreCase = true) ||
             message.contains("challenge required", ignoreCase = true)

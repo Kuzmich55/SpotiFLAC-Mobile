@@ -1,9 +1,76 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spotiflac_android/models/download_item.dart';
+import 'package:spotiflac_android/utils/download_error_type.dart';
 import 'package:spotiflac_android/utils/extension_auth_launcher.dart';
 
 void main() {
+  test('typed provider auth errors override misleading verification text', () {
+    for (final type in [
+      'authentication_error',
+      'PROVIDER_AUTH_FAILED',
+      'request_auth_invalid',
+      'provider_reauth_required',
+    ]) {
+      final errorType =
+          downloadErrorTypeFromBackend(type) ??
+          (isExtensionVerificationRequired('Verification required upstream')
+              ? DownloadErrorType.verificationRequired
+              : DownloadErrorType.unknown);
+      expect(errorType, DownloadErrorType.unknown, reason: type);
+    }
+    expect(downloadErrorTypeFromBackend(null), isNull);
+    expect(downloadErrorTypeFromBackend('unknown'), isNull);
+    expect(
+      downloadErrorTypeFromBackend('verification_required'),
+      DownloadErrorType.verificationRequired,
+    );
+  });
+
+  test('provider auth and HTTP status errors do not imply verification', () {
+    for (final message in [
+      'Provider unauthorized',
+      'HTTP 401 for /download',
+      'HTTP status 428: precondition required',
+      'PROVIDER_AUTH_FAILED: unauthorized',
+    ]) {
+      expect(
+        isExtensionVerificationRequired(message),
+        isFalse,
+        reason: message,
+      );
+    }
+    for (final message in [
+      'verification_required: canonical gateway challenge',
+      'VERIFY_REQUIRED',
+      'signed session is not authenticated',
+      'signed session expired',
+    ]) {
+      expect(isExtensionVerificationRequired(message), isTrue, reason: message);
+    }
+  });
+
+  test(
+    'does not open a verification flow for a provider authentication error',
+    () async {
+      var verificationCalls = 0;
+      await expectLater(
+        runExtensionOperationWithVerificationRetry<void>(
+          extensionId: 'provider-a',
+          browserMode: 'in_app_first',
+          operation: () async => throw StateError('Provider unauthorized'),
+          verify: () async {
+            verificationCalls++;
+            return true;
+          },
+        ),
+        throwsStateError,
+      );
+      expect(verificationCalls, 0);
+    },
+  );
+
   test('verification challenge expires after three minutes', () {
     expect(extensionVerificationGrantTimeout, const Duration(minutes: 3));
   });
@@ -11,20 +78,20 @@ void main() {
   test('extracts the extension that raised a verification challenge', () {
     expect(
       extensionIdFromVerificationError(
-        "verification_required: extension 'tidal-web' needs verification",
-        const ['amazon-web', 'tidal-web'],
+        "verification_required: extension 'provider-b' needs verification",
+        const ['provider-a', 'provider-b'],
       ),
-      'tidal-web',
+      'provider-b',
     );
   });
 
   test('prefers the longest known extension id in legacy errors', () {
     expect(
       extensionIdFromVerificationError(
-        'qobuz-web verification_required',
-        const ['qobuz', 'qobuz-web'],
+        'sample-provider verification_required',
+        const ['sample', 'sample-provider'],
       ),
-      'qobuz-web',
+      'sample-provider',
     );
   });
 
@@ -35,7 +102,7 @@ void main() {
       var verificationCalls = 0;
 
       final result = await runExtensionOperationWithVerificationRetry(
-        extensionId: 'qobuz-web',
+        extensionId: 'provider-a',
         browserMode: 'in_app_first',
         operation: () async {
           operationCalls++;
@@ -59,7 +126,7 @@ void main() {
 
     await expectLater(
       runExtensionOperationWithVerificationRetry(
-        extensionId: 'qobuz-web',
+        extensionId: 'provider-a',
         browserMode: 'in_app_first',
         operation: () async {
           operationCalls++;
@@ -77,7 +144,7 @@ void main() {
     final foreground = Completer<void>();
     final cancellation = Completer<void>();
     final result = openVerificationAndAwaitGrant(
-      'tidal-web',
+      'provider-a',
       browserMode: 'in_app_first',
       awaitForeground: (_) => foreground.future,
       cancellationSignal: cancellation.future,

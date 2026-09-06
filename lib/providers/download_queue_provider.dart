@@ -24,6 +24,7 @@ import 'package:spotiflac_android/services/platform_bridge.dart';
 import 'package:spotiflac_android/services/download_request_payload.dart';
 import 'package:spotiflac_android/services/ffmpeg_service.dart';
 import 'package:spotiflac_android/services/notification_service.dart';
+import 'package:spotiflac_android/services/verification_notification.dart';
 import 'package:spotiflac_android/utils/logger.dart' hide log;
 import 'package:spotiflac_android/utils/file_access.dart';
 import 'package:spotiflac_android/utils/string_utils.dart';
@@ -32,6 +33,7 @@ import 'package:spotiflac_android/utils/audio_format_utils.dart';
 import 'package:spotiflac_android/utils/audio_conversion_utils.dart';
 import 'package:spotiflac_android/utils/int_utils.dart';
 import 'package:spotiflac_android/utils/extension_auth_launcher.dart';
+import 'package:spotiflac_android/utils/download_error_type.dart';
 import 'package:spotiflac_android/utils/lyrics_metadata_helper.dart';
 import 'package:spotiflac_android/utils/progress_stream_poller.dart';
 
@@ -363,6 +365,7 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
   int _failedInSession = 0;
   int _queueItemSequence = 0;
   bool _isLoaded = false;
+  final Completer<void> _queueRestored = Completer<void>();
   bool _foregroundResumeScheduled = false;
   bool _iosBackgroundExecutionExpired = false;
   StreamSubscription<List<String>>? _iosBackgroundExpirationSubscription;
@@ -446,6 +449,7 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
     });
 
     ref.onDispose(() {
+      if (!_queueRestored.isCompleted) _queueRestored.complete();
       _verificationWaitCoordinator.cancelAll();
       _progressPoller.stop();
       _connectivitySub?.cancel();
@@ -460,9 +464,13 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
     });
 
     Future.microtask(() async {
-      updateSettings(ref.read(settingsProvider));
-      await _initOutputDir();
-      await _loadQueueFromStorage();
+      try {
+        updateSettings(ref.read(settingsProvider));
+        await _initOutputDir();
+        await _loadQueueFromStorage();
+      } finally {
+        if (!_queueRestored.isCompleted) _queueRestored.complete();
+      }
     });
     return const DownloadQueueState();
   }
@@ -524,6 +532,10 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
       }
     });
   }
+
+  Future<void> handleVerificationNotificationTap(
+    VerificationNotification target,
+  ) => _handleVerificationNotificationTap(target);
 
   void _handleIosBackgroundDownloadExpiration(List<String> nativeItemIds) {
     if (!Platform.isIOS) return;
@@ -1415,6 +1427,8 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
               item.status != DownloadStatus.skipped) {
             return item;
           }
+          _verificationRetryGuard.clearItem(item.id);
+          _rateLimitRetriedItemIds.remove(item.id);
           return item.copyWith(
             status: DownloadStatus.queued,
             progress: 0,
@@ -1568,23 +1582,6 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
     } catch (e) {
       _log.e('Failed to export failed downloads: $e');
       return null;
-    }
-  }
-
-  DownloadErrorType _downloadErrorTypeFromBackend(String? errorType) {
-    switch (errorType) {
-      case 'not_found':
-        return DownloadErrorType.notFound;
-      case 'rate_limit':
-        return DownloadErrorType.rateLimit;
-      case 'network':
-        return DownloadErrorType.network;
-      case 'permission':
-        return DownloadErrorType.permission;
-      case 'verification_required':
-        return DownloadErrorType.verificationRequired;
-      default:
-        return DownloadErrorType.unknown;
     }
   }
 

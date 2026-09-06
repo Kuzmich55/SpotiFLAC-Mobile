@@ -22,10 +22,7 @@ bool isExtensionVerificationRequired(Object error) {
       message.contains('needsverification') ||
       message.contains('needs verification') ||
       message.contains('session is not authenticated') ||
-      message.contains('unauthorized') ||
-      message.contains('precondition required') ||
-      _containsHttpStatusCode(message, '401') ||
-      _containsHttpStatusCode(message, '428');
+      message.contains('signed session expired');
 }
 
 Future<T> runExtensionOperationWithVerificationRetry<T>({
@@ -82,15 +79,6 @@ String? extensionIdFromVerificationError(
   return null;
 }
 
-bool _containsHttpStatusCode(String message, String code) {
-  return message.contains('http $code') ||
-      message.contains('http status $code') ||
-      message.contains('status $code') ||
-      message.contains('$code for ') ||
-      message.contains('$code:') ||
-      message.contains('$code;');
-}
-
 Future<bool> openPendingExtensionVerification(
   String extensionId, {
   String browserMode = 'in_app_first',
@@ -100,14 +88,22 @@ Future<bool> openPendingExtensionVerification(
   final normalizedExtensionId = extensionId.trim();
   if (normalizedExtensionId.isEmpty) return false;
 
+  var cancelled = false;
+  if (cancellationSignal != null) {
+    unawaited(cancellationSignal.then((_) => cancelled = true));
+  }
   try {
     final pending = await _awaitVerificationStepOrCancellation(
       PlatformBridge.getExtensionPendingAuth(normalizedExtensionId),
       cancellationSignal,
     );
-    if (pending == null) return false;
-    final authUrl = pending['auth_url']?.toString().trim() ?? '';
-    if (authUrl.isEmpty) return false;
+    if (cancelled) return false;
+    final authUrl = pending?['auth_url']?.toString().trim() ?? '';
+    if (authUrl.isEmpty) {
+      _log.w('No pending verification challenge for $normalizedExtensionId');
+      showExtensionVerificationUnavailable(normalizedExtensionId);
+      return false;
+    }
 
     final uri = Uri.tryParse(authUrl);
     if (uri == null) return false;
@@ -138,8 +134,20 @@ Future<bool> openPendingExtensionVerification(
     _log.w(
       'Failed to open verification challenge for $normalizedExtensionId: $e',
     );
+    if (!cancelled) showExtensionVerificationUnavailable(normalizedExtensionId);
     return false;
   }
+}
+
+void showExtensionVerificationUnavailable(String extensionId) {
+  final context = AppNavigationService.rootNavigatorKey.currentContext;
+  if (context == null || !context.mounted) return;
+  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+    SnackBar(
+      content: Text(context.l10n.extensionVerificationUnavailable(extensionId)),
+      duration: const Duration(seconds: 8),
+    ),
+  );
 }
 
 Timer? scheduleExtensionVerificationHelpDialog(
