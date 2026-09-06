@@ -30,6 +30,7 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.abs
 import kotlin.math.pow
 
 object NativeDownloadFinalizer {
@@ -251,8 +252,17 @@ object NativeDownloadFinalizer {
                     result.put("auto_conversion_warning", e.message ?: "conversion failed")
                 }
                 checkCancelled(shouldCancel)
-                val replayGain = writeReplayGain(context, effectiveInput, state, shouldCancel)
-                if (replayGain != null) result.put("replaygain", replayGain)
+                try {
+                    val replayGain = writeReplayGain(context, effectiveInput, state, shouldCancel)
+                    if (replayGain != null) result.put("replaygain", replayGain)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Gain tagging is optional; keep the completed audio if
+                    // its native editor or the verification step fails.
+                    Log.w(TAG, "ReplayGain write failed: ${e.message}")
+                    result.put("replaygain_warning", e.message ?: "ReplayGain write failed")
+                }
                 checkCancelled(shouldCancel)
                 try {
                     refreshFinalAudioQualityMetadata(context, result, state)
@@ -982,14 +992,14 @@ object NativeDownloadFinalizer {
 
     private fun writeReplayGainFields(context: Context, path: String, fields: JSONObject) {
         if (!path.startsWith("content://")) {
-            Gobackend.editFileMetadata(path, fields.toString())
+            writeLocalReplayGainFields(path, fields)
             return
         }
 
         val tempPath = SafDownloadHandler.copyContentUriToTemp(context, path)
             ?: throw IllegalStateException("failed to copy SAF file for ReplayGain write")
         try {
-            Gobackend.editFileMetadata(tempPath, fields.toString())
+            writeLocalReplayGainFields(tempPath, fields)
             val uri = Uri.parse(path)
             context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
                 File(tempPath).inputStream().use { input -> input.copyTo(output) }
@@ -997,6 +1007,30 @@ object NativeDownloadFinalizer {
             } ?: throw IllegalStateException("failed to write ReplayGain back to SAF")
         } finally {
             File(tempPath).delete()
+        }
+    }
+
+    private fun writeLocalReplayGainFields(path: String, fields: JSONObject) {
+        val result = parseObject(Gobackend.editFileMetadata(path, fields.toString()))
+        val method = result.optString("method", "")
+        check(
+            result.optBoolean("success", false) &&
+                !result.has("error") &&
+                (method == "native" || method.startsWith("native_")),
+        ) { "ReplayGain native write did not complete: $result" }
+
+        val metadata = parseObject(Gobackend.readFileMetadata(path))
+        check(!metadata.has("error")) { "ReplayGain verification failed: $metadata" }
+        val isOpus = metadata.optString("audio_codec", "") == "opus"
+        for (key in fields.keys()) {
+            // Opus stores only R128 gain, exposed by the Go reader as dB.
+            if (isOpus && key.endsWith("_peak")) continue
+            val expected = fields.optString(key, "").trim().removeSuffix("dB").trim().toDoubleOrNull()
+            val actual = metadata.optString(key, "").trim().removeSuffix("dB").trim().toDoubleOrNull()
+            val tolerance = if (key.endsWith("_gain")) 0.01 else 0.000001
+            check(expected != null && actual != null && abs(actual - expected) <= tolerance) {
+                "ReplayGain verification failed for $key"
+            }
         }
     }
 

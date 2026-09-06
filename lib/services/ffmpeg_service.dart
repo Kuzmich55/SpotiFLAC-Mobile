@@ -1057,22 +1057,6 @@ class FFmpegService {
     );
   }
 
-  /// Convert a ReplayGain gain value (dB, referenced to -18 LUFS) into an Opus
-  /// R128 gain tag value (Q7.8 fixed point integer, referenced to -23 LUFS).
-  ///
-  /// Opus players read `R128_TRACK_GAIN` / `R128_ALBUM_GAIN` per RFC 7845, not
-  /// the `REPLAYGAIN_*` dB strings. The reference levels differ by exactly 5 dB
-  /// (-18 vs -23 LUFS), so the R128 gain equals the ReplayGain value minus 5 dB,
-  /// stored as `round(dB * 256)`.
-  static String? replayGainDbToR128(String replayGainDb) {
-    final match = RegExp(r'-?\d+\.?\d*').firstMatch(replayGainDb);
-    if (match == null) return null;
-    final rgDb = double.tryParse(match.group(0) ?? '');
-    if (rgDb == null) return null;
-    final r128Db = rgDb - 5.0;
-    return (r128Db * 256).round().toString();
-  }
-
   /// Write album ReplayGain tags to a file via FFmpeg.
   ///
   /// For local files, replaces the file in-place and returns `true`.
@@ -1097,10 +1081,9 @@ class FFmpegService {
 
   /// Write track ReplayGain tags to a file via FFmpeg, replacing it in place.
   ///
-  /// Used for formats that are not handled by the native tag writers
-  /// (MP3/Opus). All existing streams and metadata are preserved via
-  /// `-map 0 -c copy -map_metadata 0`; only the REPLAYGAIN_TRACK_* fields are
-  /// added/overwritten. Returns `true` when the file was rewritten in place.
+  /// Used as a fallback for formats other than Ogg/Opus. Copies streams and
+  /// metadata with `-map 0 -c copy -map_metadata 0`, setting track gain and peak.
+  /// The caller verifies the tags after a successful rewrite.
   static Future<bool> writeTrackReplayGainTags(
     String filePath,
     String trackGain,
@@ -1108,7 +1091,7 @@ class FFmpegService {
   ) => _writeReplayGainTags(filePath, 'Track', trackGain, trackPeak);
 
   /// Shared implementation for album/track ReplayGain tagging.
-  /// [scope] is 'Album' or 'Track'; it selects the REPLAYGAIN_*/R128_* tags.
+  /// [scope] is 'Album' or 'Track'; it selects the REPLAYGAIN_* tags.
   static Future<bool> _writeReplayGainTags(
     String filePath,
     String scope,
@@ -1120,6 +1103,10 @@ class FFmpegService {
     final ext = filePath.contains('.')
         ? '.${filePath.split('.').last}'
         : '.tmp';
+    if (ext.toLowerCase() == '.opus' || ext.toLowerCase() == '.ogg') {
+      _log.e('Ogg/Opus ReplayGain requires the native tag writer');
+      return false;
+    }
     final tempDir = await getTemporaryDirectory();
     final tempOutput = _nextTempEmbedPath(tempDir.path, ext);
     final tag = scope.toUpperCase();
@@ -1141,15 +1128,6 @@ class FFmpegService {
       'REPLAYGAIN_${tag}_PEAK=$peak',
     ];
 
-    if (ext.toLowerCase() == '.opus') {
-      final r128 = replayGainDbToR128(gain);
-      if (r128 != null) {
-        arguments
-          ..add('-metadata')
-          ..add('R128_${tag}_GAIN=$r128');
-      }
-    }
-
     arguments
       ..add(tempOutput)
       ..add('-y');
@@ -1157,6 +1135,11 @@ class FFmpegService {
     _log.d('Writing ${scope.toLowerCase()} ReplayGain tags via FFmpeg');
     final result = await _executeWithArguments(arguments);
 
+    if (!result.success) {
+      _log.e(
+        '$scope ReplayGain write failed (code ${result.returnCode}): ${result.output}',
+      );
+    }
     if (result.success) {
       if (returnTempPath) {
         try {

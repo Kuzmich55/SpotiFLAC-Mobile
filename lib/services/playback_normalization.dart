@@ -7,9 +7,15 @@ class PlaybackNormalizationCache {
   readMetadata;
   final void Function(Object)? onReadError;
   final Map<String, double> _volumes = {};
+  int _generation = 0;
   static final _gainNumber = RegExp(r'-?\d+(\.\d+)?');
 
   PlaybackNormalizationCache({required this.readMetadata, this.onReadError});
+
+  void invalidate(String source) {
+    _volumes.remove(source);
+    _generation++;
+  }
 
   Future<double> volumeFor(
     String path, {
@@ -19,6 +25,7 @@ class PlaybackNormalizationCache {
     final key = cacheKey ?? path;
     final cached = _volumes[key];
     if (cached != null) return cached;
+    final generation = _generation;
     try {
       final metadata = await readMetadata(path, displayName: displayName);
       if (metadata['error'] != null) {
@@ -31,8 +38,10 @@ class PlaybackNormalizationCache {
       final volume = gain == null
           ? 1.0
           : pow(10.0, gain / 20.0).toDouble().clamp(0.0, 1.0);
-      if (_volumes.length >= 128) _volumes.remove(_volumes.keys.first);
-      _volumes[key] = volume;
+      if (generation == _generation) {
+        if (_volumes.length >= 128) _volumes.remove(_volumes.keys.first);
+        _volumes[key] = volume;
+      }
       return volume;
     } catch (error) {
       onReadError?.call(error);

@@ -48,7 +48,8 @@ func ReadOggVorbisComments(filePath string) (*AudioMetadata, error) {
 		}
 	}
 
-	if metadata.Title == "" && metadata.Artist == "" {
+	if metadata.Title == "" && metadata.Artist == "" &&
+		metadata.ReplayGainTrackGain == "" && metadata.ReplayGainAlbumGain == "" {
 		return nil, fmt.Errorf("no Vorbis comments found")
 	}
 
@@ -314,9 +315,9 @@ func parseVorbisComments(data []byte, metadata *AudioMetadata) {
 
 // r128ToReplayGainDb converts an R128_*_GAIN value (integer, 1/256 dB steps,
 // -23 LUFS reference) to a ReplayGain 2 dB string (-18 LUFS reference):
-// rg = q/256 + 5. Inverse of the writer's replayGainDbToR128.
+// rg = q/256 + 5. Inverse of applyOpusReplayGainEdits.
 func r128ToReplayGainDb(raw string) (string, bool) {
-	q, err := strconv.Atoi(strings.TrimSpace(raw))
+	q, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 16)
 	if err != nil {
 		return "", false
 	}

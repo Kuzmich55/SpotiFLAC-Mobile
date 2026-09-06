@@ -1415,7 +1415,6 @@ extension _DownloadQueueNativeWorker on DownloadQueueNotifier {
       actualBitrate = autoConvertBitrateKbps(settings.autoConvertBitrate);
     }
     await _writeNativeWorkerReplayGain(
-      context: context,
       settings: settings,
       track: trackToDownload,
       filePath: filePath,
@@ -1547,7 +1546,6 @@ extension _DownloadQueueNativeWorker on DownloadQueueNotifier {
   }
 
   Future<void> _writeNativeWorkerReplayGain({
-    required _NativeWorkerRequestContext context,
     required AppSettings settings,
     required Track track,
     required String filePath,
@@ -1555,19 +1553,20 @@ extension _DownloadQueueNativeWorker on DownloadQueueNotifier {
     if (!settings.embedReplayGain) {
       return;
     }
-    if (context.outputExt != '.flac' && context.outputExt != '.m4a') {
+    final ext = audioFormatForPath(filePath)?.toLowerCase();
+    if (ext != 'flac' &&
+        ext != 'm4a' &&
+        ext != 'mp3' &&
+        ext != 'opus' &&
+        !isContentUri(filePath)) {
       return;
     }
 
     try {
-      final rgResult = await FFmpegService.scanReplayGain(filePath);
+      final rgResult = await ReplayGainService.scanAndApplyToFile(filePath);
       if (rgResult == null) {
         return;
       }
-      await PlatformBridge.editFileMetadata(filePath, {
-        'replaygain_track_gain': rgResult.trackGain,
-        'replaygain_track_peak': rgResult.trackPeak,
-      });
       _storeTrackReplayGainForAlbum(track, filePath, rgResult);
       _updateAlbumRgFilePath(track, filePath);
       await _checkAndWriteAlbumReplayGain(track);

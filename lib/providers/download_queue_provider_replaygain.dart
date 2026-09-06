@@ -172,55 +172,13 @@ extension _DownloadQueueReplayGain on DownloadQueueNotifier {
     String albumGain,
     String albumPeak,
   ) async {
-    final lower = filePath.toLowerCase();
-    if (lower.endsWith('.flac') ||
-        lower.endsWith('.ape') ||
-        lower.endsWith('.wv') ||
-        lower.endsWith('.mpc')) {
-      // Native writer — only touches the provided fields, preserves the rest.
-      await PlatformBridge.editFileMetadata(filePath, {
-        'replaygain_album_gain': albumGain,
-        'replaygain_album_peak': albumPeak,
-      });
-    } else if (isContentUri(filePath)) {
-      // SAF content:// URI — FFmpeg can read it but can't write back directly.
-      // Get the temp output from FFmpeg, then copy it to the SAF URI.
-      String? tempPath;
-      final ok = await FFmpegService.writeAlbumReplayGainTags(
-        filePath,
-        albumGain,
-        albumPeak,
-        returnTempPath: true,
-        onTempReady: (path) => tempPath = path,
-      );
-      if (ok && tempPath != null) {
-        try {
-          final safOk = await PlatformBridge.writeTempToSaf(
-            tempPath!,
-            filePath,
-          );
-          if (!safOk) {
-            _log.w('SAF write-back failed for album RG: $filePath');
-          }
-        } finally {
-          try {
-            final tmp = File(tempPath!);
-            if (await tmp.exists()) await tmp.delete();
-          } catch (_) {}
-        }
-      } else {
-        _log.w('FFmpeg album ReplayGain write failed for SAF: $filePath');
-      }
-    } else {
-      // Local MP3 / Opus — use FFmpeg copy-with-metadata approach.
-      final ok = await FFmpegService.writeAlbumReplayGainTags(
-        filePath,
-        albumGain,
-        albumPeak,
-      );
-      if (!ok) {
-        _log.w('FFmpeg album ReplayGain write failed for: $filePath');
-      }
+    final ok = await ReplayGainService.writeAlbumTags(
+      filePath,
+      albumGain,
+      albumPeak,
+    );
+    if (!ok) {
+      _log.w('Album ReplayGain write failed for: $filePath');
     }
   }
 

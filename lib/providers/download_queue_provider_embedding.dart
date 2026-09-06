@@ -563,16 +563,16 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
           final rgResult = await FFmpegService.scanReplayGain(filePath);
           if (rgResult != null) {
             scannedReplayGain = rgResult;
-            metadata['REPLAYGAIN_TRACK_GAIN'] = rgResult.trackGain;
-            metadata['REPLAYGAIN_TRACK_PEAK'] = rgResult.trackPeak;
-            if (format == 'opus') {
-              final r128 = FFmpegService.replayGainDbToR128(rgResult.trackGain);
-              if (r128 != null) metadata['R128_TRACK_GAIN'] = r128;
+            if (format != 'opus') {
+              metadata['REPLAYGAIN_TRACK_GAIN'] = rgResult.trackGain;
+              metadata['REPLAYGAIN_TRACK_PEAK'] = rgResult.trackPeak;
             }
             _log.d(
               'ReplayGain for $format: gain=${rgResult.trackGain}, peak=${rgResult.trackPeak}',
             );
-            _storeTrackReplayGainForAlbum(track, filePath, rgResult);
+            if (format != 'opus') {
+              _storeTrackReplayGainForAlbum(track, filePath, rgResult);
+            }
           }
         } catch (e) {
           _log.w('Failed to scan ReplayGain for $format: $e');
@@ -634,10 +634,10 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
       // audio through untouched — no FFmpeg spawn, no full container remux,
       // no temp-promote copy. The Go side answers method=ffmpeg for files it
       // can't handle natively, and any failure falls back to FFmpeg below.
-      // Scanned ReplayGain (opt-in, non-FLAC) keeps the FFmpeg path: its
-      // extra tags (e.g. Opus R128_TRACK_GAIN) ride the FFmpeg metadata map.
+      // Opus ReplayGain is written and verified separately below, through the
+      // same native R128 writer used by manual scans and album gain updates.
       var embeddedNatively = false;
-      if (scannedReplayGain == null) {
+      if (scannedReplayGain == null || format == 'opus') {
         try {
           final nativeFields = <String, String>{
             'title': track.name,
@@ -686,7 +686,10 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
             filePath,
             nativeFields,
           );
-          embeddedNatively = response['method'] != 'ffmpeg';
+          embeddedNatively =
+              response['success'] == true &&
+              response['error'] == null &&
+              response['method'] != 'ffmpeg';
         } catch (e) {
           _log.w('Native $format tag embed failed, falling back to FFmpeg: $e');
         }
@@ -728,6 +731,19 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
           _log.d('Metadata embedded to $format via FFmpeg');
         } else {
           _log.w('FFmpeg $format metadata embed failed');
+        }
+      }
+
+      if (format == 'opus' && scannedReplayGain != null) {
+        final written = await ReplayGainService.writeTrackTags(
+          filePath,
+          scannedReplayGain.trackGain,
+          scannedReplayGain.trackPeak,
+        );
+        if (written) {
+          _storeTrackReplayGainForAlbum(track, filePath, scannedReplayGain);
+        } else {
+          _log.w('Failed to write Opus ReplayGain');
         }
       }
 

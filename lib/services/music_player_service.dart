@@ -37,6 +37,12 @@ void setPlaybackNormalizationEnabled(bool enabled) {
   _activeMusicPlayerHandler?.reapplyNormalization();
 }
 
+/// Refreshes gain tags after a successful file update, including SAF copies.
+void refreshPlaybackNormalization(String source) {
+  final handler = _activeMusicPlayerHandler;
+  if (handler != null) unawaited(handler._refreshNormalizationSource(source));
+}
+
 List<int> buildShuffleCandidatePool({
   required int mediaCount,
   required int currentIndex,
@@ -556,6 +562,24 @@ class MusicPlayerHandler extends BaseAudioHandler
     onReadError: (error) =>
         _log.w('Failed to read gain tags for normalization: $error'),
   );
+  int _normalizationGeneration = 0;
+
+  Future<void> _refreshNormalizationSource(String source) async {
+    _normalizationGeneration++;
+    _normalizationCache.invalidate(source);
+    // A copy started before the edit can still contain the old comments.
+    await _pendingSourceResolutions[source];
+    final oldPath = _resolvedPathCache.remove(source);
+    _resolvedPathSizes.remove(source);
+    _resolvedPathOrder.remove(source);
+    if (oldPath != null) await _discardResolvedPath(oldPath);
+    if (_disposed) return;
+    if (_index >= 0 &&
+        _index < _media.length &&
+        _media[_index].source == source) {
+      reapplyNormalization();
+    }
+  }
 
   Future<double> _normalizationVolumeFor(
     String path, {
@@ -574,6 +598,7 @@ class MusicPlayerHandler extends BaseAudioHandler
   void reapplyNormalization() {
     final index = _index;
     final generation = _playRequestGeneration;
+    final normalizationGeneration = ++_normalizationGeneration;
     if (index < 0 || index >= _media.length) return;
     unawaited(() async {
       final media = _media[index];
@@ -599,7 +624,11 @@ class MusicPlayerHandler extends BaseAudioHandler
       if (playbackLease != null) {
         await PlatformBridge.closeContentUriPlaybackLease(playbackLease.token);
       }
-      if (_index != index || generation != _playRequestGeneration) return;
+      if (_index != index ||
+          generation != _playRequestGeneration ||
+          normalizationGeneration != _normalizationGeneration) {
+        return;
+      }
       try {
         await _player.setVolume(volume);
       } catch (e) {

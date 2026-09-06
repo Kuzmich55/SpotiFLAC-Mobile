@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	flacvorbis "github.com/go-flac/flacvorbis/v2"
@@ -350,6 +352,12 @@ func EditOggFields(filePath string, fields map[string]string) error {
 	cmt.Vendor = vendor
 	cmt.Comments = comments
 	applyVorbisFieldEdits(cmt, fields)
+	if isOpus {
+		if err := applyOpusReplayGainEdits(cmt, fields); err != nil {
+			f.Close()
+			return err
+		}
+	}
 
 	coverPath := strings.TrimSpace(fields["cover_path"])
 	if coverPath != "" && fileExists(coverPath) {
@@ -444,5 +452,32 @@ func EditOggFields(filePath string, fields map[string]string) error {
 		return err
 	}
 	syncDir(filepath.Dir(filePath))
+	return nil
+}
+
+// Opus uses R128 gain comments relative to -23 LUFS, in signed Q7.8 units.
+// The scan already includes OpusHead's output gain; preserve that header and
+// store only the additional adjustment. Remove legacy tags for edited scopes
+// so players cannot select conflicting gains or peaks (RFC 7845 section 5.2).
+func applyOpusReplayGainEdits(cmt *flacvorbis.MetaDataBlockVorbisComment, fields map[string]string) error {
+	for _, scope := range []string{"track", "album"} {
+		raw, present := fields["replaygain_"+scope+"_gain"]
+		if !present {
+			continue
+		}
+		value := ""
+		if raw = strings.TrimSpace(raw); raw != "" {
+			db, err := strconv.ParseFloat(strings.TrimSpace(strings.TrimSuffix(raw, "dB")), 64)
+			q := math.Round((db - 5) * 256)
+			if err != nil || math.IsNaN(q) || math.IsInf(q, 0) || q < -32768 || q > 32767 {
+				return fmt.Errorf("invalid Opus %s ReplayGain: %q", scope, raw)
+			}
+			value = strconv.Itoa(int(q))
+		}
+		upper := strings.ToUpper(scope)
+		setOrClearComment(cmt, "R128_"+upper+"_GAIN", value)
+		removeCommentKey(cmt, "REPLAYGAIN_"+upper+"_GAIN")
+		removeCommentKey(cmt, "REPLAYGAIN_"+upper+"_PEAK")
+	}
 	return nil
 }
