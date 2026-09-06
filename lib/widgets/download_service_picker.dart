@@ -260,9 +260,15 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
 
   String _sizeLabel(BuildContext context, DownloadSizeEstimate? estimate) {
     if (estimate == null) return context.l10n.downloadSizeUnavailable;
-    final size = estimate.minBytes == estimate.maxBytes
-        ? formatBytes(estimate.maxBytes)
-        : '${formatBytes(estimate.minBytes)}–${formatBytes(estimate.maxBytes)}';
+    final size = formatBytes(estimate.bytes);
+    final depth = estimate.assumedBitDepth;
+    final rate = estimate.assumedSampleRate;
+    if (depth != null && rate != null) {
+      return context.l10n.downloadEstimatedSizeAtQuality(
+        size,
+        '$depth-bit/${formatSampleRateKHz(rate)}',
+      );
+    }
     return context.l10n.downloadEstimatedSize(size);
   }
 

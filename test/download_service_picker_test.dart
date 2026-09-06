@@ -22,6 +22,7 @@ class _PickerExtensions extends ExtensionNotifier {
         hasDownloadProvider: true,
         qualityOptions: [
           QualityOption(id: 'LOSSLESS', label: 'Lossless'),
+          QualityOption(id: 'HI_RES', label: 'Hi-Res'),
           QualityOption(id: 'HI_RES_LOSSLESS', label: 'Hi-Res'),
         ],
       ),
@@ -106,13 +107,16 @@ void main() {
       duration: const Duration(minutes: 4),
       onSelect: (quality, service) => selected = (quality, service),
     );
-    expect(find.text('≈ 20.2 MB–32.3 MB'), findsOneWidget);
-    expect(find.text('≈ 20.2 MB–210.9 MB'), findsOneWidget);
+    expect(find.text('≈ 26.2 MB'), findsOneWidget);
+    expect(find.text('≈ 85.7 MB if 24-bit/96kHz'), findsOneWidget);
+    expect(find.text('≈ 171.4 MB if 24-bit/192kHz'), findsOneWidget);
+    expect(find.textContaining('MB–'), findsNothing);
     await tester.tap(find.text('Audio B'));
     await tester.pumpAndSettle();
     expect(find.text('≈ 7.3 MB'), findsOneWidget);
     expect(find.text('Size estimate unavailable'), findsOneWidget);
-    expect(find.text('≈ 20.2 MB–32.3 MB'), findsNothing);
+    expect(find.text('≈ 26.2 MB'), findsNothing);
+    expect(find.textContaining('if 24-bit'), findsNothing);
     await tester.tap(find.text('Opus 256kbps'));
     await tester.pumpAndSettle();
     expect(selected, ('opus_256', 'provider-b'));
@@ -123,13 +127,25 @@ void main() {
     'missing duration stays unknown and downloads remain selectable',
     (tester) async {
       await _openPicker(tester, locale: const Locale('id'));
-      expect(find.text('Estimasi ukuran belum tersedia'), findsNWidgets(2));
+      expect(find.text('Estimasi ukuran belum tersedia'), findsNWidgets(3));
       expect(find.textContaining('≈'), findsNothing);
       await tester.tap(find.text('FLAC Lossless'));
       await tester.pumpAndSettle();
       expect(find.byType(DownloadServicePicker), findsNothing);
     },
   );
+
+  testWidgets('capped estimates show their quality assumption in Indonesian', (
+    tester,
+  ) async {
+    await _openPicker(
+      tester,
+      duration: const Duration(minutes: 4),
+      locale: const Locale('id'),
+    );
+    expect(find.text('≈ 85.7 MB jika 24-bit/96kHz'), findsOneWidget);
+    expect(find.text('≈ 171.4 MB jika 24-bit/192kHz'), findsOneWidget);
+  });
 
   testWidgets(
     'conversion estimate is separate and fits narrow, enlarged text',
@@ -148,7 +164,7 @@ void main() {
           autoConvertBitrate: '256k',
         ),
       );
-      expect(find.text('≈ 20.2 MB–32.3 MB'), findsOneWidget);
+      expect(find.text('≈ 26.2 MB'), findsOneWidget);
       final conversionNote = find.textContaining(
         'After conversion to OPUS: ≈ 7.3 MB',
       );

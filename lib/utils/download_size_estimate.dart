@@ -1,13 +1,16 @@
-import 'dart:math' as math;
-
 import 'package:spotiflac_android/models/track.dart';
 import 'package:spotiflac_android/providers/extension_provider.dart';
 
 class DownloadSizeEstimate {
-  final int minBytes;
-  final int maxBytes;
+  final int bytes;
+  final int? assumedBitDepth;
+  final int? assumedSampleRate;
 
-  const DownloadSizeEstimate({required this.minBytes, required this.maxBytes});
+  const DownloadSizeEstimate({
+    required this.bytes,
+    this.assumedBitDepth,
+    this.assumedSampleRate,
+  });
 }
 
 /// Unknown durations must not make a batch estimate look like a complete total.
@@ -32,7 +35,7 @@ DownloadSizeEstimate? estimateDownloadSize({
   if (bitrate != null) {
     if (bitrate <= 0 || parameters.isMaximum) return null;
     final bytes = (seconds * bitrate * 1000 / 8).round();
-    return DownloadSizeEstimate(minBytes: bytes, maxBytes: bytes);
+    return DownloadSizeEstimate(bytes: bytes);
   }
 
   final depth = parameters.bitDepth;
@@ -44,15 +47,15 @@ DownloadSizeEstimate? estimateDownloadSize({
       parameters.channels <= 0) {
     return null;
   }
-  final minDepth = parameters.isMaximum ? math.min(depth, 16) : depth;
-  final minRate = parameters.isMaximum ? math.min(rate, 44100) : rate;
-  // A rough compressed-lossless range (50–80% of PCM), not a bound or a
-  // guarantee. Capped tiers can deliver CD quality instead of their maximum.
+  // Use one comparison estimate at the selected tier, assuming 65% of PCM.
+  // This is a heuristic, not a measurement of this recording's compression.
+  // For capped tiers the UI must show the assumed depth/rate: a provider can
+  // return lower quality, so the tier's maximum is not the track's actual size.
   // Artwork, tags, container overhead and later conversion are excluded.
   return DownloadSizeEstimate(
-    minBytes: (seconds * minDepth * minRate * parameters.channels / 8 * 0.5)
-        .round(),
-    maxBytes: (seconds * depth * rate * parameters.channels / 8 * 0.8).round(),
+    bytes: (seconds * depth * rate * parameters.channels / 8 * 0.65).round(),
+    assumedBitDepth: parameters.isMaximum ? depth : null,
+    assumedSampleRate: parameters.isMaximum ? rate : null,
   );
 }
 

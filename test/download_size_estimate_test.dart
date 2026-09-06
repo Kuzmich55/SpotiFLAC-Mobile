@@ -29,38 +29,37 @@ void main() {
         duration: duration,
         quality: quality,
       )!;
-      expect(estimate.minBytes, 7680000);
-      expect(estimate.maxBytes, 7680000);
+      expect(estimate.bytes, 7680000);
+      expect(estimate.assumedBitDepth, isNull);
+      expect(estimate.assumedSampleRate, isNull);
     }
   });
 
-  test(
-    'lossless range scales with duration and includes lower capped tiers',
-    () {
-      const cd = QualityOption(id: 'LOSSLESS', label: 'Lossless');
-      final cdSize = estimateDownloadSize(duration: duration, quality: cd)!;
-      expect(cdSize.minBytes, 21168000);
-      expect(cdSize.maxBytes, 33868800);
-      final batchSize = estimateDownloadSize(
-        duration: totalDownloadDuration([_track(240), _track(240)]),
-        quality: cd,
-      )!;
-      expect(batchSize.minBytes, cdSize.minBytes * 2);
-      expect(batchSize.maxBytes, cdSize.maxBytes * 2);
+  test('lossless estimates compare each tier at its own quality', () {
+    const cd = QualityOption(id: 'LOSSLESS', label: 'Lossless');
+    final cdSize = estimateDownloadSize(duration: duration, quality: cd)!;
+    expect(cdSize.bytes, 27518400);
+    expect(cdSize.assumedSampleRate, isNull);
+    final batchSize = estimateDownloadSize(
+      duration: totalDownloadDuration([_track(240), _track(240)]),
+      quality: cd,
+    )!;
+    expect(batchSize.bytes, cdSize.bytes * 2);
 
-      for (final (id, maximum) in [
-        ('HI_RES', 110592000),
-        ('HI_RES_LOSSLESS', 221184000),
-      ]) {
-        final size = estimateDownloadSize(
-          duration: duration,
-          quality: QualityOption(id: id, label: ''),
-        )!;
-        expect(size.minBytes, cdSize.minBytes);
-        expect(size.maxBytes, maximum);
-      }
-    },
-  );
+    for (final (id, rate, bytes) in [
+      ('HI_RES', 96000, 89856000),
+      ('HI_RES_LOSSLESS', 192000, 179712000),
+    ]) {
+      final size = estimateDownloadSize(
+        duration: duration,
+        quality: QualityOption(id: id, label: ''),
+      )!;
+      expect(size.bytes, bytes);
+      expect(size.bytes, greaterThan(cdSize.bytes));
+      expect(size.assumedBitDepth, 24);
+      expect(size.assumedSampleRate, rate);
+    }
+  });
 
   test(
     'explicit parameters override legacy assumptions and preserve channels',
@@ -74,8 +73,9 @@ void main() {
         duration: duration,
         quality: quality,
       )!;
-      expect(estimate.minBytes, 17280000);
-      expect(estimate.maxBytes, 27648000);
+      expect(estimate.bytes, 22464000);
+      expect(estimate.assumedBitDepth, isNull);
+      expect(estimate.assumedSampleRate, isNull);
       final capped = estimateDownloadSize(
         duration: duration,
         quality: QualityOption.fromJson({
@@ -88,8 +88,9 @@ void main() {
           },
         }),
       )!;
-      expect(capped.minBytes, 21168000);
-      expect(capped.maxBytes, 221184000);
+      expect(capped.bytes, 179712000);
+      expect(capped.assumedBitDepth, 24);
+      expect(capped.assumedSampleRate, 192000);
     },
   );
 

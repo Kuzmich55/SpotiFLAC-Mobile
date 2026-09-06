@@ -2129,7 +2129,7 @@
   },
   "downloadEstimatedSize": "≈ {size}",
   "@downloadEstimatedSize": {
-    "description": "Approximate audio file size, or total for all selected tracks; size includes units and may be a range",
+    "description": "Approximate audio file size, or total for all selected tracks; size includes units",
     "placeholders": {
       "size": {
         "type": "String"
@@ -2137,7 +2137,19 @@
     }
   },
   "downloadSizeUnavailable": "Size estimate unavailable",
-  "downloadSizeEstimateNote": "Estimated audio size before conversion, excluding artwork and tags. Actual size varies with quality and compression; data usage may be higher.",
+  "downloadEstimatedSizeAtQuality": "≈ {size} if {quality}",
+  "@downloadEstimatedSizeAtQuality": {
+    "description": "Conditional size estimate for a tier with an unknown actual quality; quality is the assumed bit depth and sample rate",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "quality": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadSizeEstimateNote": "Estimates assume the quality shown. Lower quality can produce smaller files; compression also affects size. Excludes artwork and tags. Data usage may be higher.",
   "downloadConvertedSizeEstimate": "After conversion to {format}: {size}",
   "@downloadConvertedSizeEstimate": {
     "description": "Estimated size after the user's automatic conversion, excluding tags and artwork",
