@@ -1,30 +1,21 @@
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:spotiflac_android/services/local_track_batch_actions.dart';
 import 'package:spotiflac_android/theme/cover_palette.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spotiflac_android/l10n/l10n.dart';
-import 'package:spotiflac_android/models/track.dart';
-import 'package:spotiflac_android/providers/download_queue_provider.dart';
-import 'package:spotiflac_android/providers/extension_provider.dart';
 import 'package:spotiflac_android/providers/settings_provider.dart';
 import 'package:spotiflac_android/utils/adaptive_layout.dart';
 import 'package:spotiflac_android/utils/audio_quality_badge_policy.dart';
 import 'package:spotiflac_android/utils/confirm_and_delete_tracks.dart';
-import 'package:spotiflac_android/utils/ffmpeg_reenrich.dart';
 import 'package:spotiflac_android/utils/file_access.dart';
 import 'package:spotiflac_android/utils/image_cache_utils.dart';
-import 'package:spotiflac_android/utils/lyrics_metadata_helper.dart';
 import 'package:spotiflac_android/utils/nav_bar_inset.dart';
 import 'package:spotiflac_android/services/library_database.dart';
 import 'package:spotiflac_android/services/batch_track_actions.dart';
-import 'package:spotiflac_android/services/batch_metadata_re_enrich.dart';
 import 'package:spotiflac_android/models/unified_library_item.dart';
 import 'package:spotiflac_android/services/local_track_redownload_service.dart';
-import 'package:spotiflac_android/widgets/batch_progress_dialog.dart';
-import 'package:spotiflac_android/widgets/re_enrich_field_dialog.dart';
-import 'package:spotiflac_android/widgets/re_enrich_review_sheet.dart';
-import 'package:spotiflac_android/services/platform_bridge.dart';
 import 'package:spotiflac_android/providers/local_library_provider.dart';
 import 'package:spotiflac_android/providers/playback_provider.dart';
 import 'package:spotiflac_android/providers/music_player_provider.dart';
@@ -432,41 +423,6 @@ class _LocalAlbumScreenState extends ConsumerState<LocalAlbumScreen>
     );
   }
 
-  Future<bool> _reEnrichLocalTrack(
-    LocalLibraryItem item, {
-    required List<String> updateFields,
-    required Map<String, dynamic> resolvedMetadata,
-  }) async {
-    final settings = ref.read(settingsProvider);
-    final artistTagMode = settings.artistTagMode;
-    await ref.read(settingsProvider.notifier).syncLyricsSettingsToBackend();
-    final request = buildBatchReEnrichRequest(
-      item: item,
-      settings: settings,
-      updateFields: updateFields,
-      resolvedMetadata: resolvedMetadata,
-    );
-
-    final result = await PlatformBridge.reEnrichFile(request);
-    final method = result['method'] as String?;
-    if (method == 'native') {
-      // Filesystem .lrc sidecar (SAF sidecar handled natively in Kotlin).
-      await writeReEnrichSidecarLrc(
-        audioFilePath: item.filePath,
-        reEnrichResult: result,
-      );
-      return true;
-    }
-    if (method == 'ffmpeg') {
-      return applyFfmpegReEnrichResult(
-        item: item,
-        result: result,
-        artistTagMode: artistTagMode,
-      );
-    }
-    return false;
-  }
-
   List<LocalLibraryItem> _selectedFlacEligibleItems(
     List<LocalLibraryItem> allTracks,
   ) {
@@ -478,310 +434,31 @@ class _LocalAlbumScreenState extends ConsumerState<LocalAlbumScreen>
         .toList(growable: false);
   }
 
-  Future<void> _queueSelectedAsFlac(List<LocalLibraryItem> allTracks) async {
-    final selected = _selectedFlacEligibleItems(allTracks);
-
-    if (selected.isEmpty) {
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.queueFlacAction),
-        content: Text(context.l10n.queueFlacConfirmMessage(selected.length)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.l10n.dialogCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(context.l10n.queueFlacAction),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) {
-      return;
-    }
-
-    final settings = ref.read(settingsProvider);
-    final extensionState = ref.read(extensionProvider);
-    final includeExtensions =
-        settings.useExtensionProviders &&
-        extensionState.extensions.any(
-          (ext) => ext.enabled && ext.hasMetadataProvider,
-        );
-    final targetService = LocalTrackRedownloadService.preferredFlacService(
-      settings,
-      extensionState,
-    );
-    if (targetService.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.extensionsNoDownloadProvider)),
+  Future<void> _queueSelectedAsFlac(List<LocalLibraryItem> allTracks) =>
+      queueLocalTracksAsFlac(
+        context,
+        ref,
+        _selectedFlacEligibleItems(allTracks),
+        isActive: () => mounted,
+        onComplete: exitSelectionMode,
       );
-      return;
-    }
-    final targetQuality =
-        LocalTrackRedownloadService.preferredFlacQualityForService(
-          targetService,
-          extensionState,
-        );
-
-    final matchedTracks = <Track>[];
-    var skippedCount = 0;
-    final total = selected.length;
-
-    var cancelled = false;
-    BatchProgressDialog.show(
-      context: context,
-      title: context.l10n.queueFlacAction,
-      total: total,
-      icon: Icons.queue_music,
-      onCancel: () {
-        cancelled = true;
-        BatchProgressDialog.dismiss(context);
-      },
-    );
-
-    for (var i = 0; i < total; i++) {
-      if (!mounted || cancelled) break;
-
-      BatchProgressDialog.update(current: i + 1, detail: selected[i].trackName);
-
-      try {
-        final resolution = await LocalTrackRedownloadService.resolveBestMatch(
-          selected[i],
-          includeExtensions: includeExtensions,
-        );
-        if (resolution.canQueue && resolution.match != null) {
-          matchedTracks.add(resolution.match!);
-        } else {
-          skippedCount++;
-        }
-      } catch (_) {
-        skippedCount++;
-      }
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    if (!cancelled) {
-      BatchProgressDialog.dismiss(context);
-    }
-
-    if (matchedTracks.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.queueFlacNoReliableMatches)),
-      );
-      return;
-    }
-
-    ref
-        .read(downloadQueueProvider.notifier)
-        .addMultipleToQueue(
-          matchedTracks,
-          targetService,
-          qualityOverride: targetQuality,
-        );
-
-    final summary = skippedCount == 0
-        ? context.l10n.snackbarAddedTracksToQueue(matchedTracks.length)
-        : context.l10n.queueFlacQueuedWithSkipped(
-            matchedTracks.length,
-            skippedCount,
-          );
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(summary)));
-    exitSelectionMode();
-  }
 
   Future<void> _reEnrichSelected(List<LocalLibraryItem> allTracks) async {
-    final tracksById = {for (final t in allTracks) t.id: t};
-    final selected = <LocalLibraryItem>[];
-
-    for (final id in selectedIds) {
-      final item = tracksById[id];
-      if (item != null) {
-        selected.add(item);
-      }
-    }
-
-    if (selected.isEmpty) {
-      return;
-    }
-
-    // The bar uses AnimatedPositioned (250ms), so wait for the slide-out.
-    setState(() => isSelectionMode = false);
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-
-    final selection = await showReEnrichFieldDialog(
+    final tracksById = {for (final track in allTracks) track.id: track};
+    final selected = [for (final id in selectedIds) ?tracksById[id]];
+    await reEnrichLocalTracks(
       context,
-      selectedCount: selected.length,
-    );
-
-    if (selection == null || !mounted) {
-      // Cancelled — restore selection mode (IDs are still intact).
-      if (mounted) setState(() => isSelectionMode = true);
-      return;
-    }
-
-    await ref.read(settingsProvider.notifier).syncLyricsSettingsToBackend();
-    if (!mounted) return;
-    final settings = ref.read(settingsProvider);
-    final previews = <BatchReEnrichPreview>[];
-    var cancelled = false;
-    BatchProgressDialog.show(
-      context: context,
-      title: selection.usesManualValues
-          ? context.l10n.trackReEnrichPreparing
-          : context.l10n.trackReEnrichSearching,
-      total: selected.length,
-      icon: selection.usesManualValues ? Icons.edit_note : Icons.manage_search,
-      onCancel: () {
-        cancelled = true;
-        BatchProgressDialog.dismiss(context);
+      ref,
+      selected,
+      isActive: () => mounted,
+      onSelectionHide: () async {
+        setState(() => isSelectionMode = false);
+        // Allow the selection bar's 250 ms slide-out to finish.
+        await Future<void>.delayed(const Duration(milliseconds: 300));
       },
+      onSelectionRestore: () => setState(() => isSelectionMode = true),
+      onComplete: exitSelectionMode,
     );
-
-    for (var i = 0; i < selected.length; i++) {
-      if (!mounted || cancelled) break;
-      final item = selected[i];
-      BatchProgressDialog.update(
-        current: i + 1,
-        detail: '${item.trackName} - ${item.artistName}',
-      );
-      final updateFields = selection.updateFieldsFor(item);
-      if (updateFields.isEmpty) continue;
-      if (selection.usesManualValues) {
-        final preview = buildManualBatchReEnrichPreview(item, selection);
-        if (preview != null) previews.add(preview);
-        continue;
-      }
-      try {
-        final result = await PlatformBridge.reEnrichFile(
-          buildBatchReEnrichRequest(
-            item: item,
-            settings: settings,
-            updateFields: updateFields,
-            previewOnly: true,
-          ),
-        );
-        final rawMetadata = result['enriched_metadata'];
-        if (result['method'] != 'preview' || rawMetadata is! Map) continue;
-        final enrichedMetadata = rawMetadata.map(
-          (key, value) => MapEntry(key.toString(), value),
-        );
-        final changes = buildReEnrichMetadataChanges(
-          item,
-          enrichedMetadata,
-          updateFields,
-        );
-        if (changes.isEmpty) continue;
-        previews.add(
-          BatchReEnrichPreview(
-            item: item,
-            updateFields: updateFields,
-            enrichedMetadata: enrichedMetadata,
-            changes: changes,
-          ),
-        );
-      } catch (_) {}
-    }
-
-    if (!mounted) return;
-    if (!cancelled) BatchProgressDialog.dismiss(context);
-    if (cancelled) {
-      setState(() => isSelectionMode = true);
-      return;
-    }
-
-    if (previews.isEmpty) {
-      setState(() => isSelectionMode = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.trackReEnrichNoChanges)),
-      );
-      return;
-    }
-
-    final confirmed = await showReEnrichReviewSheet(
-      context,
-      previews: previews,
-    );
-    if (!confirmed || !mounted) {
-      if (mounted) setState(() => isSelectionMode = true);
-      return;
-    }
-
-    var successCount = 0;
-    final total = previews.length;
-    cancelled = false;
-    BatchProgressDialog.show(
-      context: context,
-      title: context.l10n.trackReEnrichProgress,
-      total: total,
-      icon: Icons.auto_fix_high,
-      onCancel: () {
-        cancelled = true;
-        BatchProgressDialog.dismiss(context);
-      },
-    );
-
-    for (var i = 0; i < total; i++) {
-      if (!mounted || cancelled) break;
-      final preview = previews[i];
-      BatchProgressDialog.update(
-        current: i + 1,
-        detail: '${preview.item.trackName} - ${preview.item.artistName}',
-      );
-      try {
-        final ok = await _reEnrichLocalTrack(
-          preview.item,
-          updateFields: preview.updateFields,
-          resolvedMetadata: preview.enrichedMetadata,
-        );
-        if (ok) successCount++;
-      } catch (_) {}
-    }
-
-    if (!mounted) return;
-    if (!cancelled) BatchProgressDialog.dismiss(context);
-
-    try {
-      if (!ref.read(localLibraryProvider).isScanning) {
-        await ref.read(localLibraryProvider.notifier).scanAllSources();
-      } else {
-        await ref.read(localLibraryProvider.notifier).reloadFromStorage();
-      }
-    } catch (_) {
-      await ref.read(localLibraryProvider.notifier).reloadFromStorage();
-    }
-
-    exitSelectionMode();
-
-    if (!mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).clearSnackBars();
-    final failedCount = total - successCount;
-    final summary = failedCount <= 0
-        ? '${context.l10n.trackReEnrichSuccess} ($successCount/$total)'
-        : context.l10n.trackReEnrichSuccessWithFailures(
-            successCount,
-            total,
-            failedCount,
-          );
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(summary)));
   }
 
   List<UnifiedLibraryItem> _selectedUnifiedItems(

@@ -206,22 +206,24 @@ class SettingsNotifier extends Notifier<AppSettings> {
     unawaited(syncLyricsSettingsToBackend());
   }
 
-  Future<void> syncLyricsSettingsToBackend() async {
+  Future<void> syncLyricsSettingsToBackend({AppSettings? settings}) async {
+    final snapshot = settings ?? state;
     if (!PlatformBridge.supportsCoreBackend) return;
 
     try {
-      await PlatformBridge.setLyricsProviders(state.lyricsProviders);
+      await PlatformBridge.setLyricsProviders(snapshot.lyricsProviders);
     } catch (e) {
       _log.w('Failed to sync lyrics providers to backend: $e');
     }
 
     try {
       await PlatformBridge.setLyricsFetchOptions({
-        'include_translation_netease': state.lyricsIncludeTranslationNetease,
-        'include_romanization_netease': state.lyricsIncludeRomanizationNetease,
-        'multi_person_word_by_word': state.lyricsMultiPersonWordByWord,
-        'apple_elrc_word_sync': state.lyricsAppleElrcWordSync,
-        'musixmatch_language': state.musixmatchLanguage,
+        'include_translation_netease': snapshot.lyricsIncludeTranslationNetease,
+        'include_romanization_netease':
+            snapshot.lyricsIncludeRomanizationNetease,
+        'multi_person_word_by_word': snapshot.lyricsMultiPersonWordByWord,
+        'apple_elrc_word_sync': snapshot.lyricsAppleElrcWordSync,
+        'musixmatch_language': snapshot.musixmatchLanguage,
       });
     } catch (e) {
       _log.w('Failed to sync lyrics fetch options to backend: $e');
