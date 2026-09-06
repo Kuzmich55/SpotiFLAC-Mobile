@@ -1337,7 +1337,7 @@ extension _DownloadQueueNativeWorker on DownloadQueueNotifier {
       item.track,
       settings,
     );
-    final trackToDownload = _buildTrackForMetadataEmbedding(
+    final trackToDownload = buildTrackForMetadataEmbedding(
       item.track,
       result,
       resolvedAlbumArtist,

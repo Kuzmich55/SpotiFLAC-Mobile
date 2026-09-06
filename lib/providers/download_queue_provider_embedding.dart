@@ -32,12 +32,6 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
     return albumArtist;
   }
 
-  static final _isrcRegex = RegExp(r'^[A-Z]{2}[A-Z0-9]{3}\d{2}\d{5}$');
-
-  bool _isValidISRC(String value) {
-    return _isrcRegex.hasMatch(value.toUpperCase());
-  }
-
   /// Returns true if any enabled extension matching [source] or [service]
   /// declares `skipLyrics: true` in its manifest.
   bool _shouldSkipLyrics(
@@ -129,64 +123,6 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
     return null;
   }
 
-  Track _copyTrackWithResolvedMetadata(
-    Track track, {
-    String? resolvedIsrc,
-    int? trackNumber,
-    int? totalTracks,
-    int? discNumber,
-    int? totalDiscs,
-    String? releaseDate,
-    String? deezerId,
-    String? composer,
-  }) {
-    final normalizedIsrc = normalizeOptionalString(resolvedIsrc);
-    final normalizedComposer = normalizeOptionalString(composer);
-
-    return Track(
-      id: track.id,
-      name: track.name,
-      artistName: track.artistName,
-      albumName: track.albumName,
-      albumArtist: track.albumArtist,
-      artistId: track.artistId,
-      albumId: track.albumId,
-      coverUrl: normalizeCoverReference(track.coverUrl),
-      duration: track.duration,
-      isrc: (normalizedIsrc != null && _isValidISRC(normalizedIsrc))
-          ? normalizedIsrc
-          : track.isrc,
-      trackNumber: (track.trackNumber != null && track.trackNumber! > 0)
-          ? track.trackNumber
-          : trackNumber,
-      discNumber: (track.discNumber != null && track.discNumber! > 0)
-          ? track.discNumber
-          : discNumber,
-      totalDiscs: (track.totalDiscs != null && track.totalDiscs! > 0)
-          ? track.totalDiscs
-          : totalDiscs,
-      releaseDate: track.releaseDate ?? normalizeOptionalString(releaseDate),
-      deezerId: deezerId ?? track.deezerId,
-      availability: track.availability,
-      source: track.source,
-      albumType: track.albumType,
-      totalTracks: (track.totalTracks != null && track.totalTracks! > 0)
-          ? track.totalTracks
-          : totalTracks,
-      composer: (track.composer != null && track.composer!.isNotEmpty)
-          ? track.composer
-          : normalizedComposer,
-      genre: track.genre,
-      label: track.label,
-      copyright: track.copyright,
-      comment: track.comment,
-      itemType: track.itemType,
-      audioQuality: track.audioQuality,
-      audioModes: track.audioModes,
-      explicit: track.explicit,
-    );
-  }
-
   Future<_DeezerLookupPreparation> _resolveProviderTrackForDeezerLookup(
     Track track,
     String itemId,
@@ -231,7 +167,7 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
         'Resolved ISRC from ${effectiveProvider.isEmpty ? provider : effectiveProvider}: $resolvedIsrc',
       );
 
-      final updatedTrack = _copyTrackWithResolvedMetadata(
+      final updatedTrack = copyTrackWithResolvedMetadata(
         track,
         resolvedIsrc: resolvedIsrc,
         releaseDate: trackData['release_date'] as String?,
@@ -251,7 +187,7 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
       return _DeezerLookupPreparation(
         track: deezerTrackId == null
             ? updatedTrack
-            : _copyTrackWithResolvedMetadata(
+            : copyTrackWithResolvedMetadata(
                 updatedTrack,
                 deezerId: deezerTrackId,
               ),
@@ -321,7 +257,7 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
             deezerTrackId != null;
 
         final updatedTrack = needsEnrich
-            ? _copyTrackWithResolvedMetadata(
+            ? copyTrackWithResolvedMetadata(
                 track,
                 resolvedIsrc: deezerIsrc,
                 releaseDate: trackData['release_date'] as String?,
@@ -351,7 +287,7 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
         deezerTrackId = deezerData['id'].toString();
         _log.d('Found Deezer track ID via SongLink (flat): $deezerTrackId');
         return _DeezerLookupPreparation(
-          track: _copyTrackWithResolvedMetadata(track, deezerId: deezerTrackId),
+          track: copyTrackWithResolvedMetadata(track, deezerId: deezerTrackId),
           deezerTrackId: deezerTrackId,
         );
       }
@@ -449,172 +385,6 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
       return Future.value(null);
     }
     return _loadDeezerExtendedMetadata(deezerTrackId);
-  }
-
-  bool _isUsableIndex(int? number, int? total) {
-    if (number == null || number <= 0) return false;
-    return total == null || total <= 0 || number <= total;
-  }
-
-  int? _resolvePositiveMetadataInt(int? sourceValue, int? backendValue) {
-    if (sourceValue != null && sourceValue > 0) return sourceValue;
-    return backendValue;
-  }
-
-  int? _resolveMetadataIndex({
-    required int? sourceValue,
-    required int? backendValue,
-    required int? total,
-  }) {
-    if (_isUsableIndex(sourceValue, total)) return sourceValue;
-    if (_isUsableIndex(backendValue, total)) return backendValue;
-    return sourceValue != null && sourceValue > 0 ? sourceValue : backendValue;
-  }
-
-  String? _resolveMetadataText(String? sourceValue, String? backendValue) {
-    return normalizeOptionalString(sourceValue) ??
-        normalizeOptionalString(backendValue);
-  }
-
-  Track _buildTrackForMetadataEmbedding(
-    Track baseTrack,
-    Map<String, dynamic> backendResult,
-    String? resolvedAlbumArtist,
-  ) {
-    final backendTrackNum = readPositiveInt(backendResult['track_number']);
-    final backendDiscNum = readPositiveInt(backendResult['disc_number']);
-    final backendTotalTracks = readPositiveInt(backendResult['total_tracks']);
-    final backendTotalDiscs = readPositiveInt(backendResult['total_discs']);
-    final backendYear = normalizeOptionalString(
-      backendResult['release_date'] as String?,
-    );
-    final backendAlbum = normalizeOptionalString(
-      backendResult['album'] as String?,
-    );
-    final backendIsrc = normalizeOptionalString(
-      backendResult['isrc'] as String?,
-    );
-    final backendCoverUrl = normalizeCoverReference(
-      backendResult['cover_url']?.toString(),
-    );
-    final baseCoverUrl = normalizeCoverReference(baseTrack.coverUrl);
-    final resolvedCoverUrl = baseCoverUrl ?? backendCoverUrl;
-    final backendAlbumArtist = normalizeOptionalString(
-      backendResult['album_artist'] as String?,
-    );
-    final backendComposer = normalizeOptionalString(
-      backendResult['composer']?.toString(),
-    );
-    final sourceAlbumName = normalizeOptionalString(baseTrack.albumName);
-    final sourceAlbumArtist = normalizeOptionalString(baseTrack.albumArtist);
-    final sourceIsrc = normalizeOptionalString(baseTrack.isrc);
-    final sourceReleaseDate = normalizeOptionalString(baseTrack.releaseDate);
-    final sourceComposer = normalizeOptionalString(baseTrack.composer);
-    final sourceAlbumType = normalizeOptionalString(baseTrack.albumType);
-    final sourceGenre = normalizeOptionalString(baseTrack.genre);
-    final sourceLabel = normalizeOptionalString(baseTrack.label);
-    final sourceCopyright = normalizeOptionalString(baseTrack.copyright);
-    final sourceComment = normalizeOptionalString(baseTrack.comment);
-    final sourceUpc = normalizeOptionalString(baseTrack.upc);
-    final backendGenre = normalizeOptionalString(
-      backendResult['genre']?.toString(),
-    );
-    final backendLabel = normalizeOptionalString(
-      backendResult['label']?.toString(),
-    );
-    final backendCopyright = normalizeOptionalString(
-      backendResult['copyright']?.toString(),
-    );
-    final backendComment = normalizeOptionalString(
-      backendResult['comment']?.toString(),
-    );
-    final resolvedComment = backendComment ?? sourceComment;
-    final backendAlbumType = normalizeOptionalString(
-      backendResult['album_type']?.toString(),
-    );
-    final backendUpc = normalizeOptionalString(
-      (backendResult['upc'] ?? backendResult['barcode'])?.toString(),
-    );
-    final backendExplicit = backendResult['explicit'] == true;
-    final resolvedTotalTracks = _resolvePositiveMetadataInt(
-      baseTrack.totalTracks,
-      backendTotalTracks,
-    );
-    final resolvedTotalDiscs = _resolvePositiveMetadataInt(
-      baseTrack.totalDiscs,
-      backendTotalDiscs,
-    );
-    final resolvedTrackNumber = _resolveMetadataIndex(
-      sourceValue: baseTrack.trackNumber,
-      backendValue: backendTrackNum,
-      total: resolvedTotalTracks,
-    );
-    final resolvedDiscNumber = _resolveMetadataIndex(
-      sourceValue: baseTrack.discNumber,
-      backendValue: backendDiscNum,
-      total: resolvedTotalDiscs,
-    );
-
-    final hasOverrides =
-        resolvedTrackNumber != baseTrack.trackNumber ||
-        resolvedDiscNumber != baseTrack.discNumber ||
-        resolvedTotalTracks != baseTrack.totalTracks ||
-        resolvedTotalDiscs != baseTrack.totalDiscs ||
-        resolvedAlbumArtist != sourceAlbumArtist ||
-        (sourceReleaseDate == null && backendYear != null) ||
-        (sourceAlbumName == null && backendAlbum != null) ||
-        (sourceIsrc == null && backendIsrc != null) ||
-        (baseCoverUrl == null && backendCoverUrl != null) ||
-        (sourceAlbumArtist == null &&
-            resolvedAlbumArtist == null &&
-            backendAlbumArtist != null) ||
-        (sourceComposer == null && backendComposer != null) ||
-        (sourceAlbumType == null && backendAlbumType != null) ||
-        (sourceGenre == null && backendGenre != null) ||
-        (sourceLabel == null && backendLabel != null) ||
-        (sourceCopyright == null && backendCopyright != null) ||
-        resolvedComment != sourceComment ||
-        (baseTrack.explicit != true && backendExplicit) ||
-        (sourceUpc == null && backendUpc != null);
-
-    if (!hasOverrides) {
-      return baseTrack;
-    }
-
-    return Track(
-      id: baseTrack.id,
-      name: baseTrack.name,
-      artistName: baseTrack.artistName,
-      albumName: sourceAlbumName ?? backendAlbum ?? baseTrack.albumName,
-      albumArtist:
-          resolvedAlbumArtist ?? sourceAlbumArtist ?? backendAlbumArtist,
-      artistId: baseTrack.artistId,
-      albumId: baseTrack.albumId,
-      coverUrl: resolvedCoverUrl,
-      duration: baseTrack.duration,
-      isrc: sourceIsrc ?? backendIsrc,
-      trackNumber: resolvedTrackNumber,
-      discNumber: resolvedDiscNumber,
-      totalDiscs: resolvedTotalDiscs,
-      releaseDate: sourceReleaseDate ?? backendYear,
-      deezerId: baseTrack.deezerId,
-      availability: baseTrack.availability,
-      albumType: sourceAlbumType ?? backendAlbumType,
-      totalTracks: resolvedTotalTracks,
-      composer: sourceComposer ?? backendComposer,
-      genre: sourceGenre ?? backendGenre,
-      label: sourceLabel ?? backendLabel,
-      copyright: sourceCopyright ?? backendCopyright,
-      comment: resolvedComment,
-      source: baseTrack.source,
-      itemType: baseTrack.itemType,
-      audioQuality: baseTrack.audioQuality,
-      audioModes: baseTrack.audioModes,
-      explicit: baseTrack.explicit == true || backendExplicit
-          ? true
-          : baseTrack.explicit,
-      upc: sourceUpc ?? backendUpc,
-    );
   }
 
   /// Unified metadata, cover, lyrics, and ReplayGain embedding for all formats.
@@ -1078,4 +848,202 @@ extension _DownloadQueueEmbedding on DownloadQueueNotifier {
       _evictEmbedCover(url);
     }
   }
+}
+
+final _isrcRegex = RegExp(r'^[A-Z]{2}[A-Z0-9]{3}\d{2}\d{5}$');
+
+bool _isValidISRC(String value) {
+  return _isrcRegex.hasMatch(value.toUpperCase());
+}
+
+/// Fills resolved identifiers and missing metadata without dropping other tags.
+Track copyTrackWithResolvedMetadata(
+  Track track, {
+  String? resolvedIsrc,
+  int? trackNumber,
+  int? totalTracks,
+  int? discNumber,
+  int? totalDiscs,
+  String? releaseDate,
+  String? deezerId,
+  String? composer,
+}) {
+  final normalizedIsrc = normalizeOptionalString(resolvedIsrc);
+  final normalizedComposer = normalizeOptionalString(composer);
+
+  return track.copyWith(
+    coverUrl: normalizeCoverReference(track.coverUrl),
+    isrc: (normalizedIsrc != null && _isValidISRC(normalizedIsrc))
+        ? normalizedIsrc
+        : track.isrc,
+    trackNumber: (track.trackNumber != null && track.trackNumber! > 0)
+        ? track.trackNumber
+        : trackNumber,
+    discNumber: (track.discNumber != null && track.discNumber! > 0)
+        ? track.discNumber
+        : discNumber,
+    totalDiscs: (track.totalDiscs != null && track.totalDiscs! > 0)
+        ? track.totalDiscs
+        : totalDiscs,
+    releaseDate: track.releaseDate ?? normalizeOptionalString(releaseDate),
+    deezerId: deezerId ?? track.deezerId,
+    totalTracks: (track.totalTracks != null && track.totalTracks! > 0)
+        ? track.totalTracks
+        : totalTracks,
+    composer: (track.composer != null && track.composer!.isNotEmpty)
+        ? track.composer
+        : normalizedComposer,
+  );
+}
+
+bool _isUsableIndex(int? number, int? total) {
+  if (number == null || number <= 0) return false;
+  return total == null || total <= 0 || number <= total;
+}
+
+int? _resolvePositiveMetadataInt(int? sourceValue, int? backendValue) {
+  if (sourceValue != null && sourceValue > 0) return sourceValue;
+  return backendValue;
+}
+
+int? _resolveMetadataIndex({
+  required int? sourceValue,
+  required int? backendValue,
+  required int? total,
+}) {
+  if (_isUsableIndex(sourceValue, total)) return sourceValue;
+  if (_isUsableIndex(backendValue, total)) return backendValue;
+  return sourceValue != null && sourceValue > 0 ? sourceValue : backendValue;
+}
+
+String? _resolveMetadataText(String? sourceValue, String? backendValue) {
+  return normalizeOptionalString(sourceValue) ??
+      normalizeOptionalString(backendValue);
+}
+
+/// Applies backend metadata fallbacks while preserving source-only fields.
+Track buildTrackForMetadataEmbedding(
+  Track baseTrack,
+  Map<String, dynamic> backendResult,
+  String? resolvedAlbumArtist,
+) {
+  final backendTrackNum = readPositiveInt(backendResult['track_number']);
+  final backendDiscNum = readPositiveInt(backendResult['disc_number']);
+  final backendTotalTracks = readPositiveInt(backendResult['total_tracks']);
+  final backendTotalDiscs = readPositiveInt(backendResult['total_discs']);
+  final backendYear = normalizeOptionalString(
+    backendResult['release_date'] as String?,
+  );
+  final backendAlbum = normalizeOptionalString(
+    backendResult['album'] as String?,
+  );
+  final backendIsrc = normalizeOptionalString(backendResult['isrc'] as String?);
+  final backendCoverUrl = normalizeCoverReference(
+    backendResult['cover_url']?.toString(),
+  );
+  final baseCoverUrl = normalizeCoverReference(baseTrack.coverUrl);
+  final resolvedCoverUrl = baseCoverUrl ?? backendCoverUrl;
+  final backendAlbumArtist = normalizeOptionalString(
+    backendResult['album_artist'] as String?,
+  );
+  final backendComposer = normalizeOptionalString(
+    backendResult['composer']?.toString(),
+  );
+  final sourceAlbumName = normalizeOptionalString(baseTrack.albumName);
+  final sourceAlbumArtist = normalizeOptionalString(baseTrack.albumArtist);
+  final sourceIsrc = normalizeOptionalString(baseTrack.isrc);
+  final sourceReleaseDate = normalizeOptionalString(baseTrack.releaseDate);
+  final sourceComposer = normalizeOptionalString(baseTrack.composer);
+  final sourceAlbumType = normalizeOptionalString(baseTrack.albumType);
+  final sourceGenre = normalizeOptionalString(baseTrack.genre);
+  final sourceLabel = normalizeOptionalString(baseTrack.label);
+  final sourceCopyright = normalizeOptionalString(baseTrack.copyright);
+  final sourceComment = normalizeOptionalString(baseTrack.comment);
+  final sourceUpc = normalizeOptionalString(baseTrack.upc);
+  final backendGenre = normalizeOptionalString(
+    backendResult['genre']?.toString(),
+  );
+  final backendLabel = normalizeOptionalString(
+    backendResult['label']?.toString(),
+  );
+  final backendCopyright = normalizeOptionalString(
+    backendResult['copyright']?.toString(),
+  );
+  final backendComment = normalizeOptionalString(
+    backendResult['comment']?.toString(),
+  );
+  final resolvedComment = backendComment ?? sourceComment;
+  final backendAlbumType = normalizeOptionalString(
+    backendResult['album_type']?.toString(),
+  );
+  final backendUpc = normalizeOptionalString(
+    (backendResult['upc'] ?? backendResult['barcode'])?.toString(),
+  );
+  final backendExplicit = backendResult['explicit'] == true;
+  final resolvedTotalTracks = _resolvePositiveMetadataInt(
+    baseTrack.totalTracks,
+    backendTotalTracks,
+  );
+  final resolvedTotalDiscs = _resolvePositiveMetadataInt(
+    baseTrack.totalDiscs,
+    backendTotalDiscs,
+  );
+  final resolvedTrackNumber = _resolveMetadataIndex(
+    sourceValue: baseTrack.trackNumber,
+    backendValue: backendTrackNum,
+    total: resolvedTotalTracks,
+  );
+  final resolvedDiscNumber = _resolveMetadataIndex(
+    sourceValue: baseTrack.discNumber,
+    backendValue: backendDiscNum,
+    total: resolvedTotalDiscs,
+  );
+
+  final hasOverrides =
+      resolvedTrackNumber != baseTrack.trackNumber ||
+      resolvedDiscNumber != baseTrack.discNumber ||
+      resolvedTotalTracks != baseTrack.totalTracks ||
+      resolvedTotalDiscs != baseTrack.totalDiscs ||
+      resolvedAlbumArtist != sourceAlbumArtist ||
+      (sourceReleaseDate == null && backendYear != null) ||
+      (sourceAlbumName == null && backendAlbum != null) ||
+      (sourceIsrc == null && backendIsrc != null) ||
+      (baseCoverUrl == null && backendCoverUrl != null) ||
+      (sourceAlbumArtist == null &&
+          resolvedAlbumArtist == null &&
+          backendAlbumArtist != null) ||
+      (sourceComposer == null && backendComposer != null) ||
+      (sourceAlbumType == null && backendAlbumType != null) ||
+      (sourceGenre == null && backendGenre != null) ||
+      (sourceLabel == null && backendLabel != null) ||
+      (sourceCopyright == null && backendCopyright != null) ||
+      resolvedComment != sourceComment ||
+      (baseTrack.explicit != true && backendExplicit) ||
+      (sourceUpc == null && backendUpc != null);
+
+  if (!hasOverrides) {
+    return baseTrack;
+  }
+
+  return baseTrack.copyWith(
+    albumName: sourceAlbumName ?? backendAlbum ?? baseTrack.albumName,
+    albumArtist: resolvedAlbumArtist ?? sourceAlbumArtist ?? backendAlbumArtist,
+    coverUrl: resolvedCoverUrl,
+    isrc: sourceIsrc ?? backendIsrc,
+    trackNumber: resolvedTrackNumber,
+    discNumber: resolvedDiscNumber,
+    totalDiscs: resolvedTotalDiscs,
+    releaseDate: sourceReleaseDate ?? backendYear,
+    albumType: sourceAlbumType ?? backendAlbumType,
+    totalTracks: resolvedTotalTracks,
+    composer: sourceComposer ?? backendComposer,
+    genre: sourceGenre ?? backendGenre,
+    label: sourceLabel ?? backendLabel,
+    copyright: sourceCopyright ?? backendCopyright,
+    comment: resolvedComment,
+    explicit: baseTrack.explicit == true || backendExplicit
+        ? true
+        : baseTrack.explicit,
+    upc: sourceUpc ?? backendUpc,
+  );
 }

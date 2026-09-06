@@ -327,7 +327,7 @@ class _DownloadRun {
             final enrichedComposer = normalizeOptionalString(
               data['composer']?.toString(),
             );
-            trackToDownload = Track(
+            trackToDownload = trackToDownload.copyWith(
               id: (data['spotify_id'] as String?) ?? trackToDownload.id,
               name: (data['name'] as String?) ?? trackToDownload.name,
               artistName:
@@ -350,7 +350,6 @@ class _DownloadRun {
               totalDiscs: enrichedTotalDiscs ?? trackToDownload.totalDiscs,
               releaseDate: data['release_date'] as String?,
               deezerId: rawId,
-              availability: trackToDownload.availability,
               albumType:
                   (data['album_type'] as String?) ?? trackToDownload.albumType,
               totalTracks: enrichedTotalTracks ?? trackToDownload.totalTracks,
@@ -360,10 +359,6 @@ class _DownloadRun {
               copyright:
                   data['copyright']?.toString() ?? trackToDownload.copyright,
               comment: data['comment']?.toString() ?? trackToDownload.comment,
-              source: trackToDownload.source,
-              itemType: trackToDownload.itemType,
-              audioQuality: trackToDownload.audioQuality,
-              audioModes: trackToDownload.audioModes,
               explicit:
                   parseExplicitFlag(data['explicit']) ??
                   trackToDownload.explicit,
@@ -708,7 +703,7 @@ class _DownloadRun {
     decryptionDescriptor = DownloadDecryptionDescriptor.fromDownloadResult(
       result,
     );
-    trackToDownload = n._buildTrackForMetadataEmbedding(
+    trackToDownload = buildTrackForMetadataEmbedding(
       trackToDownload,
       result,
       resolvedAlbumArtist,
@@ -1617,7 +1612,7 @@ class _DownloadRun {
     bool rebuildTrack = true,
   }) async {
     final track = rebuildTrack
-        ? n._buildTrackForMetadataEmbedding(
+        ? buildTrackForMetadataEmbedding(
             trackToDownload,
             result,
             resolvedAlbumArtist,
