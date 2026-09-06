@@ -12,7 +12,7 @@ import (
 )
 
 func TestFallbackKeepsPendingVerificationOwnership(t *testing.T) {
-	for _, mode := range []string{"fresh-response", "saved-challenge", "network-error", "download-error", "empty-download-error"} {
+	for _, mode := range []string{"fresh-response", "saved-challenge", "cached-unavailable", "cold-session", "network-error", "download-error", "empty-download-error"} {
 		t.Run(mode, func(t *testing.T) {
 			primary := newTestLoadedExtension(t, ExtensionTypeDownloadProvider)
 			primary.ID, primary.Manifest.Name = "primary-provider", "primary-provider"
@@ -41,6 +41,7 @@ func TestFallbackKeepsPendingVerificationOwnership(t *testing.T) {
 				registerExtension({
 					searchTracks: queryCatalog,
 					checkAvailability: function() {
+						if (fixtureMode === "cached-unavailable" || fixtureMode === "cold-session") return {available: false, reason: "No verified track match found"};
 						if (fixtureMode === "network-error") throw new Error("lookup network timeout");
 						if (fixtureMode === "download-error" || fixtureMode === "empty-download-error") return {available: true, track_id: "matched-track"};
 						if (fixtureMode === "saved-challenge") throw savedChallenge;
@@ -89,12 +90,15 @@ func TestFallbackKeepsPendingVerificationOwnership(t *testing.T) {
 					Body: io.NopCloser(strings.NewReader(`{"auth_url":"https://auth.example.test/verify"}`)),
 				}, nil
 			})}
-			expectsVerification := mode == "fresh-response" || mode == "saved-challenge"
-			if expectsVerification {
+			expectsVerification := mode == "fresh-response" || mode == "saved-challenge" || mode == "cached-unavailable" || mode == "cold-session"
+			if expectsVerification && mode != "cold-session" {
 				_, err := newExtensionProviderWrapper(secondary).SearchTracks("Song Artist", 1)
 				if err == nil || GetPendingAuthRequest(secondary.ID) == nil {
 					t.Fatalf("metadata lookup did not create a pending challenge: %v", err)
 				}
+			}
+			if !expectsVerification {
+				saveUsableSignedSession(t, secondary.runtime, *secondary.Manifest.SignedSession, "authenticated-session")
 			}
 			if err := last.ensureRuntimeReady(); err != nil {
 				t.Fatal(err)
@@ -128,8 +132,8 @@ func TestFallbackKeepsPendingVerificationOwnership(t *testing.T) {
 				if laterCalls.Load() != 0 || bootstrapCalls.Load() != 1 {
 					t.Fatalf("pending challenge was skipped or recreated: later=%d bootstrap=%d", laterCalls.Load(), bootstrapCalls.Load())
 				}
-			} else if laterCalls.Load() != 1 {
-				t.Fatal("ordinary lookup failures must allow the next provider")
+			} else if laterCalls.Load() != 1 || bootstrapCalls.Load() != 0 {
+				t.Fatalf("authenticated failures must allow fallback without bootstrapping: later=%d bootstrap=%d", laterCalls.Load(), bootstrapCalls.Load())
 			}
 		})
 	}

@@ -690,7 +690,18 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 
 			provider := newExtensionProviderWrapper(ext)
 
-			availability, err := provider.CheckAvailabilityForItemID(req.ISRC, req.TrackName, req.ArtistName, req.SpotifyID, req.DeezerID, req.TidalID, req.QobuzID, req.DurationMS, req.ItemID, extensionAvailabilityTrackContext(req))
+			// Fallback providers need the same session preparation as the selected
+			// provider. A cached availability result may never call signedFetch,
+			// leaving an expired session or pending challenge invisible to the app.
+			var availability *ExtAvailabilityResult
+			verificationRequired, err := preflightExtensionDownloadSession(providerID)
+			if err != nil {
+				err = fmt.Errorf("signed-session preflight failed: %w", err)
+			} else if verificationRequired {
+				err = fmt.Errorf("verification_required: extension '%s' needs signed-session verification", providerID)
+			} else {
+				availability, err = provider.CheckAvailabilityForItemID(req.ISRC, req.TrackName, req.ArtistName, req.SpotifyID, req.DeezerID, req.TidalID, req.QobuzID, req.DurationMS, req.ItemID, extensionAvailabilityTrackContext(req))
+			}
 			if shouldAbortCancelledFallback(req.ItemID, err) {
 				return nil, ErrDownloadCancelled
 			}
@@ -713,7 +724,7 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 						}, nil
 					}
 				} else {
-					GoLog("[DownloadWithExtensionFallback] %s: not available\n", providerID)
+					GoLog("[DownloadWithExtensionFallback] %s: not available (reason: %s)\n", providerID, resolveExtensionAvailabilityReason(availability, nil))
 				}
 				if terminalAvailability {
 					GoLog("[DownloadWithExtensionFallback] %s requested skip_fallback after availability check\n", providerID)
