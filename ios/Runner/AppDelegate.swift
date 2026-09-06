@@ -12,15 +12,9 @@ import Gobackend
     private let LARGE_JSON_RESULT_FILE_KEY = "__json_file"
     private let LARGE_JSON_RESULT_FILE_THRESHOLD_BYTES = 256 * 1024
     private let streamQueue = DispatchQueue(label: "com.zarz.spotiflac.progress_stream", qos: .utility)
-    private let downloadProgressQueue = DispatchQueue(
-        label: "com.zarz.spotiflac.download_progress_stream",
-        qos: .utility
-    )
-    private var downloadProgressTimer: DispatchSourceTimer?
-    private var downloadProgressEventSink: FlutterEventSink?
-    private var lastDownloadProgressPayload: String?
-    private var lastDownloadProgressSeq: Int64 = 0
-    private var downloadProgressGeneration: UInt64 = 0
+    private let downloadProgressSubscription = DownloadProgressSubscription { sequence, timeout in
+        GobackendWaitForAllDownloadProgressDelta(sequence, timeout) as String? ?? ""
+    }
     private var libraryScanProgressTimer: DispatchSourceTimer?
     private var libraryScanProgressEventSink: FlutterEventSink?
     private var lastLibraryScanProgressPayload: String?
@@ -236,43 +230,11 @@ import Gobackend
     }
 
     private func startDownloadProgressStream(_ eventSink: @escaping FlutterEventSink) {
-        stopDownloadProgressStream()
-        downloadProgressGeneration &+= 1
-        let generation = downloadProgressGeneration
-        downloadProgressEventSink = eventSink
-        lastDownloadProgressPayload = nil
-        lastDownloadProgressSeq = 0
-
-        let timer = DispatchSource.makeTimerSource(queue: downloadProgressQueue)
-        timer.schedule(deadline: .now(), repeating: .milliseconds(250))
-        timer.setEventHandler { [weak self] in
-            guard let self, self.downloadProgressGeneration == generation else { return }
-            let payload = GobackendWaitForAllDownloadProgressDelta(
-                self.lastDownloadProgressSeq,
-                15_000
-            ) as String? ?? ""
-            if payload.isEmpty || payload == self.lastDownloadProgressPayload {
-                return
-            }
-            self.updateDownloadProgressSeq(payload)
-            self.lastDownloadProgressPayload = payload
-            DispatchQueue.main.async { [weak self] in
-                guard let self, self.downloadProgressGeneration == generation else { return }
-                eventSink(self.parseJsonPayload(payload))
-            }
-        }
-        downloadProgressTimer = timer
-        timer.resume()
+        downloadProgressSubscription.start(eventSink)
     }
 
     private func stopDownloadProgressStream() {
-        downloadProgressGeneration &+= 1
-        downloadProgressTimer?.setEventHandler {}
-        downloadProgressTimer?.cancel()
-        downloadProgressTimer = nil
-        downloadProgressEventSink = nil
-        lastDownloadProgressPayload = nil
-        lastDownloadProgressSeq = 0
+        downloadProgressSubscription.stop()
     }
 
     private func startLibraryScanProgressStream(_ eventSink: @escaping FlutterEventSink) {
@@ -317,18 +279,6 @@ import Gobackend
             return try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
         } catch {
             return payload
-        }
-    }
-
-    private func updateDownloadProgressSeq(_ payload: String) {
-        guard let data = payload.data(using: .utf8) else { return }
-        do {
-            if let obj = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]) as? [String: Any],
-               let seq = obj["seq"] as? NSNumber,
-               seq.int64Value > lastDownloadProgressSeq {
-                lastDownloadProgressSeq = seq.int64Value
-            }
-        } catch {
         }
     }
 
