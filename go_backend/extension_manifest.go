@@ -49,6 +49,7 @@ type ExtensionSetting struct {
 
 type QualityOption struct {
 	ID          string                   `json:"id"`
+	Kind        string                   `json:"kind,omitempty"`
 	Label       string                   `json:"label"`
 	Description string                   `json:"description"`
 	Settings    []QualitySpecificSetting `json:"settings,omitempty"`
@@ -242,6 +243,17 @@ func (m *ExtensionManifest) Validate() error {
 			return &ManifestValidationError{
 				Field:   fmt.Sprintf("settings[%d].action", i),
 				Message: "button type requires action (JS function name)",
+			}
+		}
+	}
+
+	for i, quality := range m.QualityOptions {
+		switch quality.Kind {
+		case "", "lossless", "lossy", "spatial":
+		default:
+			return &ManifestValidationError{
+				Field:   fmt.Sprintf("qualityOptions[%d].kind", i),
+				Message: "quality kind must be lossless, lossy, or spatial",
 			}
 		}
 	}

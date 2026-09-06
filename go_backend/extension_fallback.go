@@ -26,6 +26,20 @@ func attemptExtensionDownload(
 	lastErrType *string,
 	lastRetryAfterSeconds *int,
 ) (resp *DownloadResponse, cancelledOuter bool) {
+	resolvedQuality, qualityErr := resolveExtensionDownloadQuality(
+		quality, requestedQualityManifest(req, getExtensionManager()), ext.Manifest,
+	)
+	if qualityErr != nil {
+		*lastErr = qualityErr
+		*lastErrType = "quality_unavailable"
+		*lastRetryAfterSeconds = 0
+		return nil, false
+	}
+	if resolvedQuality != quality {
+		GoLog("[DownloadWithExtensionFallback] Provider %s maps requested quality %q to %q\n", providerLabel, quality, resolvedQuality)
+	}
+	quality = resolvedQuality
+	req.Quality = resolvedQuality
 	req.DownloadProvider = strings.TrimSpace(providerLabel)
 	req.ProviderTrackID = strings.TrimSpace(trackID)
 	preparedContext = extensionPreparedDownloadContext(req, preparedContext)
@@ -700,30 +714,7 @@ func DownloadWithExtensionFallback(req DownloadRequest) (*DownloadResponse, erro
 
 			req.OutputExt = ""
 
-			// Honor the requested quality when this provider recognizes it
-			// (e.g. an explicit user selection). Only when the token is not
-			// one of this provider's own options do we fall back to its
-			// highest quality, since a source provider's token may not map.
-			fallbackQuality := req.Quality
-			if len(ext.Manifest.QualityOptions) > 0 {
-				requested := strings.TrimSpace(req.Quality)
-				recognized := false
-				if requested != "" {
-					for _, opt := range ext.Manifest.QualityOptions {
-						if strings.EqualFold(strings.TrimSpace(opt.ID), requested) {
-							recognized = true
-							break
-						}
-					}
-				}
-				if !recognized {
-					if best := strings.TrimSpace(ext.Manifest.QualityOptions[0].ID); best != "" {
-						fallbackQuality = best
-					}
-				}
-			}
-
-			resp, cancelledOuter := attemptExtensionDownload(req, ext, provider, availability.TrackID, fallbackQuality, providerID, availability.PreparedContext, false, &lastErr, &lastErrType, &lastRetryAfterSeconds)
+			resp, cancelledOuter := attemptExtensionDownload(req, ext, provider, availability.TrackID, req.Quality, providerID, availability.PreparedContext, false, &lastErr, &lastErrType, &lastRetryAfterSeconds)
 			if cancelledOuter {
 				return nil, ErrDownloadCancelled
 			}

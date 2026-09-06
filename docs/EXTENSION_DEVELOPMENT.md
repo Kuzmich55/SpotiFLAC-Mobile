@@ -130,6 +130,24 @@ modes are returned to the extension without automatic replay.
 Do not use legacy spellings such as `display_name`, `types`,
 `permissions.network.domains`, or an object for `permissions.network`.
 
+### Download quality across providers
+
+Quality IDs belong to the provider that declares them. Add an optional `kind`
+to each `qualityOptions` entry: `lossless`, `lossy`, or `spatial`.
+
+```json
+{"id": "best", "label": "Best FLAC", "kind": "lossless"}
+```
+
+On fallback, the host preserves a compatible quality ID or selects the first
+option of the same kind. A lossless request cannot select Atmos or a lossy
+tier just because it appears first. Spatial and lossy requests can use
+lossless when the target has no option of the requested kind. Providers with
+no compatible option are skipped. The host infers kinds from legacy IDs and
+labels, with `downloadFallbackTier` helping classify `best` and `default`;
+explicit kinds avoid ambiguity for custom IDs. Descriptions are not used
+because they may describe other fallback formats.
+
 ### Permissions
 
 ```json
