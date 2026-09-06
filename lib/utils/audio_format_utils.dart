@@ -134,6 +134,23 @@ String isoBmffAudioExtensionForCodec(String? codec) {
   return normalizeAudioFormatValue(codec) == 'ac4' ? '.mp4' : '.m4a';
 }
 
+/// Uses the finalized local container after conversion, before publishing to
+/// SAF. Provider output fields still describe the original download here.
+String finalizedAudioFileName({
+  required String fileName,
+  required String localPath,
+  required String fallbackExtension,
+}) {
+  final extension =
+      RegExp(
+        r'\.(flac|m4a|mp4|mp3|opus|ogg|aac|wav|aiff)$',
+        caseSensitive: false,
+      ).firstMatch(localPath)?.group(0)?.toLowerCase() ??
+      fallbackExtension;
+  final stem = fileName.replaceFirst(RegExp(r'\.[^.]+$'), '');
+  return '$stem$extension';
+}
+
 /// Resolves the actual audio codec reported by native metadata probing, while
 /// falling back to the container format when the codec is absent or generic.
 ///

@@ -1002,13 +1002,14 @@ class _DownloadRun {
         (localFile.uri.pathSegments.isEmpty
             ? 'track$safOutputExt'
             : localFile.uri.pathSegments.last);
-    final localExt = n._downloadResultOutputExt(result, filePath: localPath);
-    if (localExt != null && localExt.isNotEmpty) {
-      finalName = finalName.replaceFirst(RegExp(r'\.[^.]+$'), localExt);
-      if (!finalName.toLowerCase().endsWith(localExt.toLowerCase())) {
-        finalName = '$finalName$localExt';
-      }
-    }
+    finalName = finalizedAudioFileName(
+      fileName: finalName,
+      localPath: localPath,
+      fallbackExtension:
+          n._downloadResultOutputExt(result, filePath: localPath) ??
+          safOutputExt,
+    );
+    final localExt = finalName.substring(finalName.lastIndexOf('.'));
 
     final measured = probedFinalMetadata;
     final qualityLabel = buildQualityVariantFilenameLabel(
@@ -1039,7 +1040,11 @@ class _DownloadRun {
     String? publishedName;
     var alreadyExists = false;
     if (item.preserveQualityVariant && qualityVariantCollisionOnly) {
-      final logicalName = safFileName ?? finalName;
+      final logicalName = finalizedAudioFileName(
+        fileName: safFileName ?? finalName,
+        localPath: localPath,
+        fallbackExtension: localExt,
+      );
       final stagingLabel = qualityVariantStagingLabel(item.id);
       final cleanName = removeQualityVariantStagingLabel(
         fileName: logicalName,
@@ -1057,7 +1062,7 @@ class _DownloadRun {
         relativeDir: effectiveOutputDir,
         cleanFileName: cleanName,
         variantFileName: variantName,
-        mimeType: n._mimeTypeForExt(localExt ?? safOutputExt),
+        mimeType: n._mimeTypeForExt(localExt),
         srcPath: localPath,
         preservedSuffix: qualityLabel ?? '',
       );
@@ -1068,7 +1073,7 @@ class _DownloadRun {
         treeUri: settings.downloadTreeUri,
         relativeDir: effectiveOutputDir,
         fileName: finalName,
-        mimeType: n._mimeTypeForExt(localExt ?? safOutputExt),
+        mimeType: n._mimeTypeForExt(localExt),
         srcPath: localPath,
         preservedSuffix: qualityLabel ?? '',
       );
@@ -1079,7 +1084,7 @@ class _DownloadRun {
         treeUri: settings.downloadTreeUri,
         relativeDir: effectiveOutputDir,
         fileName: finalName,
-        mimeType: n._mimeTypeForExt(localExt ?? safOutputExt),
+        mimeType: n._mimeTypeForExt(localExt),
         srcPath: localPath,
       );
       publishedUri = published?.uri;

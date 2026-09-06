@@ -23,6 +23,47 @@ import 'package:spotiflac_android/utils/path_match_keys.dart';
 import 'package:spotiflac_android/utils/string_utils.dart';
 
 void main() {
+  group('Finalized SAF audio names', () {
+    for (final extension in ['mp3', 'opus', 'flac', 'ogg', 'm4a', 'mp4']) {
+      test(
+        'publishes the final $extension container instead of source M4A',
+        () {
+          expect(
+            finalizedAudioFileName(
+              fileName: 'Example song.m4a',
+              localPath: '/cache/final_audio.$extension',
+              fallbackExtension: '.m4a',
+            ),
+            'Example song.$extension',
+          );
+        },
+      );
+    }
+    test('preserves variant labels and normalizes uppercase suffixes', () {
+      expect(
+        finalizedAudioFileName(
+          fileName: 'Song [OPUS 256kbps].m4a',
+          localPath: '/cache/final.OPUS',
+          fallbackExtension: '.m4a',
+        ),
+        'Song [OPUS 256kbps].opus',
+      );
+    });
+    test(
+      'uses the reported container when the temporary path has no suffix',
+      () {
+        expect(
+          finalizedAudioFileName(
+            fileName: 'Song',
+            localPath: '/cache/final_audio',
+            fallbackExtension: '.m4a',
+          ),
+          'Song.m4a',
+        );
+      },
+    );
+  });
+
   group('file deletion', () {
     test('confirms a local file is absent before reporting success', () async {
       final tempDir = await Directory.systemTemp.createTemp(
