@@ -177,6 +177,10 @@ requests, URL resolution, retry waits, and refreshes, including HTTP headers
 and the first audio byte. Native audio reads after the first byte and bounded
 native FFmpeg conversion pause this clock; transfer stall limits and the
 overall download timeout still apply. Progress callbacks do not reset it.
+Within one native segmented or chunked download, a successfully received part
+establishes the transfer: headers and the first byte of subsequent parts also
+pause the clock. Retry attempts and waits still consume the allowance, and a
+new native download call must establish its own transfer.
 
 `options.resolutionTimeoutMs` reports the initial allowance, while
 `utils.getResolutionRemainingMs()` reports the remaining allowance. Check for

@@ -169,6 +169,7 @@ func (r *extensionRuntime) fetchSegmentToTemp(
 	tempPath string,
 	policy DownloadTransferPolicy,
 	received *atomic.Int64,
+	completed *atomic.Bool,
 	itemProgressReporter *ItemTransferProgressReporter,
 ) segmentTransferResult {
 	config := transferRetryConfig(policy)
@@ -218,8 +219,7 @@ func (r *extensionRuntime) fetchSegmentToTemp(
 			req.Header.Set("User-Agent", appUserAgent())
 		}
 		req, watchdog := bindStallWatchdog(req, downloadStallTimeout)
-		resp, err := client.Do(req)
-		r.trackResolutionTransfer(resp)
+		resp, err := r.doResolutionTransfer(client, req, attempt == 1 && completed.Load())
 		if err != nil {
 			stalled := watchdog.stalled.Load()
 			watchdog.stop()
@@ -244,7 +244,7 @@ func (r *extensionRuntime) fetchSegmentToTemp(
 				}
 				return segmentTransferResult{Index: spec.Index, Failure: &lastFailure}
 			}
-			if waitTransferRetry(ctx, retryDelay) != nil {
+			if r.waitResolutionRetry(ctx, retryDelay) != nil {
 				lastFailure.ErrorType = "cancelled"
 				lastFailure.Message = "download cancelled"
 				return segmentTransferResult{Index: spec.Index, Failure: &lastFailure}
@@ -273,7 +273,7 @@ func (r *extensionRuntime) fetchSegmentToTemp(
 			if retryAfter > 0 {
 				delay = time.Duration(retryAfter) * time.Second
 			}
-			if waitTransferRetry(ctx, delay) != nil {
+			if r.waitResolutionRetry(ctx, delay) != nil {
 				lastFailure.ErrorType = "cancelled"
 				lastFailure.Message = "download cancelled"
 				return segmentTransferResult{Index: spec.Index, Failure: &lastFailure}
@@ -319,6 +319,7 @@ func (r *extensionRuntime) fetchSegmentToTemp(
 			readErr = io.ErrUnexpectedEOF
 		}
 		if readErr == nil && size > 0 {
+			completed.Store(true)
 			return segmentTransferResult{
 				Index:    spec.Index,
 				Path:     tempPath,
@@ -349,7 +350,7 @@ func (r *extensionRuntime) fetchSegmentToTemp(
 		if attempt == policy.MaxAttempts {
 			return segmentTransferResult{Index: spec.Index, Failure: &lastFailure}
 		}
-		if waitTransferRetry(ctx, retryDelay) != nil {
+		if r.waitResolutionRetry(ctx, retryDelay) != nil {
 			lastFailure.ErrorType = "cancelled"
 			lastFailure.Message = "download cancelled"
 			return segmentTransferResult{Index: spec.Index, Failure: &lastFailure}
@@ -562,6 +563,7 @@ func (r *extensionRuntime) fileDownloadSegments(call goja.FunctionCall) goja.Val
 	jobs := make(chan segmentTransferSpec)
 	results := make(chan segmentTransferResult, policy.MaxParallelSegments)
 	var received atomic.Int64
+	var completed atomic.Bool
 	received.Store(totalWritten)
 	itemProgressReporter := NewItemTransferProgressReporter(activeItemID, totalWritten, 0)
 	var workers sync.WaitGroup
@@ -578,6 +580,7 @@ func (r *extensionRuntime) fileDownloadSegments(call goja.FunctionCall) goja.Val
 					segmentTempPath(stagedPath, spec.Index),
 					policy,
 					&received,
+					&completed,
 					itemProgressReporter,
 				)
 				select {
@@ -679,13 +682,18 @@ func (r *extensionRuntime) fileDownloadSegments(call goja.FunctionCall) goja.Val
 				)
 			}
 			if onProgress != nil {
-				_, _ = onProgress(
-					goja.Undefined(),
-					r.vm.ToValue(received.Load()),
-					r.vm.ToValue(int64(0)),
-					r.vm.ToValue(completedSegments),
-					r.vm.ToValue(len(segments)),
-				)
+				func() {
+					if b := r.currentResolutionBudget(); b != nil {
+						defer b.charge()()
+					}
+					_, _ = onProgress(
+						goja.Undefined(),
+						r.vm.ToValue(received.Load()),
+						r.vm.ToValue(int64(0)),
+						r.vm.ToValue(completedSegments),
+						r.vm.ToValue(len(segments)),
+					)
+				}()
 			}
 		}
 	}

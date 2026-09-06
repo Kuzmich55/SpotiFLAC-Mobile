@@ -2,6 +2,7 @@ package gobackend
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -84,6 +85,7 @@ func ReadFileMetadataWithHint(filePath, displayNameHint string) (string, error) 
 		"audio_codec":  "",
 	}
 
+	var metadataErr error
 	if isFlac {
 		result["format"] = "flac"
 		result["audio_codec"] = "flac"
@@ -155,6 +157,7 @@ func ReadFileMetadataWithHint(filePath, displayNameHint string) (string, error) 
 	} else if isM4A {
 		result["format"] = "m4a"
 		meta, err := ReadM4ATags(filePath)
+		metadataErr = err
 		if err == nil && meta != nil {
 			applyAudioMetadataToResult(result, meta)
 		}
@@ -179,6 +182,7 @@ func ReadFileMetadataWithHint(filePath, displayNameHint string) (string, error) 
 		result["format"] = "mp3"
 		result["audio_codec"] = "mp3"
 		meta, err := ReadID3Tags(filePath)
+		metadataErr = err
 		if err == nil && meta != nil {
 			applyAudioMetadataToResult(result, meta)
 		}
@@ -195,6 +199,7 @@ func ReadFileMetadataWithHint(filePath, displayNameHint string) (string, error) 
 		result["format"] = "opus"
 		result["audio_codec"] = "opus"
 		meta, err := ReadOggVorbisComments(filePath)
+		metadataErr = err
 		if err == nil && meta != nil {
 			applyAudioMetadataToResult(result, meta)
 		}
@@ -210,6 +215,7 @@ func ReadFileMetadataWithHint(filePath, displayNameHint string) (string, error) 
 		result["format"] = strings.TrimPrefix(lower, ".")
 		result["audio_codec"] = result["format"]
 		apeTag, apeErr := ReadAPETags(filePath)
+		metadataErr = apeErr
 		if apeErr == nil && apeTag != nil {
 			meta := APETagToAudioMetadata(apeTag)
 			if meta != nil {
@@ -223,12 +229,12 @@ func ReadFileMetadataWithHint(filePath, displayNameHint string) (string, error) 
 		if isAiff {
 			result["format"] = "aiff"
 			result["audio_codec"] = "pcm"
-			meta, _ = ReadAIFFTags(filePath)
+			meta, metadataErr = ReadAIFFTags(filePath)
 			quality, qualityErr = GetAIFFQuality(filePath)
 		} else {
 			result["format"] = "wav"
 			result["audio_codec"] = "pcm"
-			meta, _ = ReadWAVTags(filePath)
+			meta, metadataErr = ReadWAVTags(filePath)
 			quality, qualityErr = GetWAVQuality(filePath)
 		}
 		if meta != nil {
@@ -243,6 +249,13 @@ func ReadFileMetadataWithHint(filePath, displayNameHint string) (string, error) 
 		return "", fmt.Errorf("unsupported file format: %s", filePath)
 	}
 
+	// A readable audio file can legitimately have no tags. Filesystem errors,
+	// however, must reach the native bridge so an unreadable SAF descriptor
+	// triggers its temporary-file fallback instead of returning empty tags.
+	var pathErr *os.PathError
+	if errors.As(metadataErr, &pathErr) {
+		return "", fmt.Errorf("failed to read metadata: %w", metadataErr)
+	}
 	return marshalJSONString(result)
 }
 

@@ -230,6 +230,7 @@ func (r *extensionRuntime) fileDownloadChunked(
 	lastCheckpointAt := time.Now()
 	attemptsUsed := probeAttempts
 	fullResponse := false
+	completedChunk := false
 	buffer := make([]byte, 64*1024)
 	for totalSize <= 0 || totalWritten < totalSize {
 		chunkStart := totalWritten
@@ -264,8 +265,7 @@ func (r *extensionRuntime) fileDownloadChunked(
 				request.Header.Set("If-Range", validator)
 			}
 			request, watchdog := bindStallWatchdog(request, downloadStallTimeout)
-			response, responseErr := client.Do(request)
-			r.trackResolutionTransfer(response)
+			response, responseErr := r.doResolutionTransfer(client, request, attempt == 1 && completedChunk)
 			if responseErr != nil {
 				stalled := watchdog.stalled.Load()
 				watchdog.stop()
@@ -446,6 +446,7 @@ func (r *extensionRuntime) fileDownloadChunked(
 			}
 			if readErr == nil && chunkWritten > 0 {
 				chunkComplete = true
+				completedChunk = true
 				fullResponse = response.StatusCode == http.StatusOK
 				break
 			}

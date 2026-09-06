@@ -6,6 +6,14 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SafMetadataReadPolicyTest {
+    @Test fun completeMetadataReadErrorUsesTemporaryCopy() {
+        val metadata = mapOf("lyrics" to "words", "comment" to "notes", "track_number" to 3)
+        assertEquals(metadata, readSafMetadataWithFallback(
+            directRead = { throw Exception("failed to read metadata: permission denied") },
+            fallbackRead = { metadata },
+        ))
+    }
+
     @Test fun fallbackFailureIsIsolatedToOneFile() {
         assertNull(readSafMetadataWithFallback<String>({ null }, { throw IllegalArgumentException("malformed metadata") }))
         assertEquals("next file", readSafMetadataWithFallback({ "next file" }, { error("copy") }))

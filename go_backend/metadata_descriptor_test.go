@@ -1,12 +1,61 @@
 package gobackend
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 )
+
+func TestCompleteMetadataHintReturnsFileAccessErrors(t *testing.T) {
+	for _, format := range []string{"flac", "mp3", "m4a", "mp4", "aac", "opus", "ogg", "wav", "aiff", "aif", "aifc", "ape", "wv", "mpc"} {
+		t.Run(format, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "descriptor")
+			payload, err := ReadFileMetadataWithHint(path, "track."+format)
+			if !errors.Is(err, os.ErrNotExist) || payload != "" {
+				t.Fatalf("missing descriptor returned metadata=%s err=%v", payload, err)
+			}
+			if err := os.WriteFile(path, []byte("inaccessible"), 0000); err != nil {
+				t.Fatal(err)
+			}
+			if file, err := os.Open(path); err == nil {
+				file.Close()
+				t.Skip("host can bypass file permissions; missing-path check passed")
+			}
+			payload, err = ReadFileMetadataWithHint(path, "track."+format)
+			if !errors.Is(err, os.ErrPermission) || payload != "" {
+				t.Fatalf("unreadable descriptor returned metadata=%s err=%v", payload, err)
+			}
+		})
+	}
+}
+
+func TestCompleteMetadataHintAcceptsAudioWithoutTags(t *testing.T) {
+	for _, format := range []string{"wav", "aiff"} {
+		t.Run(format, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "descriptor")
+			if format == "wav" {
+				writeTestWAV(t, path)
+			} else {
+				writeTestAIFF(t, path)
+			}
+			payload, err := ReadFileMetadataWithHint(path, "track."+format)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var metadata map[string]any
+			if err := json.Unmarshal([]byte(payload), &metadata); err != nil {
+				t.Fatal(err)
+			}
+			if metadata["title"] != "" || metadata["sample_rate"] != float64(44100) {
+				t.Fatalf("unexpected tagless audio metadata: %s", payload)
+			}
+		})
+	}
+}
 
 func TestCompleteMetadataHintMatchesNamedFileAndDescriptor(t *testing.T) {
 	for _, format := range []string{"mp3", "flac", "m4a", "wav"} {

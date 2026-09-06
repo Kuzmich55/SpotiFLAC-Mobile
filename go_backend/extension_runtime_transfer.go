@@ -394,8 +394,7 @@ func (r *extensionRuntime) reliableFileDownload(
 
 		retryContext := req.Context()
 		req, watchdog := bindStallWatchdog(req, downloadStallTimeout)
-		resp, requestErr := client.Do(req)
-		r.trackResolutionTransfer(resp)
+		resp, requestErr := r.doResolutionTransfer(client, req, false)
 		if requestErr != nil {
 			stalled := watchdog.stalled.Load()
 			watchdog.stop()
