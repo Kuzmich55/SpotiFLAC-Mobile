@@ -9,7 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 /// Bottom sheet listing every streaming platform song.link resolves for a
 /// track. Data-driven from the generic platform-link map so the app core
 /// stays service-agnostic; tapping a row opens the link externally.
-class OpenOnPlatformSheet extends StatelessWidget {
+class OpenOnPlatformSheet extends StatefulWidget {
   final String spotifyId;
   final String isrc;
 
@@ -28,6 +28,35 @@ class OpenOnPlatformSheet extends StatelessWidget {
       title: context.l10n.trackOpenOn,
       maxHeightFactor: 0.7,
       builder: (_) => OpenOnPlatformSheet(spotifyId: spotifyId, isrc: isrc),
+    );
+  }
+
+  @override
+  State<OpenOnPlatformSheet> createState() => _OpenOnPlatformSheetState();
+}
+
+class _OpenOnPlatformSheetState extends State<OpenOnPlatformSheet> {
+  late Future<Map<String, String>> _links;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLinks();
+  }
+
+  @override
+  void didUpdateWidget(OpenOnPlatformSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.spotifyId != widget.spotifyId ||
+        oldWidget.isrc != widget.isrc) {
+      _loadLinks();
+    }
+  }
+
+  void _loadLinks() {
+    _links = PlatformBridge.getTrackPlatformLinks(
+      spotifyId: widget.spotifyId,
+      isrc: widget.isrc,
     );
   }
 
@@ -83,10 +112,7 @@ class OpenOnPlatformSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return FutureBuilder<Map<String, String>>(
-      future: PlatformBridge.getTrackPlatformLinks(
-        spotifyId: spotifyId,
-        isrc: isrc,
-      ),
+      future: _links,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Padding(
