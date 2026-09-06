@@ -8,6 +8,10 @@ import 'package:spotiflac_android/providers/settings_provider.dart';
 import 'package:spotiflac_android/widgets/download_service_picker.dart';
 
 class _Extensions extends ExtensionNotifier {
+  _Extensions(this.qualityCount);
+
+  final int qualityCount;
+
   @override
   ExtensionState build() => ExtensionState(
     extensions: [
@@ -21,7 +25,7 @@ class _Extensions extends ExtensionNotifier {
         status: 'loaded',
         hasDownloadProvider: true,
         qualityOptions: List.generate(
-          16,
+          qualityCount,
           (index) => QualityOption(id: '$index', label: 'Quality $index'),
         ),
       ),
@@ -38,48 +42,64 @@ class _Settings extends SettingsNotifier {
 }
 
 void main() {
-  testWidgets('iOS picker scrolls options and dismisses when pulled down', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          extensionProvider.overrideWith(_Extensions.new),
-          settingsProvider.overrideWith(_Settings.new),
-        ],
-        child: MaterialApp(
-          theme: ThemeData(platform: TargetPlatform.iOS),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => TextButton(
-                onPressed: () => DownloadServicePicker.show(
-                  context,
-                  trackName: 'Example track',
-                  onSelect: (_, _) {},
+  for (final qualityCount in [3, 16]) {
+    testWidgets('iOS picker fits $qualityCount options and handle dismisses', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            extensionProvider.overrideWith(() => _Extensions(qualityCount)),
+            settingsProvider.overrideWith(_Settings.new),
+          ],
+          child: MaterialApp(
+            theme: ThemeData(platform: TargetPlatform.iOS),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => DownloadServicePicker.show(
+                    context,
+                    trackName: 'Example track',
+                    onSelect: (_, _) {},
+                  ),
+                  child: const Text('Open'),
                 ),
-                child: const Text('Open'),
               ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
-    final scroll = find.descendant(
-      of: find.byType(DownloadServicePicker),
-      matching: find.byType(SingleChildScrollView),
-    );
-    await tester.drag(scroll, const Offset(0, -300));
-    await tester.pumpAndSettle();
-    expect(find.byType(DownloadServicePicker), findsOneWidget);
-    await tester.drag(scroll, const Offset(0, 1500));
-    await tester.pumpAndSettle();
-    await tester.drag(find.text('Example track'), const Offset(0, 600));
-    await tester.pumpAndSettle();
-    expect(find.byType(DownloadServicePicker), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      if (qualityCount == 3) {
+        final sheetBottom = tester.getBottomLeft(find.byType(BottomSheet)).dy;
+        final lastOptionBottom = tester
+            .getBottomLeft(find.text('Quality 2'))
+            .dy;
+        expect(sheetBottom - lastOptionBottom, lessThan(100));
+      }
+      if (qualityCount == 16) {
+        final scroll = find.descendant(
+          of: find.byType(DownloadServicePicker),
+          matching: find.byType(SingleChildScrollView),
+        );
+        await tester.drag(scroll, const Offset(0, -300));
+        await tester.pumpAndSettle();
+        expect(find.byType(DownloadServicePicker), findsOneWidget);
+        await tester.drag(scroll, const Offset(0, 1500));
+        await tester.pumpAndSettle();
+      }
+      final sheetTop = tester.getTopLeft(find.byType(BottomSheet));
+      final sheetWidth = tester.getSize(find.byType(BottomSheet)).width;
+      await tester.dragFrom(
+        sheetTop + Offset(sheetWidth / 2, 16),
+        const Offset(0, 600),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(DownloadServicePicker), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

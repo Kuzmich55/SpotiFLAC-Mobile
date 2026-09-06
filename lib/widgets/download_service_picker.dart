@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:spotiflac_android/widgets/app_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spotiflac_android/providers/extension_provider.dart';
 import 'package:spotiflac_android/providers/settings_provider.dart';
@@ -13,7 +12,6 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
   final String? coverUrl;
   final void Function(String quality, String service) onSelect;
   final String? recommendedService;
-  final ScrollController? scrollController;
 
   const DownloadServicePicker({
     super.key,
@@ -22,7 +20,6 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
     this.coverUrl,
     required this.onSelect,
     this.recommendedService,
-    this.scrollController,
   });
 
   @override
@@ -44,15 +41,16 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
       useRootNavigator: true,
       backgroundColor: colorScheme.surfaceContainerHigh,
       isScrollControlled: true,
-      builder: (context) => AppDraggableSheet(
-        builder: (context, scrollController) => DownloadServicePicker(
-          trackName: trackName,
-          artistName: artistName,
-          coverUrl: coverUrl,
-          onSelect: onSelect,
-          recommendedService: recommendedService,
-          scrollController: scrollController,
-        ),
+      showDragHandle: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+      ),
+      builder: (context) => DownloadServicePicker(
+        trackName: trackName,
+        artistName: artistName,
+        coverUrl: coverUrl,
+        onSelect: onSelect,
+        recommendedService: recommendedService,
       ),
     );
   }
@@ -126,7 +124,6 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
     return SafeArea(
       top: false,
       child: SingleChildScrollView(
-        controller: widget.scrollController,
         physics: const ClampingScrollPhysics(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -142,8 +139,6 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
                 height: 1,
                 color: colorScheme.outlineVariant.withValues(alpha: 0.5),
               ),
-            ] else ...[
-              const AppSheetHandle(),
             ],
 
             Padding(
@@ -513,7 +508,6 @@ class _TrackInfoHeaderState extends State<_TrackInfoHeader> {
         ),
         child: Column(
           children: [
-            const AppSheetHandle(),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: Row(
