@@ -37,12 +37,12 @@ class _BatchSettings extends SettingsNotifier {
 
 class _BatchLibrary extends LocalLibraryNotifier {
   final refreshed = Completer<void>();
-  bool refreshStarted = false;
+  bool _refreshStarted = false;
   @override
   LocalLibraryState build() => LocalLibraryState();
   @override
   Future<void> scanAllSources({bool forceFullScan = false}) {
-    refreshStarted = true;
+    _refreshStarted = true;
     return refreshed.future;
   }
 }
@@ -301,7 +301,7 @@ void main() {
         expect(settings.phases.length, 1);
         await tester.tap(find.text('Apply changes'));
         await tester.pumpAndSettle();
-        expect(library.refreshStarted, isTrue);
+        expect(library._refreshStarted, isTrue);
         expect(settings.phases.length, 2);
         active = !leaveDuringRefresh;
         library.refreshed.complete();

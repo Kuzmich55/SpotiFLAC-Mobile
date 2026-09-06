@@ -159,7 +159,7 @@ func TestSignedSessionGrantRetryHonorsCancellationAndReleasesCoordinator(t *test
 	lockAcquired := make(chan struct{})
 	go func() {
 		coordinator.mu.Lock()
-		coordinator.mu.Unlock()
+		defer coordinator.mu.Unlock()
 		close(lockAcquired)
 	}()
 	select {

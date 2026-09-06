@@ -2132,7 +2132,7 @@ func TestRefreshSignedSessionCoalescesWithoutHoldingCoordinatorMutex(t *testing.
 	mutexAvailable := make(chan struct{})
 	go func() {
 		coordinator.mu.Lock()
-		coordinator.mu.Unlock()
+		defer coordinator.mu.Unlock()
 		close(mutexAvailable)
 	}()
 	select {

@@ -99,11 +99,6 @@ func readID3TagsAndCover(filePath string, includeCover bool) (*AudioMetadata, []
 	return metadata, cover, mime, nil
 }
 
-func readID3v2(file *os.File) (*AudioMetadata, error) {
-	metadata, _, _, err := readID3v2WithCover(file, false)
-	return metadata, err
-}
-
 func parseID3v22Frames(data []byte, metadata *AudioMetadata, tagUnsync bool) {
 	parseID3Frames(data, metadata, 2, tagUnsync)
 }

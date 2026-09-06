@@ -7,10 +7,6 @@ import (
 	"strings"
 )
 
-func scanAudioFileWithKnownModTime(filePath, scanTime string, knownModTime int64) (*LibraryScanResult, error) {
-	return scanAudioFileWithKnownModTimeAndDisplayNameAndCoverCacheKey(filePath, "", "", scanTime, knownModTime)
-}
-
 func scanAudioFileWithKnownModTimeAndDisplayNameAndCoverCacheKey(filePath, displayNameHint, coverCacheKey, scanTime string, knownModTime int64) (*LibraryScanResult, error) {
 	ext := resolveLibraryAudioExt(filePath, displayNameHint)
 
@@ -32,13 +28,14 @@ func scanAudioFileWithKnownModTimeAndDisplayNameAndCoverCacheKey(filePath, displ
 	libraryCoverCacheMu.RUnlock()
 	var scanned *LibraryScanResult
 	var scanErr error
-	if ext == ".flac" {
+	switch ext {
+	case ".flac":
 		scanned, scanErr = scanFLACFileWithCoverCache(filePath, result, displayNameHint, coverCacheDir, coverCacheKey)
-	} else if ext == ".m4a" || ext == ".mp4" || ext == ".aac" {
+	case ".m4a", ".mp4", ".aac":
 		scanned, scanErr = scanM4AFileWithCoverCache(filePath, result, displayNameHint, coverCacheDir, coverCacheKey)
-	} else if ext == ".mp3" {
+	case ".mp3":
 		scanned, scanErr = scanMP3FileWithCoverCache(filePath, result, displayNameHint, coverCacheDir, coverCacheKey)
-	} else {
+	default:
 		if coverCacheDir != "" {
 			coverPath, err := SaveCoverToCacheWithHintAndKey(
 				filePath,
@@ -184,10 +181,6 @@ func scanFLACFileWithCoverCache(filePath string, result *LibraryScanResult, disp
 	return result, nil
 }
 
-func scanM4AFile(filePath string, result *LibraryScanResult, displayNameHint string) (*LibraryScanResult, error) {
-	return scanM4AFileWithCoverCache(filePath, result, displayNameHint, "", "")
-}
-
 func scanM4AFileWithCoverCache(filePath string, result *LibraryScanResult, displayNameHint, coverCacheDir, coverCacheKey string) (*LibraryScanResult, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -274,10 +267,6 @@ func isLosslessLibraryFormat(format string) bool {
 	default:
 		return false
 	}
-}
-
-func scanMP3File(filePath string, result *LibraryScanResult, displayNameHint string) (*LibraryScanResult, error) {
-	return scanMP3FileWithCoverCache(filePath, result, displayNameHint, "", "")
 }
 
 func scanMP3FileWithCoverCache(filePath string, result *LibraryScanResult, displayNameHint, cacheDir, cacheKey string) (*LibraryScanResult, error) {

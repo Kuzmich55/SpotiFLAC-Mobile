@@ -623,10 +623,6 @@ func isKnownBuiltInLyricsProvider(providerName string) bool {
 	}
 }
 
-func (c *LyricsClient) fetchBuiltInLyricsProvider(providerName string, request lyricsProviderSearchRequest) (*LyricsResponse, error, bool) {
-	return c.fetchBuiltInLyricsProviderContext(context.Background(), providerName, request)
-}
-
 func (c *LyricsClient) fetchBuiltInLyricsProviderContext(ctx context.Context, providerName string, request lyricsProviderSearchRequest) (*LyricsResponse, error, bool) {
 	clientCopy := *c
 	clientCopy.httpClient = bindLyricsHTTPClientContext(c.httpClient, ctx)

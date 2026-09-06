@@ -477,13 +477,6 @@ func (w *stallWatchdog) stop() {
 	w.cancel()
 }
 
-// stallError is returned when the watchdog fires. The message is deliberately
-// free of "cancel" and worded to classify as retryable network failure, so the
-// fallback layer retries instead of treating it as a user cancellation.
-func (r *extensionRuntime) stallError() goja.Value {
-	return r.jsError("download stalled: no data received for %ds (network timeout)", int(downloadStallTimeout.Seconds()))
-}
-
 func newExtensionHTTPClient(ext *loadedExtension, jar http.CookieJar, timeout time.Duration, compressResponses bool) *http.Client {
 	// Extension sandbox enforces HTTPS-only domains. Do not apply global
 	// allow_http scheme downgrade here, because some extension APIs (e.g.

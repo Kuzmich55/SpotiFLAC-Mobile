@@ -2,6 +2,7 @@ package gobackend
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -45,8 +46,8 @@ func TestStallWatchdogCancelsOnNoData(t *testing.T) {
 			break
 		}
 	}
-	if readErr == nil {
-		t.Fatal("expected read error from stall cancel")
+	if !errors.Is(readErr, context.Canceled) {
+		t.Fatalf("read error = %v, want watchdog context cancellation", readErr)
 	}
 	if !wd.stalled.Load() {
 		t.Fatalf("watchdog did not mark stalled; err=%v", readErr)

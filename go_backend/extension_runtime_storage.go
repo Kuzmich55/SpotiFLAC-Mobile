@@ -175,23 +175,6 @@ func readJSONMapFile(path string) (map[string]any, error) {
 	return result, nil
 }
 
-func (r *extensionRuntime) refreshStorage() error {
-	path := r.getStoragePath()
-	fileMu := extensionFileMu(path)
-	fileMu.Lock()
-	snapshot, err := readCachedJSONMapLocked(path, func() (map[string]any, error) {
-		return readJSONMapFile(path)
-	})
-	fileMu.Unlock()
-	if err != nil {
-		return err
-	}
-	r.storageMu.Lock()
-	r.storageCache = snapshot
-	r.storageMu.Unlock()
-	return nil
-}
-
 func (r *extensionRuntime) mutateStorage(mutate func(map[string]any) bool) error {
 	r.storageMu.RLock()
 	closed := r.storageClosed
