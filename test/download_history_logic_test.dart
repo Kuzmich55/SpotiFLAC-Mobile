@@ -15,7 +15,7 @@ DownloadHistoryItem _historyItem({
     filePath: filePath,
     service: 'test',
     downloadedAt: downloadedAt,
-    spotifyId: 'spotify:track:same',
+    spotifyId: 'source-track-same',
     isrc: 'SAMEISRC',
   );
 }
@@ -84,7 +84,7 @@ void main() {
         totalCount: 2,
       );
 
-      expect(state.getBySpotifyId('spotify:track:same')?.id, 'newest');
+      expect(state.getBySpotifyId('source-track-same')?.id, 'newest');
       expect(state.getByIsrc('SAMEISRC')?.id, 'newest');
       expect(
         state.findByTrackAndArtist('Same Song', 'Same Artist')?.id,

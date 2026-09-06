@@ -51,7 +51,7 @@ func TestBuildDownloadSuccessResponsePrefersRequestedAlbumMetadata(t *testing.T)
 	resp := buildDownloadSuccessResponse(
 		req,
 		result,
-		"tidal",
+		"download-provider",
 		"ok",
 		"/tmp/test.flac",
 		false,
@@ -186,7 +186,7 @@ func TestBuildDownloadSuccessResponseReturnsResolvedProviderFilename(t *testing.
 	req := DownloadRequest{
 		TrackName:        "Track",
 		ArtistName:       "Artist",
-		DownloadProvider: "soundcloud",
+		DownloadProvider: "download-provider",
 		ProviderTrackID:  "998877",
 		FilenameFormat:   "{artist} - {title} [{isrc}] [{provider}-{provider_id}]",
 		OutputExt:        ".flac",
@@ -199,13 +199,13 @@ func TestBuildDownloadSuccessResponseReturnsResolvedProviderFilename(t *testing.
 	resp := buildDownloadSuccessResponse(
 		req,
 		result,
-		"soundcloud",
+		"download-provider",
 		"ok",
 		"/proc/self/fd/10",
 		false,
 	)
 
-	want := "Artist - Track [USABC1234567] [soundcloud-998877].m4a"
+	want := "Artist - Track [USABC1234567] [download-provider-998877].m4a"
 	if resp.ResolvedFileName != want {
 		t.Fatalf("resolved filename = %q, want %q", resp.ResolvedFileName, want)
 	}
@@ -229,7 +229,7 @@ func TestBuildDownloadSuccessResponseNormalizesDecryptionDescriptor(t *testing.T
 	resp := buildDownloadSuccessResponse(
 		req,
 		result,
-		"amazon",
+		"download-provider",
 		"ok",
 		"/tmp/test.m4a",
 		false,
@@ -426,7 +426,7 @@ func TestEnrichExtraMetadataByISRCPrefersDeezerGenre(t *testing.T) {
 
 func TestApplyReEnrichTrackMetadataPreservesExistingReleaseDateWhenCandidateMissing(t *testing.T) {
 	req := reEnrichRequest{
-		SpotifyID:   "spotify-track-id",
+		SpotifyID:   "source-track-id",
 		AlbumName:   "Original Album",
 		ReleaseDate: "2024-01-01",
 		ISRC:        "REQ123",
@@ -541,7 +541,7 @@ func TestSelectBestReEnrichTrackPrefersCandidateWithReleaseDate(t *testing.T) {
 			AlbumName:   "Album Name",
 			DurationMS:  180000,
 			ReleaseDate: "",
-			ProviderID:  "spotify",
+			ProviderID:  "metadata-a",
 		},
 		{
 			ID:          "second",
@@ -550,7 +550,7 @@ func TestSelectBestReEnrichTrackPrefersCandidateWithReleaseDate(t *testing.T) {
 			AlbumName:   "Album Name",
 			DurationMS:  180000,
 			ReleaseDate: "2024-03-09",
-			ProviderID:  "deezer",
+			ProviderID:  "metadata-b",
 		},
 	}
 
@@ -582,7 +582,7 @@ func TestSelectBestReEnrichTrackRejectsMismatchedSearchResults(t *testing.T) {
 			TrackNumber: 4,
 			DiscNumber:  1,
 			ISRC:        "WRONG1234567",
-			ProviderID:  "deezer",
+			ProviderID:  "metadata-b",
 		},
 	}
 
@@ -606,7 +606,7 @@ func TestSelectBestReEnrichTrackAllowsExactISRCDespiteMetadataMismatch(t *testin
 			Artists:    "Different Artist",
 			DurationMS: 180000,
 			ISRC:       "USRC17607839",
-			ProviderID: "deezer",
+			ProviderID: "metadata-b",
 		},
 	}
 
@@ -634,7 +634,7 @@ func TestSelectBestReEnrichTrackPlaceholderFallsBackToAlbum(t *testing.T) {
 			Artists:    "Harry Styles",
 			AlbumName:  "Harry Styles",
 			DurationMS: 180000,
-			ProviderID: "deezer",
+			ProviderID: "metadata-b",
 		},
 	}
 

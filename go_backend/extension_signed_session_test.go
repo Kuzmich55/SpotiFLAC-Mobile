@@ -81,7 +81,7 @@ func TestSignedSessionConfigWithDefaults(t *testing.T) {
 
 	t.Run("preserves values the manifest already set", func(t *testing.T) {
 		custom := &SignedSessionConfig{
-			Namespace:         "tidal",
+			Namespace:         "provider",
 			BaseURL:           "https://auth.example.com",
 			AppVersion:        "5.0",
 			Platform:          "mobile",
@@ -89,7 +89,7 @@ func TestSignedSessionConfigWithDefaults(t *testing.T) {
 			Endpoints:         SignedSessionEndpoints{Exchange: "/custom/exchange"},
 		}
 		got := signedSessionConfigWithDefaults(custom)
-		if got.Namespace != "tidal" || got.BaseURL != "https://auth.example.com" {
+		if got.Namespace != "provider" || got.BaseURL != "https://auth.example.com" {
 			t.Errorf("namespace/baseUrl were overwritten: %+v", got)
 		}
 		if got.AppVersion != "5.0" || got.Platform != "mobile" || got.TimeWindowSeconds != 60 {
@@ -360,7 +360,7 @@ func TestDownloadWithExtensionsPreflightsBeforeMetadataEnrichment(t *testing.T) 
 
 	// Metadata may originate from another extension, but the explicitly chosen
 	// download provider owns the signed-session namespace and verification.
-	requestJSON := `{"source":"spotify-metadata","service":"preflight-download","item_id":"preflight-item","isrc":"USRC17607839"}`
+	requestJSON := `{"source":"source-metadata","service":"preflight-download","item_id":"preflight-item","isrc":"USRC17607839"}`
 	responseJSON, err := DownloadWithExtensionsJSON(requestJSON)
 	if err != nil {
 		t.Fatalf("DownloadWithExtensionsJSON: %v", err)
@@ -718,12 +718,12 @@ func TestSignedSessionProviderRetryDuration(t *testing.T) {
 }
 
 func TestNormalizeSignedSessionRecordScope(t *testing.T) {
-	config := SignedSessionConfig{Namespace: "Tidal", BaseURL: "https://a.example.com", AppVersion: "1.0", Platform: "mobile"}
+	config := SignedSessionConfig{Namespace: "Provider", BaseURL: "https://a.example.com", AppVersion: "1.0", Platform: "mobile"}
 
 	t.Run("first save just stamps the scope", func(t *testing.T) {
 		record := &signedSessionRecord{SessionID: "s1", SessionSecret: "secret"}
 		normalizeSignedSessionRecordScope(config, record)
-		if record.Namespace != "tidal" || record.BaseURL != config.BaseURL {
+		if record.Namespace != "provider" || record.BaseURL != config.BaseURL {
 			t.Errorf("scope not stamped: %+v", record)
 		}
 		if record.SessionID != "s1" || record.SessionSecret != "secret" {
@@ -733,7 +733,7 @@ func TestNormalizeSignedSessionRecordScope(t *testing.T) {
 
 	t.Run("same scope preserves the session", func(t *testing.T) {
 		record := &signedSessionRecord{
-			Namespace: "tidal", BaseURL: config.BaseURL, AppVersion: config.AppVersion, Platform: config.Platform,
+			Namespace: "provider", BaseURL: config.BaseURL, AppVersion: config.AppVersion, Platform: config.Platform,
 			SessionID: "s1", SessionSecret: "secret", ExpiresAt: "later",
 		}
 		normalizeSignedSessionRecordScope(config, record)
@@ -744,7 +744,7 @@ func TestNormalizeSignedSessionRecordScope(t *testing.T) {
 
 	t.Run("changed scope wipes the session secret", func(t *testing.T) {
 		record := &signedSessionRecord{
-			Namespace: "tidal", BaseURL: "https://old.example.com", AppVersion: config.AppVersion, Platform: config.Platform,
+			Namespace: "provider", BaseURL: "https://old.example.com", AppVersion: config.AppVersion, Platform: config.Platform,
 			SessionID: "s1", SessionSecret: "secret", ExpiresAt: "later",
 		}
 		normalizeSignedSessionRecordScope(config, record)
@@ -791,10 +791,10 @@ func saveUsableSignedSession(
 }
 
 func TestSignedSessionFilePathDeterminism(t *testing.T) {
-	runtime := newSignedSessionTestRuntime(t, "tidal-ext", nil)
+	runtime := newSignedSessionTestRuntime(t, "provider-ext", nil)
 
-	configA := SignedSessionConfig{Namespace: "tidal", BaseURL: "https://a.example.com"}
-	configB := SignedSessionConfig{Namespace: "tidal", BaseURL: "https://b.example.com"}
+	configA := SignedSessionConfig{Namespace: "provider", BaseURL: "https://a.example.com"}
+	configB := SignedSessionConfig{Namespace: "provider", BaseURL: "https://b.example.com"}
 
 	pathA1, err := runtime.signedSessionFilePath(configA)
 	if err != nil {
@@ -822,8 +822,8 @@ func TestSignedSessionFilePathDeterminism(t *testing.T) {
 }
 
 func TestLoadAndSaveSignedSessionRoundTrip(t *testing.T) {
-	runtime := newSignedSessionTestRuntime(t, "tidal-ext", nil)
-	config := SignedSessionConfig{Namespace: "tidal", BaseURL: "https://auth.example.com"}
+	runtime := newSignedSessionTestRuntime(t, "provider-ext", nil)
+	config := SignedSessionConfig{Namespace: "provider", BaseURL: "https://auth.example.com"}
 
 	record, err := runtime.loadSignedSession(config)
 	if err != nil {
@@ -868,8 +868,8 @@ func TestLoadAndSaveSignedSessionRoundTrip(t *testing.T) {
 }
 
 func TestSignedSessionStatusAndClear(t *testing.T) {
-	runtime := newSignedSessionTestRuntime(t, "tidal-ext", nil)
-	runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "tidal", BaseURL: "https://auth.example.com"}
+	runtime := newSignedSessionTestRuntime(t, "provider-ext", nil)
+	runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "provider", BaseURL: "https://auth.example.com"}
 
 	readStatus := func() map[string]any {
 		v := runtime.signedSessionStatus(goja.FunctionCall{})
@@ -929,7 +929,7 @@ func TestDoSignedSessionRequestSignature(t *testing.T) {
 
 	var capturedErr string
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		config := signedSessionConfigWithDefaults(&SignedSessionConfig{Namespace: "tidal", BaseURL: "https://auth.example.com"})
+		config := signedSessionConfigWithDefaults(&SignedSessionConfig{Namespace: "provider", BaseURL: "https://auth.example.com"})
 		prefix := config.HeaderPrefix
 
 		ts := req.Header.Get(prefix + "Timestamp")
@@ -982,8 +982,8 @@ func TestDoSignedSessionRequestSignature(t *testing.T) {
 		}, nil
 	})
 
-	runtime := newSignedSessionTestRuntime(t, "tidal-ext", transport)
-	config := signedSessionConfigWithDefaults(&SignedSessionConfig{Namespace: "tidal", BaseURL: "https://auth.example.com"})
+	runtime := newSignedSessionTestRuntime(t, "provider-ext", transport)
+	config := signedSessionConfigWithDefaults(&SignedSessionConfig{Namespace: "provider", BaseURL: "https://auth.example.com"})
 	record := &signedSessionRecord{InstallID: "install-1", SessionID: sessionID, SessionSecret: sessionSecret}
 
 	resp, body, _, err := runtime.doSignedSessionRequest(config, record, http.MethodPost, "/tracks/search", []byte(`{"q":"test"}`), nil)
@@ -1017,8 +1017,8 @@ func TestSignedSessionFetchUnauthenticatedTriggersVerification(t *testing.T) {
 		return nil, nil
 	})
 
-	runtime := newSignedSessionTestRuntime(t, "tidal-ext", transport)
-	runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "tidal", BaseURL: "https://auth.example.com"}
+	runtime := newSignedSessionTestRuntime(t, "provider-ext", transport)
+	runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "provider", BaseURL: "https://auth.example.com"}
 
 	call := goja.FunctionCall{Arguments: []goja.Value{runtime.vm.ToValue("GET"), runtime.vm.ToValue("/tracks/search")}}
 	result := runtime.signedSessionFetch(call).Export().(map[string]any)
@@ -1056,8 +1056,8 @@ func TestSignedSessionFetchRevokesSessionOnCanonicalSessionInvalid(t *testing.T)
 		}
 	})
 
-	runtime := newSignedSessionTestRuntime(t, "tidal-ext", transport)
-	config := SignedSessionConfig{Namespace: "tidal", BaseURL: "https://auth.example.com"}
+	runtime := newSignedSessionTestRuntime(t, "provider-ext", transport)
+	config := SignedSessionConfig{Namespace: "provider", BaseURL: "https://auth.example.com"}
 	runtime.manifest.SignedSession = &config
 
 	resolved := signedSessionConfigWithDefaults(&config)
@@ -1849,8 +1849,8 @@ func TestExchangeSignedSessionGrant(t *testing.T) {
 			body, _ := json.Marshal(payload)
 			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(string(body))), Request: req}, nil
 		})
-		runtime := newSignedSessionTestRuntime(t, "tidal-ext", transport)
-		runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "tidal", BaseURL: "https://auth.example.com"}
+		runtime := newSignedSessionTestRuntime(t, "provider-ext", transport)
+		runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "provider", BaseURL: "https://auth.example.com"}
 
 		if err := runtime.exchangeSignedSessionGrant("grant-token"); err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -1876,8 +1876,8 @@ func TestExchangeSignedSessionGrant(t *testing.T) {
 		transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: 400, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{}`)), Request: req}, nil
 		})
-		runtime := newSignedSessionTestRuntime(t, "tidal-ext", transport)
-		runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "tidal", BaseURL: "https://auth.example.com"}
+		runtime := newSignedSessionTestRuntime(t, "provider-ext", transport)
+		runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "provider", BaseURL: "https://auth.example.com"}
 
 		if err := runtime.exchangeSignedSessionGrant("bad-grant"); err == nil {
 			t.Fatal("expected an error for a non-2xx exchange response")
@@ -1919,9 +1919,9 @@ func TestExchangeSignedSessionGrant(t *testing.T) {
 				Request:    req,
 			}, nil
 		})
-		runtime := newSignedSessionTestRuntime(t, "tidal-rate-limit", transport)
+		runtime := newSignedSessionTestRuntime(t, "provider-rate-limit", transport)
 		runtime.manifest.SignedSession = &SignedSessionConfig{
-			Namespace: "tidal-rate-limit",
+			Namespace: "provider-rate-limit",
 			BaseURL:   "https://auth.example.com",
 		}
 		setPendingSignedSessionGrant(runtime.extensionID, "grant-preserved")
@@ -1964,9 +1964,9 @@ func TestExchangeSignedSessionGrant(t *testing.T) {
 				Request:    req,
 			}, nil
 		})
-		runtime := newSignedSessionTestRuntime(t, "tidal-rate-limit-exhausted", transport)
+		runtime := newSignedSessionTestRuntime(t, "provider-rate-limit-exhausted", transport)
 		runtime.manifest.SignedSession = &SignedSessionConfig{
-			Namespace: "tidal-rate-limit-exhausted",
+			Namespace: "provider-rate-limit-exhausted",
 			BaseURL:   "https://auth.example.com",
 		}
 		setPendingSignedSessionGrant(runtime.extensionID, "grant-retry-later")
@@ -2025,9 +2025,9 @@ func TestRefreshSignedSession(t *testing.T) {
 			body, _ := json.Marshal(payload)
 			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(string(body))), Request: req}, nil
 		})
-		runtime := newSignedSessionTestRuntime(t, "tidal-ext", transport)
+		runtime := newSignedSessionTestRuntime(t, "provider-ext", transport)
 		config := signedSessionConfigWithDefaults(&SignedSessionConfig{
-			Namespace: "tidal", BaseURL: "https://auth.example.com",
+			Namespace: "provider", BaseURL: "https://auth.example.com",
 			Endpoints: SignedSessionEndpoints{Refresh: "/session/refresh"},
 		})
 		record := &signedSessionRecord{InstallID: "install-1", SessionID: "sess-1", SessionSecret: "old-secret", ExpiresAt: "2030-01-01T00:00:00Z"}
@@ -2055,9 +2055,9 @@ func TestRefreshSignedSession(t *testing.T) {
 		transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: 500, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{}`)), Request: req}, nil
 		})
-		runtime := newSignedSessionTestRuntime(t, "tidal-ext", transport)
+		runtime := newSignedSessionTestRuntime(t, "provider-ext", transport)
 		config := signedSessionConfigWithDefaults(&SignedSessionConfig{
-			Namespace: "tidal", BaseURL: "https://auth.example.com",
+			Namespace: "provider", BaseURL: "https://auth.example.com",
 			Endpoints: SignedSessionEndpoints{Refresh: "/session/refresh"},
 		})
 		record := &signedSessionRecord{InstallID: "install-1", SessionID: "sess-1", SessionSecret: "old-secret"}
@@ -2229,8 +2229,8 @@ func TestSignedSessionCompleteGrant(t *testing.T) {
 			body, _ := json.Marshal(payload)
 			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(string(body))), Request: req}, nil
 		})
-		runtime := newSignedSessionTestRuntime(t, "tidal-ext", transport)
-		runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "tidal", BaseURL: "https://auth.example.com"}
+		runtime := newSignedSessionTestRuntime(t, "provider-ext", transport)
+		runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "provider", BaseURL: "https://auth.example.com"}
 
 		call := goja.FunctionCall{Arguments: []goja.Value{runtime.vm.ToValue("grant-from-arg")}}
 		result := runtime.signedSessionCompleteGrant(call).Export().(map[string]any)
@@ -2245,8 +2245,8 @@ func TestSignedSessionCompleteGrant(t *testing.T) {
 			body, _ := json.Marshal(payload)
 			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(string(body))), Request: req}, nil
 		})
-		runtime := newSignedSessionTestRuntime(t, "tidal-ext-pending", transport)
-		runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "tidal", BaseURL: "https://auth.example.com"}
+		runtime := newSignedSessionTestRuntime(t, "provider-ext-pending", transport)
+		runtime.manifest.SignedSession = &SignedSessionConfig{Namespace: "provider", BaseURL: "https://auth.example.com"}
 		setPendingSignedSessionGrant(runtime.extensionID, "pending-grant")
 
 		result := runtime.signedSessionCompleteGrant(goja.FunctionCall{}).Export().(map[string]any)
@@ -2263,7 +2263,7 @@ func TestSignedSessionCompleteGrant(t *testing.T) {
 	})
 
 	t.Run("no grant available reports failure", func(t *testing.T) {
-		runtime := newSignedSessionTestRuntime(t, "tidal-ext-none", nil)
+		runtime := newSignedSessionTestRuntime(t, "provider-ext-none", nil)
 		result := runtime.signedSessionCompleteGrant(goja.FunctionCall{}).Export().(map[string]any)
 		if result["success"] != false {
 			t.Fatalf("expected failure without a grant, got %+v", result)
@@ -2273,11 +2273,11 @@ func TestSignedSessionCompleteGrant(t *testing.T) {
 
 func TestBuildSignedSessionChallengeURL(t *testing.T) {
 	config := signedSessionConfigWithDefaults(&SignedSessionConfig{
-		Namespace:   "tidal",
+		Namespace:   "provider",
 		BaseURL:     "https://auth.example.com",
 		CallbackURL: "spotiflac://session-grant",
 	})
-	runtime := newSignedSessionTestRuntime(t, "tidal-ext", nil)
+	runtime := newSignedSessionTestRuntime(t, "provider-ext", nil)
 
 	got := runtime.buildSignedSessionChallengeURL(config, "chal-123", "state-123")
 

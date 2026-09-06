@@ -79,8 +79,8 @@ func TestLyricsCacheParsingAndLRCLibClient(t *testing.T) {
 	if ua := appUserAgent(); !strings.Contains(ua, "4.5.0") {
 		t.Fatalf("user agent = %q", ua)
 	}
-	SetLyricsProviderOrder([]string{"LRCLIB", "bad", "extension:Apple-Music", "netease", "extension:apple-music"})
-	if providers := GetLyricsProviderOrder(); len(providers) != 3 || providers[0] != LyricsProviderLRCLIB || providers[1] != "extension:apple-music" {
+	SetLyricsProviderOrder([]string{"LRCLIB", "bad", "extension:Lyrics-Fixture", "netease", "extension:lyrics-fixture"})
+	if providers := GetLyricsProviderOrder(); len(providers) != 3 || providers[0] != LyricsProviderLRCLIB || providers[1] != "extension:lyrics-fixture" {
 		t.Fatalf("providers = %#v", providers)
 	}
 	SetLyricsProviderOrder(nil)
@@ -332,7 +332,7 @@ func TestConcurrentLyricsProvidersReturnFastFallback(t *testing.T) {
 
 func TestResolveLyricsProviderOrderOnlyIncludesSelectedAvailableExtensions(t *testing.T) {
 	availableExtensions := map[string]*extensionProviderWrapper{
-		"extension:apple-music":     nil,
+		"extension:lyrics-fixture":  nil,
 		"extension:future-provider": nil,
 	}
 	providers := resolveLyricsProviderOrder(

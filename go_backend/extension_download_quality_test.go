@@ -12,8 +12,8 @@ func qualityTestManifest(name string, options ...QualityOption) *ExtensionManife
 }
 
 func TestExtensionQualityKeepsAudioKindAcrossProviders(t *testing.T) {
-	amazon := qualityTestManifest("source", QualityOption{ID: "best", Label: "FLAC Best Available"}, QualityOption{ID: "ac4", Label: "Dolby Atmos"})
-	tidal := qualityTestManifest("target",
+	source := qualityTestManifest("source", QualityOption{ID: "best", Label: "FLAC Best Available"}, QualityOption{ID: "ac4", Label: "Dolby Atmos"})
+	target := qualityTestManifest("target",
 		QualityOption{ID: "DOLBY_ATMOS", Label: "Dolby Atmos", Description: "falls back to FLAC"},
 		QualityOption{ID: "HI_RES_LOSSLESS", Label: "HiRes FLAC"},
 		QualityOption{ID: "LOSSLESS", Label: "Lossless"},
@@ -25,13 +25,13 @@ func TestExtensionQualityKeepsAudioKindAcrossProviders(t *testing.T) {
 		{"ac4", "DOLBY_ATMOS"}, {"DOLBY_ATMOS", "DOLBY_ATMOS"}, {"HIGH", "HIGH"},
 	} {
 		t.Run(tc.requested, func(t *testing.T) {
-			got, err := resolveExtensionDownloadQuality(tc.requested, amazon, tidal)
+			got, err := resolveExtensionDownloadQuality(tc.requested, source, target)
 			if err != nil || got != tc.want {
 				t.Fatalf("quality=%q err=%v; want %q", got, err, tc.want)
 			}
 		})
 	}
-	if got, err := resolveExtensionDownloadQuality("best", amazon, amazon); err != nil || got != "best" {
+	if got, err := resolveExtensionDownloadQuality("best", source, source); err != nil || got != "best" {
 		t.Fatalf("same provider selection changed: %s %v", got, err)
 	}
 }

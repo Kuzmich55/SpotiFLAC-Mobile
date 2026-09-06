@@ -16,7 +16,7 @@ func TestExtensionHealthClassificationAndValidation(t *testing.T) {
 	if status, _ := classifyExtensionHealthBody([]byte(`not-json`), ""); status != "online" {
 		t.Fatalf("invalid JSON status = %q", status)
 	}
-	if status, msg := classifyExtensionHealthBody([]byte(`{"services":{"tidal":{"status":401,"label":"Tidal","detail":"auth_required"}}}`), "tidal"); status != "degraded" || !strings.Contains(msg, "Tidal") {
+	if status, msg := classifyExtensionHealthBody([]byte(`{"services":{"provider":{"status":401,"label":"Provider","detail":"auth_required"}}}`), "provider"); status != "degraded" || !strings.Contains(msg, "Provider") {
 		t.Fatalf("service status/message = %q/%q", status, msg)
 	}
 	if status, msg, ok := classifyExtensionHealthService(map[string]any{"services": map[string]any{}}, "missing"); !ok || status != "unknown" || !strings.Contains(msg, "missing") {

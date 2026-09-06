@@ -167,7 +167,7 @@ func TestTrackMatchesRequestRejectsDurationMismatchAcrossReleases(t *testing.T) 
 
 func TestTitlesMatch_SeparatorVariants(t *testing.T) {
 	if !titlesMatch("Doctor / Cops", "Doctor _ Cops") {
-		t.Fatal("expected tidal titlesMatch to accept / vs _ variant")
+		t.Fatal("expected titlesMatch to accept / vs _ variant")
 	}
 }
 

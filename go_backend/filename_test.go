@@ -123,13 +123,13 @@ func TestBuildDownloadFilename_ProvidesTraceabilityPlaceholders(t *testing.T) {
 		TrackName:        "Song Name",
 		ArtistName:       "Artist Name",
 		ISRC:             "USABC1234567",
-		DownloadProvider: "tidal-web",
+		DownloadProvider: "download-provider",
 		ProviderTrackID:  "123456789",
 		FilenameFormat:   "{artist} - {title} [{isrc}] [{provider}-{provider_id}]",
 		OutputExt:        ".flac",
 	})
 
-	expected := "Artist Name - Song Name [USABC1234567] [tidal-web-123456789].flac"
+	expected := "Artist Name - Song Name [USABC1234567] [download-provider-123456789].flac"
 	if filename != expected {
 		t.Fatalf("expected %q, got %q", expected, filename)
 	}
@@ -137,12 +137,12 @@ func TestBuildDownloadFilename_ProvidesTraceabilityPlaceholders(t *testing.T) {
 
 func TestBuildFilenameFromTemplate_TraceabilityAliases(t *testing.T) {
 	metadata := map[string]any{
-		"provider":    "soundcloud",
+		"provider":    "download-provider",
 		"provider_id": "998877",
 	}
 
 	formatted := buildFilenameFromTemplate("{platform}-{id}", metadata)
-	if formatted != "soundcloud-998877" {
+	if formatted != "download-provider-998877" {
 		t.Fatalf("unexpected alias filename: %q", formatted)
 	}
 }
@@ -150,14 +150,14 @@ func TestBuildFilenameFromTemplate_TraceabilityAliases(t *testing.T) {
 func TestBuildFilenameFromTemplate_CleansEmptyTraceabilityDecorations(t *testing.T) {
 	metadata := map[string]any{
 		"title":    "Song Name",
-		"provider": "tidal-web",
+		"provider": "download-provider",
 	}
 
 	formatted := buildFilenameFromTemplate(
 		"{title} [{isrc}] [{provider}-{provider_id}]",
 		metadata,
 	)
-	if formatted != "Song Name [tidal-web]" {
+	if formatted != "Song Name [download-provider]" {
 		t.Fatalf("unexpected empty placeholder cleanup: %q", formatted)
 	}
 }

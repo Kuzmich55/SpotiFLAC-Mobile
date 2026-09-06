@@ -45,10 +45,10 @@ void main() {
     test('prefers a known provider id over guessing from the resource id', () {
       expect(
         resolvePreferredMetadataProviderId(
-          'apple-music-ext',
+          'sample-provider',
           '37i9dQZF1DXcBWIGoYBM5M',
         ),
-        'apple-music-ext',
+        'sample-provider',
       );
     });
 

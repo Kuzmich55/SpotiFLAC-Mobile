@@ -8,7 +8,7 @@ func TestOverlayExtensionReleaseMetadataFillsMissingRequestFields(t *testing.T) 
 		AlbumType: "album",
 		Explicit:  true,
 		UPC:       "4006381333931",
-		Comment:   "https://music.apple.com/jp/album/1532211596",
+		Comment:   "https://source.example/album/1532211596",
 	}
 
 	overlayExtensionReleaseMetadata(&req, track)
@@ -29,7 +29,7 @@ func TestOverlayExtensionReleaseMetadataFillsMissingRequestFields(t *testing.T) 
 	response := buildDownloadSuccessResponse(
 		req,
 		DownloadResult{},
-		"amazon",
+		"download-provider",
 		"downloaded",
 		"song.m4a",
 		false,

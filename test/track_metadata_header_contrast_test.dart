@@ -20,7 +20,7 @@ void main() {
       artistName: 'Artist',
       albumName: 'Album',
       filePath: r'Z:\missing\track.flac',
-      service: 'tidal-web',
+      service: 'provider-a',
       downloadedAt: DateTime(2026),
       duration: 250,
       bitDepth: 16,
@@ -45,7 +45,7 @@ void main() {
     expect(headerMeta, findsOneWidget);
     expect(find.byType(ExplicitBadge), findsNWidgets(2));
     expect(find.text('Explicit'), findsNothing);
-    for (final label in const ['16-bit/44.1kHz', '4:10', 'Tidal-web']) {
+    for (final label in const ['16-bit/44.1kHz', '4:10', 'Provider-a']) {
       final text = tester.widget<Text>(
         find.descendant(of: headerMeta, matching: find.text(label)),
       );

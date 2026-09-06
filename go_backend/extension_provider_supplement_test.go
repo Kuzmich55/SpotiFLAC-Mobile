@@ -68,7 +68,7 @@ func TestExtensionProviderWrapperFullSurface(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SearchTracks: %v", err)
 	}
-	if search.Total != 1 || search.Tracks[0].ProviderID != ext.ID || search.Tracks[0].ExternalLinks["tidal"] == "" {
+	if search.Total != 1 || search.Tracks[0].ProviderID != ext.ID || search.Tracks[0].ExternalLinks["provider"] == "" {
 		t.Fatalf("search = %#v", search)
 	}
 
@@ -112,7 +112,7 @@ func TestExtensionProviderWrapperFullSurface(t *testing.T) {
 		t.Fatalf("enriched = %#v", enriched)
 	}
 
-	availability, err := provider.CheckAvailabilityForItemID("ISRC", "Song", "Artist", "spotify:1", "dz", "tidal", "qobuz", 0, "")
+	availability, err := provider.CheckAvailabilityForItemID("ISRC", "Song", "Artist", "source-id", "alternate-id-a", "alternate-id-b", "alternate-id-c", 0, "")
 	if err != nil {
 		t.Fatalf("CheckAvailabilityForItemID: %v", err)
 	}
@@ -172,15 +172,15 @@ func TestExtensionProviderWrapperFullSurface(t *testing.T) {
 
 func TestExtensionProviderAndManagerSelectionHelpers(t *testing.T) {
 	manifest := &ExtensionManifest{Capabilities: map[string]any{
-		"replacesBuiltInProviders": []any{" Deezer ", 7, ""},
+		"replacesBuiltInProviders": []any{" Legacy-Provider ", 7, ""},
 	}}
-	if values := manifestCapabilityStringList(manifest, "replacesBuiltInProviders"); len(values) != 1 || values[0] != "deezer" {
+	if values := manifestCapabilityStringList(manifest, "replacesBuiltInProviders"); len(values) != 1 || values[0] != "legacy-provider" {
 		t.Fatalf("capability list = %#v", values)
 	}
-	if !extensionReplacesBuiltInProvider(&loadedExtension{Manifest: manifest}, "deezer") || extensionReplacesBuiltInProvider(nil, "deezer") {
+	if !extensionReplacesBuiltInProvider(&loadedExtension{Manifest: manifest}, "legacy-provider") || extensionReplacesBuiltInProvider(nil, "legacy-provider") {
 		t.Fatal("extension replacement mismatch")
 	}
-	if trimKnownProviderPrefix("Deezer:101", "deezer") != "101" || trimKnownProviderPrefix("101", "deezer") != "101" {
+	if trimKnownProviderPrefix("Legacy-Provider:101", "legacy-provider") != "101" || trimKnownProviderPrefix("101", "legacy-provider") != "101" {
 		t.Fatal("trimKnownProviderPrefix mismatch")
 	}
 	if metadataTrackDedupKey(ExtTrackMetadata{ISRC: "usrc"}) != "isrc:USRC" ||

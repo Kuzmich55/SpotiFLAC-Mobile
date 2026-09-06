@@ -8,43 +8,43 @@ void main() {
     test('failed challenge attempts do not consume the granted retry', () {
       final guard = DownloadVerificationRetryGuard();
 
-      guard.recordVerificationResult('item-1', 'tidal-web', granted: false);
+      guard.recordVerificationResult('item-1', 'provider-a', granted: false);
 
-      expect(guard.hasRetriedAfterGrant('item-1', 'tidal-web'), isFalse);
+      expect(guard.hasRetriedAfterGrant('item-1', 'provider-a'), isFalse);
     });
 
     test('completed grants allow only one automatic retry per service', () {
       final guard = DownloadVerificationRetryGuard();
 
-      guard.recordVerificationResult('item-1', ' TIDAL-WEB ', granted: true);
+      guard.recordVerificationResult('item-1', ' PROVIDER-A ', granted: true);
 
-      expect(guard.hasRetriedAfterGrant('item-1', 'tidal-web'), isTrue);
-      expect(guard.hasRetriedAfterGrant('item-1', 'qobuz-web'), isFalse);
-      expect(guard.hasRetriedAfterGrant('item-2', 'tidal-web'), isFalse);
+      expect(guard.hasRetriedAfterGrant('item-1', 'provider-a'), isTrue);
+      expect(guard.hasRetriedAfterGrant('item-1', 'provider-b'), isFalse);
+      expect(guard.hasRetriedAfterGrant('item-2', 'provider-a'), isFalse);
     });
 
     test('manual retry clears every service marker for an item', () {
       final guard = DownloadVerificationRetryGuard()
-        ..recordVerificationResult('item-1', 'tidal-web', granted: true)
-        ..recordVerificationResult('item-1', 'qobuz-web', granted: true)
-        ..recordVerificationResult('item-2', 'tidal-web', granted: true);
+        ..recordVerificationResult('item-1', 'provider-a', granted: true)
+        ..recordVerificationResult('item-1', 'provider-b', granted: true)
+        ..recordVerificationResult('item-2', 'provider-a', granted: true);
 
       guard.clearItem('item-1');
 
-      expect(guard.hasRetriedAfterGrant('item-1', 'tidal-web'), isFalse);
-      expect(guard.hasRetriedAfterGrant('item-1', 'qobuz-web'), isFalse);
-      expect(guard.hasRetriedAfterGrant('item-2', 'tidal-web'), isTrue);
+      expect(guard.hasRetriedAfterGrant('item-1', 'provider-a'), isFalse);
+      expect(guard.hasRetriedAfterGrant('item-1', 'provider-b'), isFalse);
+      expect(guard.hasRetriedAfterGrant('item-2', 'provider-a'), isTrue);
     });
 
     test('queue cleanup retains markers only for remaining items', () {
       final guard = DownloadVerificationRetryGuard()
-        ..recordVerificationResult('removed', 'tidal-web', granted: true)
-        ..recordVerificationResult('remaining', 'tidal-web', granted: true);
+        ..recordVerificationResult('removed', 'provider-a', granted: true)
+        ..recordVerificationResult('remaining', 'provider-a', granted: true);
 
       guard.retainItems({'remaining'});
 
-      expect(guard.hasRetriedAfterGrant('removed', 'tidal-web'), isFalse);
-      expect(guard.hasRetriedAfterGrant('remaining', 'tidal-web'), isTrue);
+      expect(guard.hasRetriedAfterGrant('removed', 'provider-a'), isFalse);
+      expect(guard.hasRetriedAfterGrant('remaining', 'provider-a'), isTrue);
     });
   });
 
@@ -58,7 +58,7 @@ void main() {
 
         final result = coordinator.waitForGrant(
           itemId: 'item-1',
-          service: 'tidal-web',
+          service: 'provider-a',
           startFlow: (cancellationSignal) async {
             flowStarted.complete();
             await cancellationSignal;
@@ -81,7 +81,7 @@ void main() {
 
       final first = coordinator.waitForGrant(
         itemId: 'item-1',
-        service: 'tidal-web',
+        service: 'provider-a',
         startFlow: (cancellationSignal) async {
           starts++;
           await cancellationSignal;
@@ -93,7 +93,7 @@ void main() {
 
       final second = coordinator.waitForGrant(
         itemId: 'item-2',
-        service: 'tidal-web',
+        service: 'provider-a',
         startFlow: (_) async {
           starts++;
           return true;
@@ -122,12 +122,12 @@ void main() {
 
         final first = coordinator.waitForGrant(
           itemId: 'item-1',
-          service: ' TIDAL-WEB ',
+          service: ' PROVIDER-A ',
           startFlow: startFlow,
         );
         final second = coordinator.waitForGrant(
           itemId: 'item-2',
-          service: 'tidal-web',
+          service: 'provider-a',
           startFlow: startFlow,
         );
 

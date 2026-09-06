@@ -3,15 +3,15 @@ package gobackend
 import "testing"
 
 func TestBuildDownloadedFileCommentKeepsSourceComment(t *testing.T) {
-	const source = "https://music.apple.com/us/album/example/123"
-	got := buildDownloadedFileComment(source, "https://music.amazon.com/albums/example")
+	const source = "https://source.example/album/example/123"
+	got := buildDownloadedFileComment(source, "https://provider.example/albums/example")
 	if got != source {
 		t.Fatalf("comment = %q, want %q", got, source)
 	}
 }
 
 func TestBuildDownloadedFileCommentUsesProviderCommentWhenSourceIsEmpty(t *testing.T) {
-	const provider = "https://music.amazon.com/albums/example"
+	const provider = "https://provider.example/albums/example"
 	got := buildDownloadedFileComment("", provider)
 	if got != provider {
 		t.Fatalf("comment = %q, want %q", got, provider)

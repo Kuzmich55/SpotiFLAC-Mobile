@@ -31,11 +31,11 @@ void main() {
     addTearDown(subscription.cancel);
 
     final first = PlatformBridge.completeExtensionSessionGrant(
-      ' qobuz-web ',
+      ' provider-a ',
       'grant-value',
     );
     final second = PlatformBridge.completeExtensionSessionGrant(
-      'QOBUZ-WEB',
+      'PROVIDER-A',
       'grant-value',
     );
 
@@ -48,7 +48,7 @@ void main() {
 
     expect(callCount, 1);
     expect(events, hasLength(1));
-    expect(events.single.extensionId, 'qobuz-web');
+    expect(events.single.extensionId, 'provider-a');
     expect(events.single.success, isTrue);
   });
 }

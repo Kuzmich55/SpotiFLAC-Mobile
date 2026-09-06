@@ -133,10 +133,10 @@ func TestSetProviderPriorityKeepsExtensionNamedLikeRetiredDownloader(t *testing.
 
 func TestPrioritizeFallbackProvidersByHealthPrefersOnlineAndSkipsOffline(t *testing.T) {
 	manager := getExtensionManager()
-	amazon := newTestLoadedExtension(t, ExtensionTypeDownloadProvider)
-	amazon.ID = "amazon"
-	amazon.Manifest.Name = "amazon"
-	amazon.Manifest.ServiceHealth = []ExtensionHealthCheck{{
+	unavailable := newTestLoadedExtension(t, ExtensionTypeDownloadProvider)
+	unavailable.ID = "unavailable-provider"
+	unavailable.Manifest.Name = "unavailable-provider"
+	unavailable.Manifest.ServiceHealth = []ExtensionHealthCheck{{
 		ID:       "main",
 		URL:      "://bad",
 		Required: true,
@@ -146,59 +146,59 @@ func TestPrioritizeFallbackProvidersByHealthPrefersOnlineAndSkipsOffline(t *test
 	plain.ID = "plain"
 	plain.Manifest.Name = "plain"
 
-	deezer := newTestLoadedExtension(t, ExtensionTypeDownloadProvider)
-	deezer.ID = "deezer"
-	deezer.Manifest.Name = "deezer"
-	deezer.Manifest.ServiceHealth = []ExtensionHealthCheck{{
+	available := newTestLoadedExtension(t, ExtensionTypeDownloadProvider)
+	available.ID = "available-provider"
+	available.Manifest.Name = "available-provider"
+	available.Manifest.ServiceHealth = []ExtensionHealthCheck{{
 		ID:  "main",
 		URL: "https://example.test/health",
 	}}
 
 	manager.mu.Lock()
-	previousAmazon, hadAmazon := manager.extensions[amazon.ID]
+	previousUnavailable, hadUnavailable := manager.extensions[unavailable.ID]
 	previousPlain, hadPlain := manager.extensions[plain.ID]
-	previousDeezer, hadDeezer := manager.extensions[deezer.ID]
-	manager.extensions[amazon.ID] = amazon
+	previousAvailable, hadAvailable := manager.extensions[available.ID]
+	manager.extensions[unavailable.ID] = unavailable
 	manager.extensions[plain.ID] = plain
-	manager.extensions[deezer.ID] = deezer
+	manager.extensions[available.ID] = available
 	manager.mu.Unlock()
 	defer func() {
 		manager.mu.Lock()
-		if hadAmazon {
-			manager.extensions[amazon.ID] = previousAmazon
+		if hadUnavailable {
+			manager.extensions[unavailable.ID] = previousUnavailable
 		} else {
-			delete(manager.extensions, amazon.ID)
+			delete(manager.extensions, unavailable.ID)
 		}
 		if hadPlain {
 			manager.extensions[plain.ID] = previousPlain
 		} else {
 			delete(manager.extensions, plain.ID)
 		}
-		if hadDeezer {
-			manager.extensions[deezer.ID] = previousDeezer
+		if hadAvailable {
+			manager.extensions[available.ID] = previousAvailable
 		} else {
-			delete(manager.extensions, deezer.ID)
+			delete(manager.extensions, available.ID)
 		}
 		manager.mu.Unlock()
 
 		extensionHealthCacheMu.Lock()
-		delete(extensionHealthCache, amazon.ID)
-		delete(extensionHealthCache, deezer.ID)
+		delete(extensionHealthCache, unavailable.ID)
+		delete(extensionHealthCache, available.ID)
 		extensionHealthCacheMu.Unlock()
 	}()
 
 	extensionHealthCacheMu.Lock()
-	extensionHealthCache[amazon.ID] = cachedExtensionHealthResult{
+	extensionHealthCache[unavailable.ID] = cachedExtensionHealthResult{
 		result: ExtensionHealthResult{
-			ExtensionID: amazon.ID,
+			ExtensionID: unavailable.ID,
 			Status:      "offline",
 			CheckedAt:   time.Now().UTC().Format(time.RFC3339),
 		},
 		expiresAt: time.Now().Add(time.Minute),
 	}
-	extensionHealthCache[deezer.ID] = cachedExtensionHealthResult{
+	extensionHealthCache[available.ID] = cachedExtensionHealthResult{
 		result: ExtensionHealthResult{
-			ExtensionID: deezer.ID,
+			ExtensionID: available.ID,
 			Status:      "online",
 			CheckedAt:   time.Now().UTC().Format(time.RFC3339),
 		},
@@ -207,11 +207,11 @@ func TestPrioritizeFallbackProvidersByHealthPrefersOnlineAndSkipsOffline(t *test
 	extensionHealthCacheMu.Unlock()
 
 	got := prioritizeFallbackProvidersByHealth(
-		[]string{"amazon", "plain", "deezer"},
+		[]string{"unavailable-provider", "plain", "available-provider"},
 		manager,
 		"",
 	)
-	want := []string{"deezer", "plain"}
+	want := []string{"available-provider", "plain"}
 	if len(got) != len(want) {
 		t.Fatalf("unexpected provider order length: got %v want %v", got, want)
 	}
@@ -468,14 +468,14 @@ func TestShouldStopProviderFallback(t *testing.T) {
 }
 
 func TestMoveProviderToFrontPreservesExplicitSelection(t *testing.T) {
-	priority := []string{"qobuz-web", "amazon-web", "tidal-web"}
-	got := moveProviderToFront(priority, "AMAZON-WEB")
-	want := []string{"amazon-web", "qobuz-web", "tidal-web"}
+	priority := []string{"provider-a", "provider-b", "provider-c"}
+	got := moveProviderToFront(priority, "PROVIDER-B")
+	want := []string{"provider-b", "provider-a", "provider-c"}
 
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("moveProviderToFront() = %#v, want %#v", got, want)
 	}
-	if !reflect.DeepEqual(priority, []string{"qobuz-web", "amazon-web", "tidal-web"}) {
+	if !reflect.DeepEqual(priority, []string{"provider-a", "provider-b", "provider-c"}) {
 		t.Fatalf("moveProviderToFront mutated input: %#v", priority)
 	}
 }
@@ -520,15 +520,15 @@ func TestDiscardRejectedExtensionOutputPreservesExistingLibraryHit(t *testing.T)
 }
 
 func TestBuildExtensionFallbackStoppedResponsePrefersAvailabilityReason(t *testing.T) {
-	resp := buildExtensionFallbackStoppedResponse("soundcloud", &ExtAvailabilityResult{
-		Reason:       "direct SoundCloud track ID",
+	resp := buildExtensionFallbackStoppedResponse("direct-provider", &ExtAvailabilityResult{
+		Reason:       "direct provider track ID",
 		SkipFallback: true,
 	}, errors.New("ignored"))
 
-	if resp.Service != "soundcloud" {
+	if resp.Service != "direct-provider" {
 		t.Fatalf("service = %q", resp.Service)
 	}
-	if resp.Error != "Fallback stopped by soundcloud: direct SoundCloud track ID" {
+	if resp.Error != "Fallback stopped by direct-provider: direct provider track ID" {
 		t.Fatalf("unexpected error message: %q", resp.Error)
 	}
 	if resp.ErrorType != "extension_error" {
@@ -537,11 +537,11 @@ func TestBuildExtensionFallbackStoppedResponsePrefersAvailabilityReason(t *testi
 }
 
 func TestBuildExtensionFallbackStoppedResponseFallsBackToError(t *testing.T) {
-	resp := buildExtensionFallbackStoppedResponse("soundcloud", &ExtAvailabilityResult{
+	resp := buildExtensionFallbackStoppedResponse("direct-provider", &ExtAvailabilityResult{
 		SkipFallback: true,
 	}, errors.New("lookup failed"))
 
-	if resp.Error != "Fallback stopped by soundcloud: lookup failed" {
+	if resp.Error != "Fallback stopped by direct-provider: lookup failed" {
 		t.Fatalf("unexpected error message: %q", resp.Error)
 	}
 }
@@ -619,7 +619,7 @@ func TestParseExtensionSearchResultAcceptsObjectAndArrayShapes(t *testing.T) {
 			album_name: "Album",
 			duration_ms: 123000,
 			cover_url: "https://img.test/cover.jpg",
-			external_links: { spotify: "spotify:track:1" },
+			external_links: { provider: "https://provider.example/track/1" },
 			audio_quality: "LOSSLESS"
 		}],
 		total: 9
@@ -640,7 +640,7 @@ func TestParseExtensionSearchResultAcceptsObjectAndArrayShapes(t *testing.T) {
 		track.AlbumName != "Album" ||
 		track.DurationMS != 123000 ||
 		track.CoverURL != "https://img.test/cover.jpg" ||
-		track.ExternalLinks["spotify"] != "spotify:track:1" ||
+		track.ExternalLinks["provider"] != "https://provider.example/track/1" ||
 		track.AudioQuality != "LOSSLESS" {
 		t.Fatalf("unexpected parsed track: %+v", track)
 	}
@@ -846,16 +846,16 @@ func TestMatchesURLHostAnchored(t *testing.T) {
 	manifest := &ExtensionManifest{
 		URLHandler: &URLHandlerConfig{
 			Enabled:  true,
-			Patterns: []string{"spotify.com", "deezer.page.link", "spotify:"},
+			Patterns: []string{"catalog.example", "short.example", "catalog:"},
 		},
 	}
 
 	for _, urlStr := range []string{
-		"https://open.spotify.com/track/abc",
-		"https://spotify.com/track/abc",
-		"HTTPS://OPEN.SPOTIFY.COM/track/ABC",
-		"https://deezer.page.link/xyz",
-		"spotify:track:abc123",
+		"https://open.catalog.example/track/abc",
+		"https://catalog.example/track/abc",
+		"HTTPS://OPEN.CATALOG.EXAMPLE/track/ABC",
+		"https://short.example/xyz",
+		"catalog:track:abc123",
 	} {
 		if !manifest.MatchesURL(urlStr) {
 			t.Fatalf("expected match for %q", urlStr)
@@ -864,10 +864,10 @@ func TestMatchesURLHostAnchored(t *testing.T) {
 
 	for _, urlStr := range []string{
 		// The old substring matching accepted all of these.
-		"https://evil.example/?next=https://spotify.com/track/abc",
-		"https://notspotify.com/track/abc",
-		"https://spotify.com.evil.example/track/abc",
-		"https://example.com/spotify.com",
+		"https://evil.example/?next=https://catalog.example/track/abc",
+		"https://notcatalog.example/track/abc",
+		"https://catalog.example.evil.example/track/abc",
+		"https://example.com/catalog.example",
 		"not a url at all",
 	} {
 		if manifest.MatchesURL(urlStr) {
@@ -878,13 +878,13 @@ func TestMatchesURLHostAnchored(t *testing.T) {
 	withPath := &ExtensionManifest{
 		URLHandler: &URLHandlerConfig{
 			Enabled:  true,
-			Patterns: []string{"youtube.com/watch"},
+			Patterns: []string{"video.example/watch"},
 		},
 	}
-	if !withPath.MatchesURL("https://www.youtube.com/watch?v=abc") {
+	if !withPath.MatchesURL("https://www.video.example/watch?v=abc") {
 		t.Fatal("expected host+path prefix to match")
 	}
-	if withPath.MatchesURL("https://www.youtube.com/playlist?list=abc") {
+	if withPath.MatchesURL("https://www.video.example/playlist?list=abc") {
 		t.Fatal("expected different path to not match")
 	}
 }

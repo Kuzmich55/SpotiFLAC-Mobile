@@ -680,7 +680,7 @@ void main() {
 
     test('round-trips json with service availability', () {
       final track = Track.fromJson({
-        'id': 'spotify:track:1',
+        'id': 'source-track-1',
         'name': 'Song',
         'artistName': 'Artist',
         'albumName': 'Album',
@@ -691,7 +691,7 @@ void main() {
       expect(track.availability?.tidal, isTrue);
       expect(track.availability?.qobuz, isFalse);
       expect(track.availability?.deezerId, '31337');
-      expect(track.toJson()['id'], 'spotify:track:1');
+      expect(track.toJson()['id'], 'source-track-1');
       expect(track.availability!.toJson()['deezer'], isTrue);
     });
   });
@@ -710,7 +710,7 @@ void main() {
       final item = DownloadItem(
         id: 'download-1',
         track: sampleTrack(),
-        service: 'tidal',
+        service: 'provider-a',
         createdAt: createdAt,
       );
 
@@ -745,7 +745,7 @@ void main() {
       final base = DownloadItem(
         id: 'download-1',
         track: sampleTrack(),
-        service: 'qobuz',
+        service: 'provider-b',
         createdAt: DateTime.utc(2026),
         filePath: '/music/stale.flac',
         error: 'raw backend failure',
@@ -790,7 +790,7 @@ void main() {
           'albumName': 'Album',
           'duration': 1000,
         },
-        'service': 'deezer',
+        'service': 'provider-a',
         'status': 'failed',
         'errorType': 'network',
         'createdAt': '2026-05-04T10:00:00.000Z',
@@ -811,7 +811,7 @@ void main() {
       final item = DownloadItem(
         id: 'download-active',
         track: sampleTrack(),
-        service: 'tidal',
+        service: 'provider-a',
         createdAt: DateTime.utc(2026),
         status: DownloadStatus.finalizing,
         progress: 0.97,
@@ -937,7 +937,7 @@ void main() {
       );
 
       final updated = settings.copyWith(
-        defaultService: 'tidal',
+        defaultService: 'provider-a',
         embedReplayGain: true,
         embeddedCoverMaxDimension: 1000,
         lyricsProviders: ['apple_music'],
@@ -950,7 +950,7 @@ void main() {
         clearHomeFeedProvider: true,
       );
 
-      expect(updated.defaultService, 'tidal');
+      expect(updated.defaultService, 'provider-a');
       expect(updated.embedReplayGain, isTrue);
       expect(updated.embeddedCoverMaxDimension, 1000);
       expect(updated.lyricsProviders, ['apple_music']);
@@ -969,7 +969,7 @@ void main() {
 
     test('round-trips json including recently added settings', () {
       const settings = AppSettings(
-        defaultService: 'qobuz',
+        defaultService: 'provider-b',
         storageMode: 'saf',
         downloadTreeUri: 'content://tree/music',
         downloadFallbackExtensionIds: ['ext.a', 'ext.b'],
@@ -996,7 +996,7 @@ void main() {
 
       final decoded = AppSettings.fromJson(settings.toJson());
 
-      expect(decoded.defaultService, 'qobuz');
+      expect(decoded.defaultService, 'provider-b');
       expect(decoded.storageMode, 'saf');
       expect(decoded.downloadTreeUri, 'content://tree/music');
       expect(decoded.downloadFallbackExtensionIds, ['ext.a', 'ext.b']);
@@ -1053,10 +1053,10 @@ void main() {
     test('serializes all backend field names', () {
       const payload = DownloadRequestPayload(
         isrc: 'ISRC123',
-        service: 'tidal',
-        downloadProvider: 'tidal-web',
+        service: 'source-provider',
+        downloadProvider: 'download-provider',
         providerTrackId: '123456789',
-        spotifyId: 'spotify:track:1',
+        spotifyId: 'source-track-1',
         trackName: 'Song',
         artistName: 'Artist',
         albumName: 'Album',
@@ -1092,9 +1092,9 @@ void main() {
         explicit: true,
         albumType: 'compilation',
         upc: '0012345678901',
-        tidalId: 'tidal-1',
-        qobuzId: 'qobuz-1',
-        deezerId: 'deezer-1',
+        tidalId: 'alternate-id-a',
+        qobuzId: 'alternate-id-b',
+        deezerId: 'alternate-id-c',
         lyricsMode: 'sidecar',
         useExtensions: true,
         useFallback: true,
@@ -1114,10 +1114,10 @@ void main() {
       expect(payload.toJson(), {
         'contract_version': DownloadRequestPayload.nativeWorkerContractVersion,
         'isrc': 'ISRC123',
-        'service': 'tidal',
-        'download_provider': 'tidal-web',
+        'service': 'source-provider',
+        'download_provider': 'download-provider',
         'provider_track_id': '123456789',
-        'spotify_id': 'spotify:track:1',
+        'spotify_id': 'source-track-1',
         'track_name': 'Song',
         'artist_name': 'Artist',
         'album_name': 'Album',
@@ -1153,9 +1153,9 @@ void main() {
         'explicit': true,
         'album_type': 'compilation',
         'upc': '0012345678901',
-        'tidal_id': 'tidal-1',
-        'qobuz_id': 'qobuz-1',
-        'deezer_id': 'deezer-1',
+        'tidal_id': 'alternate-id-a',
+        'qobuz_id': 'alternate-id-b',
+        'deezer_id': 'alternate-id-c',
         'lyrics_mode': 'sidecar',
         'use_extensions': true,
         'use_fallback': true,
@@ -1283,7 +1283,7 @@ void main() {
         'albumType': 'album',
         'explicit': true,
         'upc': '4006381333931',
-        'comment': 'https://listen.tidal.com/album/1',
+        'comment': 'https://media.example/album/1',
         'format': 'flac',
       });
 
@@ -1302,7 +1302,7 @@ void main() {
       expect(normalized['album_type'], 'album');
       expect(normalized['explicit'], isTrue);
       expect(normalized['upc'], '4006381333931');
-      expect(normalized['comment'], 'https://listen.tidal.com/album/1');
+      expect(normalized['comment'], 'https://media.example/album/1');
       expect(normalized['audio_codec'], 'flac');
     });
 

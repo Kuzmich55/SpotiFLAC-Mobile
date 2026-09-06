@@ -47,14 +47,14 @@ class RunnerTests: XCTestCase {
 
     func testParsesOAuthCallback() {
         let route = ExtensionCallbackParser.parse(
-            URL(string: "spotiflac://callback?code=auth-code&state=spotify-web")!
+            URL(string: "spotiflac://callback?code=auth-code&state=metadata-provider")!
         )
 
         XCTAssertEqual(
             route,
             ExtensionCallbackRoute(
                 code: "auth-code",
-                state: "spotify-web",
+                state: "metadata-provider",
                 isSessionGrant: false
             )
         )

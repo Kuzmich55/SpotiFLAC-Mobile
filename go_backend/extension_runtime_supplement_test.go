@@ -1170,7 +1170,7 @@ func TestExtensionRuntimeUtilityAPIs(t *testing.T) {
 }
 
 func TestClassifySignedSessionExpiredAsVerification(t *testing.T) {
-	got := classifyDownloadErrorType("Failed to resolve Deezer download: signed session expired")
+	got := classifyDownloadErrorType("Failed to resolve provider download: signed session expired")
 	if got != "verification_required" {
 		t.Fatalf("expected verification_required, got %q", got)
 	}

@@ -19,7 +19,7 @@ func TestPreparedDownloadRequestCache(t *testing.T) {
 		ItemID:        "item-1",
 		Service:       "provider-a",
 		Source:        "source-a",
-		SpotifyID:     "spotify-1",
+		SpotifyID:     "source-track-1",
 		TrackName:     "Track",
 		ArtistName:    "Artist",
 		OutputDir:     "/new/output",
@@ -33,7 +33,7 @@ func TestPreparedDownloadRequestCache(t *testing.T) {
 	prepared.ISRC = "USRC17607839"
 	prepared.AlbumName = "Resolved Album"
 	prepared.AlbumArtist = "Resolved Album Artist"
-	prepared.DeezerID = "deezer-1"
+	prepared.DeezerID = "alternate-track-1"
 	prepared.Genre = "Pop"
 	prepared.OutputDir = "/stale/output"
 	prepared.OutputPath = "/stale/output/old.flac"
@@ -73,7 +73,7 @@ func TestPreparedDownloadRequestCacheRejectsChangedTrackAndExpiry(t *testing.T) 
 	req := DownloadRequest{
 		ItemID:     "item-2",
 		Service:    "provider-a",
-		SpotifyID:  "spotify-2",
+		SpotifyID:  "source-track-2",
 		TrackName:  "Track",
 		ArtistName: "Artist",
 	}
@@ -81,7 +81,7 @@ func TestPreparedDownloadRequestCacheRejectsChangedTrackAndExpiry(t *testing.T) 
 	cachePreparedDownloadRequest(key, req)
 
 	changed := req
-	changed.SpotifyID = "spotify-other"
+	changed.SpotifyID = "source-track-other"
 	if _, _, ok := takePreparedDownloadRequest(downloadPreparationKey(changed), changed); ok {
 		t.Fatal("changed track must not reuse another track's prepared metadata")
 	}
