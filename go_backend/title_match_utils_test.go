@@ -230,6 +230,88 @@ func TestTrackMetadataTolerancePreservesRecordingIdentity(t *testing.T) {
 	}
 }
 
+func TestTrackIdentityIgnoresCreditAndSoundtrackAnnotations(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		expected string
+		found    string
+		want     bool
+	}{
+		{"soundtrack", "Signal", `Signal (From "Original Soundtrack")`, true},
+		{"mix credit", "Signal - Tiger Style Mix", "Signal (feat. Guest) [Tiger Style Mix]", true},
+		{"mix soundtrack", "Signal - Tiger Style Mix", `Signal (Tiger Style Mix) [From "Original Soundtrack"]`, true},
+		{"different mix", "Signal - Tiger Style Mix", "Signal (feat. Guest) [Club Mix]", false},
+		{"original and mix", "Signal", "Signal (feat. Guest) [Tiger Style Mix]", false},
+		{"unrelated title", "Signal", `Another Song (From "Signal")`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := DownloadRequest{
+				TrackName: tc.expected, ArtistName: "Composer, Singer & Writer",
+				AlbumName: "Original Soundtrack", DurationMS: 280000,
+			}
+			resolved := resolvedTrackInfo{
+				Title: tc.found, ArtistName: "Singer & Composer",
+				AlbumName: "Collection", Duration: 283,
+			}
+			if got := trackMatchesRequest(req, resolved, "test"); got != tc.want {
+				t.Fatalf("trackMatchesRequest = %v, want %v", got, tc.want)
+			}
+			tracks := []ExtTrackMetadata{{
+				Name: resolved.Title, Artists: resolved.ArtistName, AlbumName: resolved.AlbumName,
+				DurationMS: resolved.Duration * 1000, ProviderID: "provider",
+			}}
+			if got := selectBestMetadataEnrichmentTrack(req, tracks) != nil; got != tc.want {
+				t.Fatalf("metadata enrichment match = %v, want %v", got, tc.want)
+			}
+			resolved.Duration = 244
+			if trackMatchesRequest(req, resolved, "test") {
+				t.Fatal("title annotations must not bypass a duration mismatch")
+			}
+		})
+	}
+}
+
+func TestTrackIdentityResolvesConflictingCatalogDurations(t *testing.T) {
+	for _, tc := range []struct {
+		title    string
+		expected int
+		found    int
+	}{
+		{"Signal", 280000, 244},
+		{"Signal (Tiger Style Mix)", 243000, 280},
+	} {
+		t.Run(tc.title, func(t *testing.T) {
+			req := DownloadRequest{
+				TrackName: tc.title, ArtistName: "Composer, Singer & Writer", AlbumName: "Soundtrack",
+				ISRC: "USAAA0000001", DurationMS: tc.expected,
+			}
+			resolved := resolvedTrackInfo{
+				Title: tc.title, ArtistName: "Singer & Composer", AlbumName: "Collection",
+				ISRC: req.ISRC, Duration: tc.found,
+			}
+			if !trackMatchesRequest(req, resolved, "test") {
+				t.Fatal("matching ISRC and recording names should resolve inconsistent catalog durations")
+			}
+			for _, isrc := range []string{"", "USAAA0000002"} {
+				resolved.ISRC = isrc
+				if trackMatchesRequest(req, resolved, "test") {
+					t.Fatal("duration discrepancy requires an exact ISRC")
+				}
+			}
+			resolved.ISRC = req.ISRC
+			resolved.Duration = 30
+			if trackMatchesRequest(req, resolved, "test") {
+				t.Fatal("a preview must not qualify as a catalog duration discrepancy")
+			}
+			resolved.Duration = tc.found
+			resolved.Title += " (Live)"
+			if trackMatchesRequest(req, resolved, "test") {
+				t.Fatal("inconsistent names and durations must not qualify on ISRC alone")
+			}
+		})
+	}
+}
+
 func TestTitlesMatch_EmojiStrict(t *testing.T) {
 	if titlesMatch("🪐", "Higher Power") {
 		t.Fatal("expected emoji title not to match unrelated textual title")

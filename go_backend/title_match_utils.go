@@ -1,6 +1,7 @@
 package gobackend
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -254,7 +255,15 @@ func titlesMatch(expectedTitle, foundTitle string) bool {
 	return false
 }
 
+var trackTitleAnnotationPattern = regexp.MustCompile(`(?i)[(\[]\s*(?:(?:feat\.?|ft\.?|featuring)\s+[^)\]]+|from\s+["“][^)\]]+["”]\s*)[)\]]`)
+
+func normalizeTrackIdentityTitle(title string) string {
+	return normalizeLooseTitle(trackTitleAnnotationPattern.ReplaceAllString(title, " "))
+}
+
 func trackTitlesMatch(expectedTitle, foundTitle string) bool {
+	expectedTitle = trackTitleAnnotationPattern.ReplaceAllString(expectedTitle, " ")
+	foundTitle = trackTitleAnnotationPattern.ReplaceAllString(foundTitle, " ")
 	expected := normalizeLooseTitle(expectedTitle)
 	found := normalizeLooseTitle(foundTitle)
 	if expected != "" && expected == found {
@@ -417,7 +426,7 @@ func hasStrongTrackIdentity(req DownloadRequest, resolved resolvedTrackInfo) boo
 		return false
 	}
 
-	titleExact := exactLooseIdentityMatch(req.TrackName, resolved.Title, normalizeLooseTitle)
+	titleExact := exactLooseIdentityMatch(req.TrackName, resolved.Title, normalizeTrackIdentityTitle)
 	if !titleExact {
 		return false
 	}
@@ -471,6 +480,17 @@ func trackMatchesRequest(req DownloadRequest, resolved resolvedTrackInfo, logPre
 			diff = -diff
 		}
 		if diff > 10 {
+			// Catalog durations can disagree even for the same recording. Require
+			// both its ISRC and matching names; a preview still cannot qualify.
+			if exactISRCMatch && req.TrackName != "" && resolved.Title != "" &&
+				exactLooseIdentityMatch(req.TrackName, resolved.Title, normalizeTrackIdentityTitle) &&
+				req.ArtistName != "" && resolved.ArtistName != "" &&
+				artistsMatch(req.ArtistName, resolved.ArtistName) &&
+				!(resolved.Duration <= 35 && expectedDurationSec > 45) {
+				GoLog("[%s] Accepted catalog duration difference for matching ISRC and recording names: expected %ds, got %ds\n",
+					logPrefix, expectedDurationSec, resolved.Duration)
+				return true
+			}
 			GoLog("[%s] Verification failed: duration mismatch — expected %ds, got %ds\n",
 				logPrefix, expectedDurationSec, resolved.Duration)
 			return false
