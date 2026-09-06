@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spotiflac_android/providers/extension_provider.dart';
 import 'package:spotiflac_android/providers/settings_provider.dart';
 import 'package:spotiflac_android/l10n/l10n.dart';
+import 'package:spotiflac_android/models/track.dart';
 import 'package:spotiflac_android/utils/audio_format_utils.dart';
 import 'package:spotiflac_android/utils/download_size_estimate.dart';
 import 'package:spotiflac_android/utils/string_utils.dart';
@@ -15,8 +16,7 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
   final String? artistName;
   final String? coverUrl;
 
-  /// Combined duration for the tracks being queued; null if any is unknown.
-  final Duration? duration;
+  final List<Track> tracks;
   final void Function(String quality, String service) onSelect;
   final String? recommendedService;
 
@@ -25,7 +25,7 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
     this.trackName,
     this.artistName,
     this.coverUrl,
-    this.duration,
+    this.tracks = const [],
     required this.onSelect,
     this.recommendedService,
   });
@@ -39,7 +39,7 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
     String? trackName,
     String? artistName,
     String? coverUrl,
-    Duration? duration,
+    List<Track> tracks = const [],
     String? recommendedService,
     required void Function(String quality, String service) onSelect,
   }) {
@@ -57,7 +57,7 @@ class DownloadServicePicker extends ConsumerStatefulWidget {
         trackName: trackName,
         artistName: artistName,
         coverUrl: coverUrl,
-        duration: duration,
+        tracks: tracks,
         onSelect: onSelect,
         recommendedService: recommendedService,
       ),
@@ -130,9 +130,10 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
     final hasProviders = downloadExtensions.isNotEmpty;
     final qualityOptions = _getQualityOptions(downloadExtensions);
     final settings = ref.watch(settingsProvider);
+    final duration = totalDownloadDuration(widget.tracks);
     final convertedSize = settings.autoConvertDownloads
         ? estimateDownloadSize(
-            duration: widget.duration,
+            duration: duration,
             quality: QualityOption(
               id: 'converted',
               label: '',
@@ -218,8 +219,10 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
                   estimatedSize: _sizeLabel(
                     context,
                     estimateDownloadSize(
-                      duration: widget.duration,
+                      duration: duration,
                       quality: quality,
+                      tracks: widget.tracks,
+                      providerId: _selectedService,
                     ),
                   ),
                   icon: _getQualityIcon(quality.id),
@@ -261,14 +264,6 @@ class _DownloadServicePickerState extends ConsumerState<DownloadServicePicker> {
   String _sizeLabel(BuildContext context, DownloadSizeEstimate? estimate) {
     if (estimate == null) return context.l10n.downloadSizeUnavailable;
     final size = formatBytes(estimate.bytes);
-    final depth = estimate.assumedBitDepth;
-    final rate = estimate.assumedSampleRate;
-    if (depth != null && rate != null) {
-      return context.l10n.downloadEstimatedSizeAtQuality(
-        size,
-        '$depth-bit/${formatSampleRateKHz(rate)}',
-      );
-    }
     return context.l10n.downloadEstimatedSize(size);
   }
 

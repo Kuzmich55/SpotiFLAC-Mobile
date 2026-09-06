@@ -1,16 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:spotiflac_android/models/track.dart';
 import 'package:spotiflac_android/providers/extension_provider.dart';
 
 class DownloadSizeEstimate {
   final int bytes;
-  final int? assumedBitDepth;
-  final int? assumedSampleRate;
 
-  const DownloadSizeEstimate({
-    required this.bytes,
-    this.assumedBitDepth,
-    this.assumedSampleRate,
-  });
+  const DownloadSizeEstimate({required this.bytes});
 }
 
 /// Unknown durations must not make a batch estimate look like a complete total.
@@ -26,6 +22,8 @@ Duration? totalDownloadDuration(Iterable<Track> tracks) {
 DownloadSizeEstimate? estimateDownloadSize({
   required Duration? duration,
   required QualityOption quality,
+  List<Track>? tracks,
+  String? providerId,
 }) {
   if (duration == null || duration <= Duration.zero) return null;
   final parameters = quality.sizeEstimate ?? _legacyParameters(quality);
@@ -38,6 +36,44 @@ DownloadSizeEstimate? estimateDownloadSize({
     return DownloadSizeEstimate(bytes: bytes);
   }
 
+  if (tracks != null) {
+    if (tracks.isEmpty || providerId == null || providerId.isEmpty) return null;
+    var bytes = 0;
+    for (final track in tracks) {
+      // Quality from a metadata provider is not evidence for another catalog.
+      if (track.source != providerId ||
+          track.isCollection ||
+          track.duration <= 0) {
+        return null;
+      }
+      final match = _trackQualityPattern.firstMatch(track.audioQuality ?? '');
+      if (match == null) return null;
+      final depth = int.parse(match.group(1)!);
+      final rate =
+          (double.parse(match.group(2)!) *
+                  (match.group(3)!.toLowerCase() == 'khz' ? 1000 : 1))
+              .round();
+      if (depth <= 0 || rate <= 0) return null;
+      // Metadata reports the highest available quality of this track. A lower
+      // selection caps it; a higher selection must never upscale the estimate.
+      final estimate = estimateDownloadSize(
+        duration: Duration(seconds: track.duration),
+        quality: QualityOption(
+          id: quality.id,
+          label: quality.label,
+          sizeEstimate: QualitySizeEstimate(
+            bitDepth: math.min(parameters.bitDepth ?? depth, depth),
+            sampleRate: math.min(parameters.sampleRate ?? rate, rate),
+            channels: parameters.channels,
+          ),
+        ),
+      );
+      if (estimate == null) return null;
+      bytes += estimate.bytes;
+    }
+    return DownloadSizeEstimate(bytes: bytes);
+  }
+
   final depth = parameters.bitDepth;
   final rate = parameters.sampleRate;
   if (depth == null ||
@@ -47,22 +83,30 @@ DownloadSizeEstimate? estimateDownloadSize({
       parameters.channels <= 0) {
     return null;
   }
-  // Use one comparison estimate at the selected tier, assuming 65% of PCM.
+  // Estimate compressed audio from the effective quality, assuming 65% of PCM.
   // This is a heuristic, not a measurement of this recording's compression.
-  // For capped tiers the UI must show the assumed depth/rate: a provider can
-  // return lower quality, so the tier's maximum is not the track's actual size.
   // Artwork, tags, container overhead and later conversion are excluded.
   return DownloadSizeEstimate(
     bytes: (seconds * depth * rate * parameters.channels / 8 * 0.65).round(),
-    assumedBitDepth: parameters.isMaximum ? depth : null,
-    assumedSampleRate: parameters.isMaximum ? rate : null,
   );
 }
+
+final _trackQualityPattern = RegExp(
+  r'^\s*(\d+)\s*-?\s*bit\s*/\s*(\d+(?:\.\d+)?)\s*(kHz|Hz)\s*$',
+  caseSensitive: false,
+);
 
 QualitySizeEstimate? _legacyParameters(QualityOption quality) {
   // These are the same legacy tiers already labelled by the picker. Custom
   // IDs (including best/high/low and spatial audio) need declared parameters.
   switch (quality.id.toUpperCase()) {
+    case 'BEST':
+    case 'DEFAULT':
+    case 'FLAC':
+      if (quality.kind == 'lossless' || quality.label.toUpperCase() == 'FLAC') {
+        return const QualitySizeEstimate();
+      }
+      return null;
     case 'LOSSLESS':
       return const QualitySizeEstimate(bitDepth: 16, sampleRate: 44100);
     case 'HI_RES':

@@ -2137,19 +2137,7 @@
     }
   },
   "downloadSizeUnavailable": "Size estimate unavailable",
-  "downloadEstimatedSizeAtQuality": "≈ {size} if {quality}",
-  "@downloadEstimatedSizeAtQuality": {
-    "description": "Conditional size estimate for a tier with an unknown actual quality; quality is the assumed bit depth and sample rate",
-    "placeholders": {
-      "size": {
-        "type": "String"
-      },
-      "quality": {
-        "type": "String"
-      }
-    }
-  },
-  "downloadSizeEstimateNote": "Estimates assume the quality shown. Lower quality can produce smaller files; compression also affects size. Excludes artwork and tags. Data usage may be higher.",
+  "downloadSizeEstimateNote": "Lossless estimates use the track quality reported by the selected provider. Actual size depends on compression; artwork and tags are excluded. Data usage may be higher.",
   "downloadConvertedSizeEstimate": "After conversion to {format}: {size}",
   "@downloadConvertedSizeEstimate": {
     "description": "Estimated size after the user's automatic conversion, excluding tags and artwork",

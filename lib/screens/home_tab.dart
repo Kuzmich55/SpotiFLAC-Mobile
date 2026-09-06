@@ -27,7 +27,6 @@ import 'package:spotiflac_android/services/cover_download_service.dart';
 import 'package:spotiflac_android/services/downloaded_embedded_cover_resolver.dart';
 import 'package:spotiflac_android/services/platform_bridge.dart';
 import 'package:spotiflac_android/utils/adaptive_layout.dart';
-import 'package:spotiflac_android/utils/download_size_estimate.dart';
 import 'package:spotiflac_android/utils/extension_auth_launcher.dart';
 import 'package:spotiflac_android/utils/nav_bar_inset.dart';
 import 'package:spotiflac_android/utils/file_access.dart';
@@ -653,7 +652,7 @@ class _HomeTabState extends ConsumerState<HomeTab>
           trackName: track.name,
           artistName: track.artistName,
           coverUrl: track.coverUrl,
-          duration: Duration(seconds: track.duration),
+          tracks: [track],
           recommendedService:
               trackState.searchExtensionId ?? trackState.searchSource,
           onSelect: (quality, service) {

@@ -6200,7 +6200,6 @@
   "libraryFilterMetadataMissingIsrc": "Missing ISRC",
   "downloadEstimatedSize": "≈ {size}",
   "downloadSizeUnavailable": "Estimasi ukuran belum tersedia",
-  "downloadEstimatedSizeAtQuality": "≈ {size} jika {quality}",
-  "downloadSizeEstimateNote": "Estimasi memakai kualitas yang tertera. Kualitas lebih rendah bisa menghasilkan file lebih kecil; kompresi juga memengaruhi ukuran. Tanpa sampul dan tag. Penggunaan data bisa lebih besar.",
+  "downloadSizeEstimateNote": "Estimasi lossless memakai kualitas lagu dari provider yang dipilih. Ukuran sebenarnya bergantung pada kompresi; tanpa sampul dan tag. Penggunaan data bisa lebih besar.",
   "downloadConvertedSizeEstimate": "Setelah konversi ke {format}: {size}"
 }

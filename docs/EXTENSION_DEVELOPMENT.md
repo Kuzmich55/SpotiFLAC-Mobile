@@ -172,24 +172,27 @@ for custom IDs without resolving streams or triggering verification:
   For example, `"sizeEstimate": {"bitrateKbps": 256}`.
 - For compressed lossless audio, supply `bitDepth` and `sampleRate` in Hz.
   `channels` defaults to 2. Do not use this model for uncompressed PCM.
-- Set `isMaximum: true` for a lossless tier that can return lower quality. Its
-  estimate uses the declared depth/rate and explicitly labels that assumption
-  (for example, “≈ 171.4 MB if 24-bit/192kHz”). It does not predict which quality
-  the provider will actually return. A capped bitrate alone remains unavailable.
+- Set `isMaximum: true` for a lossless tier that can return lower quality.
+  The picker caps the declared depth/rate using each track's `audio_quality`
+  (for example, `16bit/44.1kHz` or `24bit/96kHz`). Metadata must belong to the
+  selected provider; missing or incomplete quality stays unavailable.
+  A capped bitrate alone remains unavailable.
 - Omitted parameters remain unknown. Older extensions retain estimates for
   the picker's legacy `LOSSLESS`, `HI_RES`, and `HI_RES_LOSSLESS` tiers and
   explicit codec/bitrate IDs or labels such as `opus_256` or `Opus 256kbps`.
-  Generic `best`, `high`, `low`, and spatial tiers need explicit parameters.
+  `best`, `default`, and `flac` options with `kind: "lossless"` can use track
+  quality directly. Other generic and spatial tiers need explicit parameters.
 
 Lossy estimates use duration × bitrate / 8. Lossless estimates use a rough
-65% of uncompressed PCM size at the declared quality. This is a comparison
+65% of uncompressed PCM size at the effective track quality. This is a comparison
 heuristic, not measured compression for the recording or a guaranteed size.
 Do not combine a CD-quality minimum with a hi-res maximum: that range hides
 the distinction between tiers and provides little useful size information.
 Estimates exclude artwork, tags, and container overhead. They describe the
 selected quality before automatic conversion, with a separate converted-size
 estimate when enabled. Fallback quality and intermediate transfers can change
-both the final size and data usage. If any selected track lacks a duration,
+both the final size and data usage. Collection estimates sum each track's
+individual estimate. If any selected track lacks the required metadata,
 the picker does not show a partial sum as a complete total.
 
 ### Permissions

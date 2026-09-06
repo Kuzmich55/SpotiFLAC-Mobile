@@ -689,6 +689,7 @@ class PostProcessingHook {
 
 class QualityOption {
   final String id;
+  final String? kind;
   final String label;
   final String? description;
   final QualitySizeEstimate? sizeEstimate;
@@ -696,6 +697,7 @@ class QualityOption {
 
   const QualityOption({
     required this.id,
+    this.kind,
     required this.label,
     this.description,
     this.sizeEstimate,
@@ -705,6 +707,7 @@ class QualityOption {
   factory QualityOption.fromJson(Map<String, dynamic> json) {
     return QualityOption(
       id: json['id'] as String? ?? '',
+      kind: json['kind'] as String?,
       label: json['label'] as String? ?? '',
       description: json['description'] as String?,
       sizeEstimate: json['sizeEstimate'] is Map<String, dynamic>

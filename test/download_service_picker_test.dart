@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spotiflac_android/l10n/app_localizations.dart';
 import 'package:spotiflac_android/models/settings.dart';
+import 'package:spotiflac_android/models/track.dart';
 import 'package:spotiflac_android/providers/extension_provider.dart';
 import 'package:spotiflac_android/providers/settings_provider.dart';
 import 'package:spotiflac_android/widgets/download_service_picker.dart';
@@ -56,6 +57,8 @@ class _PickerSettings extends SettingsNotifier {
 Future<void> _openPicker(
   WidgetTester tester, {
   Duration? duration,
+  String? audioQuality = '16bit/44.1kHz',
+  String? source = 'provider-a',
   AppSettings settings = const AppSettings(),
   Locale locale = const Locale('en'),
   double textScale = 1,
@@ -83,7 +86,17 @@ Future<void> _openPicker(
               onPressed: () => DownloadServicePicker.show(
                 context,
                 trackName: 'Selected tracks',
-                duration: duration,
+                tracks: [
+                  Track(
+                    id: 'sample',
+                    name: 'Sample',
+                    artistName: 'Artist',
+                    albumName: 'Album',
+                    duration: duration?.inSeconds ?? 0,
+                    source: source,
+                    audioQuality: audioQuality,
+                  ),
+                ],
                 onSelect: onSelect ?? (_, _) {},
               ),
               child: const Text('Open'),
@@ -107,9 +120,7 @@ void main() {
       duration: const Duration(minutes: 4),
       onSelect: (quality, service) => selected = (quality, service),
     );
-    expect(find.text('≈ 26.2 MB'), findsOneWidget);
-    expect(find.text('≈ 85.7 MB if 24-bit/96kHz'), findsOneWidget);
-    expect(find.text('≈ 171.4 MB if 24-bit/192kHz'), findsOneWidget);
+    expect(find.text('≈ 26.2 MB'), findsNWidgets(3));
     expect(find.textContaining('MB–'), findsNothing);
     await tester.tap(find.text('Audio B'));
     await tester.pumpAndSettle();
@@ -135,16 +146,37 @@ void main() {
     },
   );
 
-  testWidgets('capped estimates show their quality assumption in Indonesian', (
+  testWidgets('metadata caps both hi-res tiers to the available sample rate', (
     tester,
   ) async {
     await _openPicker(
       tester,
       duration: const Duration(minutes: 4),
+      audioQuality: '24bit/96kHz',
       locale: const Locale('id'),
     );
-    expect(find.text('≈ 85.7 MB jika 24-bit/96kHz'), findsOneWidget);
-    expect(find.text('≈ 171.4 MB jika 24-bit/192kHz'), findsOneWidget);
+    expect(find.text('≈ 85.7 MB'), findsNWidgets(2));
+    expect(find.text('≈ 26.2 MB'), findsOneWidget);
+    expect(find.textContaining('171.4'), findsNothing);
+  });
+
+  testWidgets('foreign or incomplete track quality stays unavailable', (
+    tester,
+  ) async {
+    await _openPicker(
+      tester,
+      duration: const Duration(minutes: 4),
+      source: 'provider-b',
+    );
+    expect(find.text('Size estimate unavailable'), findsNWidgets(3));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await _openPicker(
+      tester,
+      duration: const Duration(minutes: 4),
+      audioQuality: '24bit',
+    );
+    expect(find.text('Size estimate unavailable'), findsNWidgets(3));
   });
 
   testWidgets(
@@ -164,7 +196,7 @@ void main() {
           autoConvertBitrate: '256k',
         ),
       );
-      expect(find.text('≈ 26.2 MB'), findsOneWidget);
+      expect(find.text('≈ 26.2 MB'), findsNWidgets(3));
       final conversionNote = find.textContaining(
         'After conversion to OPUS: ≈ 7.3 MB',
       );

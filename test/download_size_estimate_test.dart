@@ -3,17 +3,75 @@ import 'package:spotiflac_android/models/track.dart';
 import 'package:spotiflac_android/providers/extension_provider.dart';
 import 'package:spotiflac_android/utils/download_size_estimate.dart';
 
-Track _track(int duration, {String? itemType}) => Track(
+Track _track(
+  int duration, {
+  String? itemType,
+  String? audioQuality,
+  String? source = 'provider-a',
+}) => Track(
   id: 'track',
   name: 'Track',
   artistName: 'Artist',
   albumName: 'Album',
   duration: duration,
   itemType: itemType,
+  audioQuality: audioQuality,
+  source: source,
 );
 
 void main() {
   const duration = Duration(minutes: 4);
+
+  test('track metadata caps quality and sums each recording separately', () {
+    final cd = _track(240, audioQuality: '16bit/44.1kHz');
+    final hiRes = _track(120, audioQuality: '24-bit/96000Hz');
+    for (final id in ['LOSSLESS', 'HI_RES', 'HI_RES_LOSSLESS']) {
+      expect(
+        estimateDownloadSize(
+          duration: duration,
+          quality: QualityOption(id: id, label: ''),
+          tracks: [cd],
+          providerId: 'provider-a',
+        )!.bytes,
+        27518400,
+      );
+    }
+    final tracks = [cd, hiRes];
+    expect(
+      estimateDownloadSize(
+        duration: totalDownloadDuration(tracks),
+        quality: QualityOption.fromJson({
+          'id': 'best',
+          'label': 'Best',
+          'kind': 'lossless',
+        }),
+        tracks: tracks,
+        providerId: 'provider-a',
+      )!.bytes,
+      27518400 + 44928000,
+    );
+  });
+
+  test(
+    'lossless metadata must be complete and belong to selected provider',
+    () {
+      for (final track in [
+        _track(240),
+        _track(240, audioQuality: '24bit'),
+        _track(240, audioQuality: '16bit/44.1kHz', source: 'provider-b'),
+      ]) {
+        expect(
+          estimateDownloadSize(
+            duration: duration,
+            quality: const QualityOption(id: 'LOSSLESS', label: ''),
+            tracks: [track],
+            providerId: 'provider-a',
+          ),
+          isNull,
+        );
+      }
+    },
+  );
 
   test('four minutes at 256 kbps is 7,680,000 bytes before overhead', () {
     for (final quality in [
@@ -30,8 +88,6 @@ void main() {
         quality: quality,
       )!;
       expect(estimate.bytes, 7680000);
-      expect(estimate.assumedBitDepth, isNull);
-      expect(estimate.assumedSampleRate, isNull);
     }
   });
 
@@ -39,16 +95,15 @@ void main() {
     const cd = QualityOption(id: 'LOSSLESS', label: 'Lossless');
     final cdSize = estimateDownloadSize(duration: duration, quality: cd)!;
     expect(cdSize.bytes, 27518400);
-    expect(cdSize.assumedSampleRate, isNull);
     final batchSize = estimateDownloadSize(
       duration: totalDownloadDuration([_track(240), _track(240)]),
       quality: cd,
     )!;
     expect(batchSize.bytes, cdSize.bytes * 2);
 
-    for (final (id, rate, bytes) in [
-      ('HI_RES', 96000, 89856000),
-      ('HI_RES_LOSSLESS', 192000, 179712000),
+    for (final (id, bytes) in [
+      ('HI_RES', 89856000),
+      ('HI_RES_LOSSLESS', 179712000),
     ]) {
       final size = estimateDownloadSize(
         duration: duration,
@@ -56,8 +111,6 @@ void main() {
       )!;
       expect(size.bytes, bytes);
       expect(size.bytes, greaterThan(cdSize.bytes));
-      expect(size.assumedBitDepth, 24);
-      expect(size.assumedSampleRate, rate);
     }
   });
 
@@ -74,8 +127,6 @@ void main() {
         quality: quality,
       )!;
       expect(estimate.bytes, 22464000);
-      expect(estimate.assumedBitDepth, isNull);
-      expect(estimate.assumedSampleRate, isNull);
       final capped = estimateDownloadSize(
         duration: duration,
         quality: QualityOption.fromJson({
@@ -89,8 +140,6 @@ void main() {
         }),
       )!;
       expect(capped.bytes, 179712000);
-      expect(capped.assumedBitDepth, 24);
-      expect(capped.assumedSampleRate, 192000);
     },
   );
 
