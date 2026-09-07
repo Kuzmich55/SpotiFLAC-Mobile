@@ -1018,10 +1018,8 @@ class _ExtensionAlbumScreenState extends ConsumerState<ExtensionAlbumScreen> {
     int? totalTracksFallback,
   }) {
     final base = Track.fromBackendMap(data, source: widget.extensionId);
-    return Track(
+    return base.copyWith(
       id: (data['id'] ?? '').toString(),
-      name: base.name,
-      artistName: base.artistName,
       albumName: (data['album_name'] ?? widget.albumName).toString(),
       albumArtist: normalizeOptionalString(data['album_artist']?.toString()),
       artistId: base.artistId ?? _artistId,
@@ -1030,20 +1028,9 @@ class _ExtensionAlbumScreenState extends ConsumerState<ExtensionAlbumScreen> {
         data['cover_url']?.toString(),
         widget.coverUrl,
       ),
-      isrc: base.isrc,
       duration: (_legacyTrackDurationMs(data) / 1000).round(),
-      trackNumber: base.trackNumber,
-      discNumber: base.discNumber,
-      totalDiscs: base.totalDiscs,
-      releaseDate: base.releaseDate,
       albumType: base.albumType ?? albumTypeFallback ?? _albumType,
       totalTracks: base.totalTracks ?? totalTracksFallback ?? _albumTotalTracks,
-      composer: base.composer,
-      source: base.source,
-      audioQuality: base.audioQuality,
-      audioModes: base.audioModes,
-      previewUrl: base.previewUrl,
-      explicit: base.explicit,
     );
   }
 
@@ -1170,30 +1157,13 @@ class _ExtensionPlaylistScreenState
       source: widget.extensionId,
       playlistName: widget.playlistName,
     );
-    return Track(
+    return base.copyWith(
       id: (data['id'] ?? '').toString(),
-      name: base.name,
-      artistName: base.artistName,
-      albumName: base.albumName,
-      artistId: base.artistId,
-      albumId: base.albumId,
       coverUrl: _resolveTrackCoverUrl(
         data['cover_url']?.toString(),
         widget.coverUrl,
       ),
-      isrc: base.isrc,
       duration: (_legacyTrackDurationMs(data) / 1000).round(),
-      trackNumber: base.trackNumber,
-      discNumber: base.discNumber,
-      totalDiscs: base.totalDiscs,
-      releaseDate: base.releaseDate,
-      totalTracks: base.totalTracks,
-      composer: base.composer,
-      source: base.source,
-      audioQuality: base.audioQuality,
-      audioModes: base.audioModes,
-      previewUrl: base.previewUrl,
-      explicit: base.explicit,
     );
   }
 
@@ -1341,26 +1311,11 @@ class _ExtensionArtistScreenState extends ConsumerState<ExtensionArtistScreen>
 
   Track _parseTrack(Map<String, dynamic> data) {
     final base = Track.fromBackendMap(data);
-    return Track(
+    return base.copyWith(
       id: (data['id'] ?? data['spotify_id'] ?? '').toString(),
-      name: base.name,
-      artistName: base.artistName,
-      albumName: base.albumName,
-      albumArtist: base.albumArtist,
       artistId: base.artistId ?? widget.artistId,
-      albumId: base.albumId,
-      coverUrl: base.coverUrl,
-      isrc: base.isrc,
       duration: (_legacyTrackDurationMs(data) / 1000).round(),
-      trackNumber: base.trackNumber,
-      discNumber: base.discNumber,
-      totalDiscs: base.totalDiscs,
-      releaseDate: base.releaseDate,
-      totalTracks: base.totalTracks,
-      composer: base.composer,
       source: (data['provider_id'] ?? widget.extensionId).toString(),
-      previewUrl: base.previewUrl,
-      explicit: base.explicit,
     );
   }
 

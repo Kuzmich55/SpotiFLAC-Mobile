@@ -320,6 +320,13 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen>
           totalTracksFallback ??
           _albumTotalTracks,
       composer: data['composer']?.toString(),
+      genre: data['genre']?.toString(),
+      label: data['label']?.toString(),
+      copyright: data['copyright']?.toString(),
+      comment: data['comment']?.toString(),
+      upc: normalizeOptionalString(
+        (data['upc'] ?? data['barcode'])?.toString(),
+      ),
       audioQuality: data['audio_quality']?.toString(),
       audioModes: data['audio_modes']?.toString(),
       previewUrl: data['preview_url']?.toString(),
