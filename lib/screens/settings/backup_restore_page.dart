@@ -74,10 +74,10 @@ class _BackupRestorePageState extends ConsumerState<BackupRestorePage> {
 
     BackupBundle? bundle;
     try {
-      final picked = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: ['json', BackupService.fileExtension],
-      );
+      // Android resolves custom extensions to MIME types. It recognizes JSON
+      // but not SFLB, so mixing them hides our own backups. Validate contents
+      // with BackupService after selection instead of filtering by extension.
+      final picked = await FilePicker.pickFile(type: FileType.any);
       if (picked == null) return;
       final path = picked.path;
       bundle = path != null
