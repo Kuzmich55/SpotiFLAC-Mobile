@@ -1,6 +1,57 @@
 package gobackend
 
-import "testing"
+import (
+	"encoding/binary"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestM4AAudioSampleEntryQuality(t *testing.T) {
+	for _, codec := range []string{"mp4a", "alac", "fLaC", "ec-3", "ac-3", "ac-4", "Opus"} {
+		t.Run(codec, func(t *testing.T) {
+			mvhd := make([]byte, 100)
+			binary.BigEndian.PutUint32(mvhd[12:16], 1000)
+			binary.BigEndian.PutUint32(mvhd[16:20], 10000)
+			sample := make([]byte, 28)
+			binary.BigEndian.PutUint16(sample[6:8], 1)
+			binary.BigEndian.PutUint16(sample[16:18], 2)
+			binary.BigEndian.PutUint16(sample[18:20], 16)
+			binary.BigEndian.PutUint32(sample[24:28], 48000<<16)
+			stsd := append([]byte{0, 0, 0, 0, 0, 0, 0, 1}, buildM4AAtom(codec, sample)...)
+			trak := buildM4AAtom("trak", buildM4AAtom("mdia", buildM4AAtom("minf", buildM4AAtom("stbl", buildM4AAtom("stsd", stsd)))))
+			moov := buildM4AAtom("moov", append(buildM4AAtom("mvhd", mvhd), trak...))
+			data := append(moov, buildM4AAtom("mdat", make([]byte, 400000))...)
+			path := filepath.Join(t.TempDir(), "descriptor")
+			if err := os.WriteFile(path, data, 0600); err != nil {
+				t.Fatal(err)
+			}
+			quality, err := GetM4AQuality(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if quality.Codec != normalizeM4AAudioCodec(codec) || quality.SampleRate != 48000 || quality.Duration != 10 || quality.Bitrate < 320 {
+				t.Fatalf("missing audio quality: %+v", quality)
+			}
+			if codec == "Opus" && quality.BitDepth != 0 {
+				t.Fatalf("lossy Opus must not expose the sample-entry bit depth: %+v", quality)
+			}
+			// The full reader and lightweight Library scanner must both expose
+			// bitrate, including the extensionless paths used by SAF.
+			for _, read := range []func(string, string) (string, error){ReadFileMetadataWithHint, ReadAudioMetadataWithDisplayName} {
+				payload, err := read(path, "Song.m4a")
+				var metadata map[string]any
+				if err != nil || json.Unmarshal([]byte(payload), &metadata) != nil {
+					t.Fatalf("metadata=%s, error=%v", payload, err)
+				}
+				if bitrate, ok := metadata["bitrate"].(float64); !ok || bitrate < 320 {
+					t.Fatalf("missing bitrate: %s", payload)
+				}
+			}
+		})
+	}
+}
 
 func TestParseALACSpecificConfigStandardPayload(t *testing.T) {
 	payload := make([]byte, 24)

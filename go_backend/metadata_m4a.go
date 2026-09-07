@@ -1156,6 +1156,7 @@ func findAudioSampleEntry(f *os.File, start, end, fileSize int64) (int64, string
 		[]byte("ec-3"),
 		[]byte("ac-3"),
 		[]byte("ac-4"),
+		[]byte("Opus"),
 	}
 
 	var tail []byte
