@@ -1,5 +1,48 @@
 # Changelog
 
+## [4.9.6] - 2026-09-07
+
+### Added
+
+- **Batch Metadata Editing**: Set shared metadata values for multiple tracks and review changes before writing. Empty inputs retain existing values; track titles, numbers, and ISRCs remain unchanged in this mode.
+- **Bulk Duplicate Cleanup**: Keep the best copy across all duplicate groups, with confirmation before lower-quality files are deleted.
+- **Build Identification**: Show the compiled short Git commit on the About page to distinguish test builds with the same version number.
+
+### Fixed
+
+- **Verification Notifications**: Open the pending verification challenge when its notification is tapped, including when the app is resumed or launched from the notification.
+- **Verification During Fallback**: Prepare each provider's session before checking availability, retain the identity of the provider requesting verification, and pause fallback for its challenge instead of treating verification errors as an unavailable track.
+- **Verification Callbacks**: Preserve shared challenge identity and callback retries so concurrent requests do not lose the active verification flow.
+- **Download Timeouts**: Bound stalled stream resolution without applying that timeout to established transfers that are still downloading data.
+- **Fallback Quality**: Translate provider-specific quality options by audio type, avoiding accidental selection of spatial audio for ordinary lossless downloads.
+- **Track Matching**: Handle differences in artist-credit order, capitalization, punctuation, and title annotations while retaining checks for different recording versions. Matching recording IDs and names can also resolve inconsistent catalog durations without accepting short previews.
+- **Collection Metadata**: Preserve genre, label, copyright, comments, and UPC when loading album and artist tracks or opening extension albums, playlists, and artists. Also retain album credits and audio-quality fields previously lost when rebuilding track objects. This fixes missing tags when optional metadata enrichment is disabled.
+- **Metadata Enrichment**: Retain existing track fields during enrichment and preserve Opus tags during batch metadata updates.
+- **Native Download Formats**: Remove the legacy rule that automatically converted `HIGH` quality downloads to MP3. Preserve native M4A/MP4 containers unless the user enables automatic conversion.
+- **SAF Output Files**: Publish converted audio with the final format's extension, preventing MP3 data from being saved with an M4A filename and subsequently failing metadata or lyrics reads. Preserve Unicode document names and avoid overwriting existing FLAC conversion outputs.
+- **Album Folders**: Resolve missing album names from finalized metadata before publishing downloads, including spatial-audio downloads resumed after verification, instead of retaining an early `Unknown` folder choice.
+- **SAF Metadata Reads**: Restore temporary-file fallback when a file descriptor cannot be read, while allowing valid audio files with no embedded tags.
+- **Opus Quality Labels**: Recognize Opus inside M4A/MP4 containers, read its bitrate and sample rate, and avoid displaying container sample depth as lossless bit depth. Keep the Opus badge when bitrate is unavailable.
+- **ReplayGain**: Write and verify native Opus R128 gain tags while preserving audio and artwork, retain playback normalization for SAF descriptor leases, and refresh normalization after saving. Reject incomplete loudness scans and report unsupported decoders clearly.
+- **Download Quality Picker**: Restore downward drag dismissal and size the sheet to its content rather than leaving excessive empty space.
+- **Search and Library**: Let newer live searches supersede cancelled requests, keep large playlist-picker queries within SQLite parameter limits, and make missing-file cleanup safer around temporary SAF access failures.
+- **Artwork and Layout**: Preserve provider-supplied high-resolution artwork, fix collapsed-header title overlap, and improve adaptive phone and tablet layouts.
+- **iOS and AltStore**: Isolate download-progress subscriptions, restore local iOS builds, and match the AltStore source bundle identifier to the released IPA.
+
+### Improved
+
+- **Memory Use**: Release discarded extension runtimes and reclaim idle native download memory after the queue finishes. Bound cover-cache usage and decode artwork at sizes appropriate to its layout.
+- **Large Libraries and Queues**: Reduce progress-update allocations, stream scan snapshots, page cleanup work, and reuse history and collection lookups across rebuilds.
+- **Metadata and Search Performance**: Share bounded MP3 tag/cover reads, read SAF metadata through descriptors when possible, decode large extension search responses outside the UI isolate, and copy only requested extension storage values.
+- **UI and Maintenance**: Batch cached-artwork validation, retain platform-link lookups across rebuilds, share batch-action settings, and resolve analyzer diagnostics.
+
+### Compatibility
+
+- **iOS Requirement**: The minimum supported iOS version is now 16.0.
+- **AC-4 ReplayGain**: AC-4 loudness analysis still requires decoder support unavailable in the current bundled FFmpeg build. This release improves the failure message; it does not add an AC-4 decoder.
+
+---
+
 ## [4.9.5] - 2026-08-31
 
 ### Added
