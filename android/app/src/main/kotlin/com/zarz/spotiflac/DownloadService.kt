@@ -1395,6 +1395,7 @@ class DownloadService : Service() {
                     failed = counts.failed,
                 )
                 currentStatus = "finalizing"
+                releaseIdleDownloadMemory()
                 writeNativeWorkerSnapshot(
                     isRunning = false,
                     isPaused = false,
@@ -1702,6 +1703,7 @@ class DownloadService : Service() {
                         failed = counts.failed,
                     )
                 currentStatus = "finalizing"
+                releaseIdleDownloadMemory()
                 writeNativeWorkerSnapshot(
                     isRunning = false,
                     isPaused = false,
@@ -1715,6 +1717,16 @@ class DownloadService : Service() {
                     showNativeQueueComplete(counts)
                 }
             }
+        }
+    }
+
+    private fun releaseIdleDownloadMemory() {
+        try {
+            // All workers and album tagging have finished. Return unused Go
+            // heap without forcing a collection between individual tracks.
+            Gobackend.releaseMemory()
+        } catch (e: Exception) {
+            android.util.Log.w("SpotiFLAC", "Failed to release idle download memory: ${e.message}")
         }
     }
 

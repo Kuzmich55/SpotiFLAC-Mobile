@@ -1893,6 +1893,10 @@ class DownloadQueueNotifier extends Notifier<DownloadQueueState> {
       _downloadCount = 0;
     }
 
+    if (!stoppedWhilePaused) {
+      await PlatformBridge.releaseNativeMemory();
+    }
+
     _log.i(
       'Queue stats - completed: $_completedInSession, failed: $_failedInSession, totalAtStart: $_totalQueuedAtStart',
     );

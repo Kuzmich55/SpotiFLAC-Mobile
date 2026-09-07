@@ -1,9 +1,38 @@
 package gobackend
 
 import (
+	"runtime"
 	"testing"
 	"time"
+	"weak"
 )
+
+func TestDiscardedPooledRuntimeCanBeCollected(t *testing.T) {
+	ext := newTestLoadedExtension(t, ExtensionTypeDownloadProvider)
+	discarded := func() weak.Pointer[extensionRuntime] {
+		vm, rt, err := acquireIsolatedExtensionRuntime(ext)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := vm.Set("temporaryDownloadBytes", vm.NewArrayBuffer(make([]byte, 16<<20))); err != nil {
+			t.Fatal(err)
+		}
+		releaseIsolatedExtensionRuntime(ext, vm, rt, true, true, nil)
+		vm, rt, err = acquireIsolatedExtensionRuntime(ext)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pointer := weak.Make(rt)
+		// An operation error retires the borrowed VM instead of pooling it.
+		releaseIsolatedExtensionRuntime(ext, vm, rt, false, true, nil)
+		return pointer
+	}()
+	runtime.GC()
+	if discarded.Value() != nil {
+		t.Fatal("retired runtime and its download buffer remain reachable from the idle pool")
+	}
+	runtime.KeepAlive(ext)
+}
 
 func TestReleaseMemoryUnderPressureClearsDisposableCaches(t *testing.T) {
 	clearCoverMemoryCache()

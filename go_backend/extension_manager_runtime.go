@@ -201,6 +201,9 @@ func acquireIsolatedExtensionRuntime(ext *loadedExtension) (*goja.Runtime, *exte
 	ext.isolatedPoolMu.Lock()
 	if n := len(ext.isolatedPool); n > 0 {
 		handle := ext.isolatedPool[n-1]
+		// Reslicing alone retains this handle in the backing array. If the
+		// borrowed VM is retired after an error, its heap would stay alive.
+		ext.isolatedPool[n-1] = nil
 		ext.isolatedPool = ext.isolatedPool[:n-1]
 		ext.isolatedPoolMu.Unlock()
 		return handle.vm, handle.runtime, nil
