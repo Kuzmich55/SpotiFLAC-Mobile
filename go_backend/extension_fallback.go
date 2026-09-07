@@ -150,6 +150,9 @@ func attemptExtensionDownload(
 			}
 		}
 
+		if folderErr := finalizeDownloadAlbumFolder(req, &built); folderErr != nil {
+			return &DownloadResponse{Success: false, Error: folderErr.Error(), ErrorType: "file_error", Service: providerLabel}, false
+		}
 		embedExtensionDownloadMetadata(built, req, alreadyExists)
 
 		if !alreadyExists && !isFDOutput(req.OutputFD) && strings.TrimSpace(req.OutputDir) != "" {
@@ -158,7 +161,7 @@ func attemptExtensionDownload(
 				indexISRC = strings.TrimSpace(req.ISRC)
 			}
 			if indexISRC != "" && strings.TrimSpace(built.FilePath) != "" {
-				AddToISRCIndex(req.OutputDir, indexISRC, built.FilePath)
+				AddToISRCIndex(resolvedAlbumOutputDirectory(req, firstNonEmptyTrimmed(req.AlbumName, built.Album)), indexISRC, built.FilePath)
 			}
 		}
 

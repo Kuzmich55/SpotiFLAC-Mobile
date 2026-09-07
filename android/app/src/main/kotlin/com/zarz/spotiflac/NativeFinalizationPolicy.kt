@@ -11,6 +11,24 @@ import kotlin.math.roundToInt
  * finalizer's I/O-heavy orchestration.
  */
 internal object NativeFinalizationPolicy {
+    fun resolvedAlbumRelativeDirectory(
+        relativeDirectory: String,
+        albumFolderTemplate: String,
+        resolvedAlbumFolder: String,
+    ): String {
+        val albumFolder = resolvedAlbumFolder.trim()
+        if (!albumFolderTemplate.contains("{album}") || albumFolder.isEmpty()) {
+            return relativeDirectory
+        }
+        // The backend supplies one sanitized leaf, never a relative path.
+        if (albumFolder == "." || albumFolder == ".." ||
+            albumFolder.contains('/') || albumFolder.contains('\\')) {
+            return relativeDirectory
+        }
+        val parent = relativeDirectory.substringBeforeLast('/', "")
+        return if (parent.isEmpty()) albumFolder else "$parent/$albumFolder"
+    }
+
     private val lyricsMetadataLinePattern = Regex(
         "^\\[[a-z][a-z0-9_]*:.*]$",
         RegexOption.IGNORE_CASE,

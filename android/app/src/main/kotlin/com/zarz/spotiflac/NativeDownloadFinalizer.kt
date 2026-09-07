@@ -186,6 +186,9 @@ object NativeDownloadFinalizer {
         val itemObject = parseObject(itemJson)
         val requestObject = parseObject(requestJson)
         validateRequestContract(requestObject)
+        if (result.optBoolean("saf_deferred_publish", false) && result.has("saf_relative_dir")) {
+            requestObject.put("saf_relative_dir", result.getString("saf_relative_dir"))
+        }
         val input = FinalizeInput(
             itemId = itemId,
             request = requestObject,

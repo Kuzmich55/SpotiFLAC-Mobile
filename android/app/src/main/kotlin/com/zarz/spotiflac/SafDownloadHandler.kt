@@ -95,7 +95,7 @@ object SafDownloadHandler {
         val stagedMimeType = if (useStagedOutput) STAGED_SAF_MIME_TYPE else mimeType
 
         val existingDir = findDocumentDir(context, treeUri, relativeDir)
-        if (existingDir != null) {
+        if (existingDir != null && req.optString("album_folder_template", "").isBlank()) {
             val existing = existingDir.findFile(fileName)
             if (existing != null && existing.isFile && existing.length() > 0) {
                 deleteStaleStagedFiles(existingDir, fileName, outputExt)
@@ -109,11 +109,8 @@ object SafDownloadHandler {
             }
         }
 
-        val targetDir = ensureDocumentDir(context, treeUri, relativeDir)
-            ?: return errorJson("Failed to access SAF directory")
-
         if (deferSafPublish) {
-            deleteStaleStagedFiles(targetDir, fileName, outputExt)
+            existingDir?.let { deleteStaleStagedFiles(it, fileName, outputExt) }
             val workingExt = outputExt.ifBlank { ".tmp" }
             val workingFile = File.createTempFile("native_saf_work_", workingExt, context.cacheDir)
             return try {
@@ -135,7 +132,12 @@ object SafDownloadHandler {
                     respObj.put("file_name", resolvedFileName)
                     respObj.put("saf_deferred_publish", true)
                     respObj.put("saf_final_file_name", resolvedFileName)
-                    respObj.put("saf_relative_dir", relativeDir)
+                    val resolvedDir = NativeFinalizationPolicy.resolvedAlbumRelativeDirectory(
+                        relativeDirectory = relativeDir,
+                        albumFolderTemplate = req.optString("album_folder_template", ""),
+                        resolvedAlbumFolder = respObj.optString("resolved_album_folder", ""),
+                    )
+                    respObj.put("saf_relative_dir", resolvedDir)
                     respObj.put("saf_tree_uri", treeUriStr)
                     respObj.put("saf_output_ext", outputExt)
                     respObj.put("saf_final_mime_type", mimeType)
@@ -148,6 +150,9 @@ object SafDownloadHandler {
                 errorJson("SAF deferred download failed: ${e.message}")
             }
         }
+
+        val targetDir = ensureDocumentDir(context, treeUri, relativeDir)
+            ?: return errorJson("Failed to access SAF directory")
 
         // Remove any stale partial from a previous killed attempt before
         // creating the staged document: reusing it would let a shorter new

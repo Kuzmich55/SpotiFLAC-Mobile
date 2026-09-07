@@ -1245,6 +1245,7 @@ void main() {
         artistName: 'Artist',
         albumName: 'Album',
         outputDir: '/downloads',
+        albumFolderTemplate: '[2024] {album}',
         filenameFormat: '{title}',
         useExtensions: false,
         useFallback: true,
@@ -1255,6 +1256,8 @@ void main() {
       expect(updated.useExtensions, isTrue);
       expect(updated.useFallback, isTrue);
       expect(updated.trackName, payload.trackName);
+      expect(updated.albumFolderTemplate, payload.albumFolderTemplate);
+      expect(updated.toJson()['album_folder_template'], '[2024] {album}');
       expect(updated.filenameFormat, payload.filenameFormat);
       expect(updated.downloadProvider, payload.downloadProvider);
       expect(updated.providerTrackId, payload.providerTrackId);

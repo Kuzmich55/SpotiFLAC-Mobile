@@ -8,6 +8,30 @@ import org.junit.Test
 
 class NativeFinalizationPolicyTest {
     @Test
+    fun lateAlbumMetadataResolvesOnlyThePendingFolderLeaf() {
+        assertEquals(
+            "Playlist/Artist/[2024] Album",
+            NativeFinalizationPolicy.resolvedAlbumRelativeDirectory(
+                "Playlist/Artist/[2024] Unknown", "[2024] {album}", "[2024] Album",
+            ),
+        )
+        assertEquals(
+            "Album",
+            NativeFinalizationPolicy.resolvedAlbumRelativeDirectory("Unknown", "{album}", "Album"),
+        )
+        for (album in listOf("", "..", "../Album", "Album/Part", "Album\\Part")) {
+            assertEquals(
+                "Artist/Unknown",
+                NativeFinalizationPolicy.resolvedAlbumRelativeDirectory("Artist/Unknown", "{album}", album),
+            )
+        }
+        assertEquals(
+            "Unknown",
+            NativeFinalizationPolicy.resolvedAlbumRelativeDirectory("Unknown", "", "Album"),
+        )
+    }
+
+    @Test
     fun matchesSharedLyricUsabilityCases() {
         val stream = checkNotNull(
             javaClass.getResourceAsStream("/lyrics_usability_cases.tsv"),

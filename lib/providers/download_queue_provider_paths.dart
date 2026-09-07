@@ -234,7 +234,7 @@ extension _DownloadQueuePaths on DownloadQueueNotifier {
       }
     }
 
-    final relativeDir = await _buildRelativeOutputDir(
+    final relativeDir = _buildRelativeOutputDir(
       track,
       folderOrganization,
       separateSingles: separateSingles,
@@ -391,7 +391,7 @@ extension _DownloadQueuePaths on DownloadQueueNotifier {
     return artist;
   }
 
-  Future<String> _buildRelativeOutputDir(
+  String _buildRelativeOutputDir(
     Track track,
     String folderOrganization, {
     bool separateSingles = false,
@@ -401,7 +401,7 @@ extension _DownloadQueuePaths on DownloadQueueNotifier {
     bool usePrimaryArtistOnly = false,
     bool filterContributingArtistsInAlbumArtist = false,
     String? playlistName,
-  }) async {
+  }) {
     final playlistPrefix =
         createPlaylistFolder &&
             folderOrganization != 'playlist' &&
@@ -501,6 +501,31 @@ extension _DownloadQueuePaths on DownloadQueueNotifier {
     if (prefix.isEmpty) return suffix;
     if (suffix.isEmpty) return prefix;
     return '$prefix/$suffix';
+  }
+
+  String _unresolvedAlbumFolderTemplate(
+    Track track,
+    DownloadItem item,
+    AppSettings settings,
+  ) {
+    if (track.albumName.trim().isNotEmpty) return '';
+    String folderFor(Track value) => _buildRelativeOutputDir(
+      value,
+      settings.folderOrganization,
+      separateSingles: settings.separateSingles,
+      albumFolderStructure: settings.albumFolderStructure,
+      createPlaylistFolder: settings.createPlaylistFolder,
+      useAlbumArtistForFolders: settings.useAlbumArtistForFolders,
+      usePrimaryArtistOnly: settings.usePrimaryArtistOnly,
+      filterContributingArtistsInAlbumArtist:
+          settings.filterContributingArtistsInAlbumArtist,
+      playlistName: item.playlistName,
+    );
+    final planned = folderFor(track);
+    final marked = folderFor(track.copyWith(albumName: '{album}'));
+    if (planned == marked) return '';
+    final leaf = marked.split('/').last;
+    return leaf.contains('{album}') ? leaf : '';
   }
 
   String? _extensionPreferredOutputExt(String service) {

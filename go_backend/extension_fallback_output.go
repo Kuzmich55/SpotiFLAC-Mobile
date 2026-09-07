@@ -72,7 +72,7 @@ func buildOutputPath(req DownloadRequest) string {
 		return strings.TrimSpace(req.OutputPath)
 	}
 
-	outputDir := req.OutputDir
+	outputDir := resolvedAlbumOutputDirectory(req, req.AlbumName)
 	if strings.TrimSpace(outputDir) == "" {
 		outputDir = filepath.Join(os.TempDir(), "spotiflac-downloads")
 	}
@@ -104,6 +104,9 @@ func buildOutputPathForExtension(req DownloadRequest, ext *loadedExtension) stri
 }
 
 func shouldReuseExistingOutput(req DownloadRequest, outputPath string) bool {
+	if req.AlbumFolderTemplate != "" && resolvedAlbumFolder(req, req.AlbumName) == "" {
+		return false
+	}
 	if req.AllowQualityVariant || isFDOutput(req.OutputFD) {
 		return false
 	}

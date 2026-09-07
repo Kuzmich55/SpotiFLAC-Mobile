@@ -21,6 +21,7 @@ type DownloadRequest struct {
 	CoverURL                    string `json:"cover_url"`
 	CoverMaxDimension           int    `json:"cover_max_dimension,omitempty"`
 	OutputDir                   string `json:"output_dir"`
+	AlbumFolderTemplate         string `json:"album_folder_template,omitempty"`
 	OutputPath                  string `json:"output_path,omitempty"`
 	OutputFD                    int    `json:"output_fd,omitempty"`
 	OutputExt                   string `json:"output_ext,omitempty"`
@@ -65,6 +66,7 @@ type DownloadResponse struct {
 	Success                     bool                    `json:"success"`
 	Message                     string                  `json:"message"`
 	FilePath                    string                  `json:"file_path,omitempty"`
+	ResolvedAlbumFolder         string                  `json:"resolved_album_folder,omitempty"`
 	ResolvedFileName            string                  `json:"resolved_file_name,omitempty"`
 	ProviderTrackID             string                  `json:"provider_track_id,omitempty"`
 	Error                       string                  `json:"error,omitempty"`

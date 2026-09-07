@@ -14,6 +14,7 @@ class DownloadRequestPayload {
   final String coverUrl;
   final int coverMaxDimension;
   final String outputDir;
+  final String albumFolderTemplate;
   final String filenameFormat;
   final String quality;
   final bool embedMetadata;
@@ -76,6 +77,7 @@ class DownloadRequestPayload {
     this.coverUrl = '',
     this.coverMaxDimension = 0,
     required this.outputDir,
+    this.albumFolderTemplate = '',
     required this.filenameFormat,
     this.quality = 'LOSSLESS',
     this.embedMetadata = true,
@@ -140,6 +142,8 @@ class DownloadRequestPayload {
       'cover_url': coverUrl,
       'cover_max_dimension': coverMaxDimension,
       'output_dir': outputDir,
+      if (albumFolderTemplate.isNotEmpty)
+        'album_folder_template': albumFolderTemplate,
       'filename_format': filenameFormat,
       'quality': quality,
       'embed_metadata': embedMetadata,
@@ -208,6 +212,7 @@ class DownloadRequestPayload {
       coverUrl: coverUrl,
       coverMaxDimension: coverMaxDimension,
       outputDir: outputDir,
+      albumFolderTemplate: albumFolderTemplate,
       filenameFormat: filenameFormat,
       quality: quality,
       embedMetadata: embedMetadata,

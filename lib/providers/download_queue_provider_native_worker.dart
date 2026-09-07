@@ -25,6 +25,23 @@ class _NativeWorkerRequestContext {
     this.safFileName,
     this.qualityVariantCollisionOnly = false,
   });
+
+  _NativeWorkerRequestContext withResolvedFolder(Map<String, dynamic> result) {
+    final directory = result['saf_relative_dir'];
+    if (storageMode != 'saf' || directory is! String) return this;
+    return _NativeWorkerRequestContext(
+      item: item,
+      requestJson: requestJson,
+      outputDir: directory,
+      quality: quality,
+      storageMode: storageMode,
+      outputExt: outputExt,
+      downloadTreeUri: downloadTreeUri,
+      safRelativeDir: directory,
+      safFileName: safFileName,
+      qualityVariantCollisionOnly: qualityVariantCollisionOnly,
+    );
+  }
 }
 
 class _NativeWorkerStartupTimeout implements Exception {
@@ -854,7 +871,7 @@ extension _DownloadQueueNativeWorker on DownloadQueueNotifier {
 
     final isSafMode = _isSafMode(settings);
     final rawOutputDir = isSafMode
-        ? await _buildRelativeOutputDir(
+        ? _buildRelativeOutputDir(
             item.track,
             settings.folderOrganization,
             separateSingles: settings.separateSingles,
@@ -1212,6 +1229,7 @@ extension _DownloadQueueNativeWorker on DownloadQueueNotifier {
     Map<String, dynamic> result,
     AppSettings settings,
   ) async {
+    context = context.withResolvedFolder(result);
     final item = context.item;
     var filePath = result['file_path'] as String?;
     if (filePath == null || filePath.isEmpty) {

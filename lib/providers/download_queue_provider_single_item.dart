@@ -233,6 +233,12 @@ class _DownloadRun {
       }
 
       if (result['success'] == true) {
+        if (effectiveSafMode && result['saf_relative_dir'] is String) {
+          effectiveOutputDir = n._sanitizeSafRelativeDir(
+            result['saf_relative_dir'] as String,
+          );
+          _log.d('Resolved output dir: $effectiveOutputDir');
+        }
         if (!await _handleDownloadSuccess()) return;
       } else {
         if (!await _handleBackendFailure()) return;
@@ -394,7 +400,7 @@ class _DownloadRun {
     if (quality == 'DEFAULT') quality = n.state.audioQuality;
     final isSafMode = n._isSafMode(settings);
     final relativeOutputDir = isSafMode
-        ? await n._buildRelativeOutputDir(
+        ? n._buildRelativeOutputDir(
             trackToDownload,
             settings.folderOrganization,
             separateSingles: settings.separateSingles,
