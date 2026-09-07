@@ -63,9 +63,18 @@ internal fun NativeDownloadFinalizer.formatForPath(path: String): String {
 }
 
 internal fun NativeDownloadFinalizer.scanReplayGain(path: String, shouldCancel: () -> Boolean = { false }): NativeDownloadFinalizer.ReplayGainScan? {
-    val command = "-hide_banner -nostats -i ${q(path)} -filter_complex ebur128=peak=true:framelog=quiet -f null -"
+    val command = "-hide_banner -nostats -loglevel info -i ${q(path)} -map 0:a:0 -vn -sn -dn -af ebur128=peak=true:framelog=quiet -f null -"
     val result = runFFmpeg(command, shouldCancel)
     val output = result.second
+    if (!result.first) {
+        val diagnostic = output.lineSequence()
+            .filter { Regex("decoder|error|invalid|failed", RegexOption.IGNORE_CASE).containsMatchIn(it) }
+            .take(3)
+            .joinToString(" ")
+            .take(500)
+        Log.w(TAG, "ReplayGain scan failed: $diagnostic")
+        return null
+    }
     val integrated = Regex("I:\\s+(-?\\d+\\.?\\d*)\\s+LUFS")
         .findAll(output)
         .lastOrNull()

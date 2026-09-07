@@ -150,6 +150,7 @@
     "description": "Button to install extension from file"
   },
   "replayGainBatchSuccess": "ReplayGain ditambahkan ke {success} dari {total} trek",
+  "replayGainUnsupportedDecoder": "Sebagian trek tidak dapat dianalisis karena codec audionya belum didukung decoder ReplayGain. File trek tersebut tidak diubah.",
   "@replayGainBatchSuccess": {
     "description": "Snackbar after batch ReplayGain completes",
     "placeholders": {

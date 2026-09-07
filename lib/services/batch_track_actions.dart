@@ -572,6 +572,7 @@ Future<void> runBatchReplayGain(
 
   var cancelled = false;
   int successCount = 0;
+  var unsupportedDecoder = false;
   final total = selectedItems.length;
 
   BatchProgressDialog.show(
@@ -590,7 +591,10 @@ Future<void> runBatchReplayGain(
     final item = selectedItems[i];
     BatchProgressDialog.update(current: i + 1, detail: item.trackName);
     try {
-      final ok = await ReplayGainService.applyToFile(item.filePath);
+      final ok = await ReplayGainService.applyToFile(
+        item.filePath,
+        onUnsupportedDecoder: () => unsupportedDecoder = true,
+      );
       if (ok) successCount++;
     } catch (_) {}
   }
@@ -604,7 +608,12 @@ Future<void> runBatchReplayGain(
   ScaffoldMessenger.of(context).clearSnackBars();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(context.l10n.replayGainBatchSuccess(successCount, total)),
+      content: Text(
+        [
+          context.l10n.replayGainBatchSuccess(successCount, total),
+          if (unsupportedDecoder) context.l10n.replayGainUnsupportedDecoder,
+        ].join('\n'),
+      ),
     ),
   );
 }

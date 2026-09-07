@@ -927,23 +927,73 @@ class FFmpegService {
   /// Uses the FFmpeg `ebur128` audio filter to measure integrated loudness (LUFS)
   /// and true peak. ReplayGain reference level is -18 LUFS (≈ 89 dB SPL).
   ///
-  static Future<ReplayGainResult?> scanReplayGain(String filePath) async {
+  static Future<ReplayGainResult?> scanReplayGain(
+    String filePath, {
+    void Function()? onUnsupportedDecoder,
+  }) async {
     // -nostats suppresses the interactive progress line.
     // ebur128=peak=true prints integrated loudness + true peak.
     // framelog=quiet suppresses per-frame measurements (very verbose),
     // keeping only the final summary which we parse.
-    final command =
-        '-hide_banner -nostats -i "$filePath" -filter_complex ebur128=peak=true:framelog=quiet -f null -';
-
     _log.d(
       'Scanning ReplayGain for: ${filePath.split(Platform.pathSeparator).last}',
     );
-    final result = await _execute(command);
+    final result = await _executeWithArguments([
+      '-hide_banner',
+      '-nostats',
+      '-loglevel',
+      'info',
+      '-i',
+      filePath,
+      '-map',
+      '0:a:0',
+      '-vn',
+      '-sn',
+      '-dn',
+      '-af',
+      'ebur128=peak=true:framelog=quiet',
+      '-f',
+      'null',
+      '-',
+    ]);
+    return parseReplayGainScan(
+      result,
+      onUnsupportedDecoder: onUnsupportedDecoder,
+    );
+  }
 
-    // FFmpeg writes ebur128 stats to stderr, which ends up in the output.
-    // Even on "failure" return code, the output may contain valid data
-    // because -f null always "fails" on some FFmpeg builds.
+  @visibleForTesting
+  static ReplayGainResult? parseReplayGainScan(
+    FFmpegResult result, {
+    void Function()? onUnsupportedDecoder,
+  }) {
     final output = result.output;
+    if (!result.success) {
+      final decoderMissing = RegExp(
+        r'decoder.*not found|no decoder found|unknown decoder',
+        caseSensitive: false,
+      );
+      final diagnostic = output
+          .split('\n')
+          .where(
+            (line) =>
+                decoderMissing.hasMatch(line) ||
+                RegExp(
+                  r'error|invalid|failed',
+                  caseSensitive: false,
+                ).hasMatch(line),
+          )
+          .take(3)
+          .join(' ')
+          .trim();
+      _log.w(
+        'ReplayGain scan failed (exit ${result.returnCode}): ${diagnostic.isEmpty ? "no decoder diagnostics" : diagnostic.substring(0, math.min(diagnostic.length, 500))}',
+      );
+      if (decoderMissing.hasMatch(output)) onUnsupportedDecoder?.call();
+      // A failed decoder/filter can still print a partial/default summary.
+      // It is not a valid measurement of the complete track.
+      return null;
+    }
 
     final integratedMatch = RegExp(
       r'I:\s+(-?\d+\.?\d*)\s+LUFS',

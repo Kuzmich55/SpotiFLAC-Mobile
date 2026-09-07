@@ -48,16 +48,29 @@ class ReplayGainService {
   static Future<bool> applyToFile(
     String filePath, {
     @visibleForTesting Future<ReplayGainResult?> Function(String)? scan,
-  }) async => await scanAndApplyToFile(filePath, scan: scan) != null;
+    void Function()? onUnsupportedDecoder,
+  }) async =>
+      await scanAndApplyToFile(
+        filePath,
+        scan: scan,
+        onUnsupportedDecoder: onUnsupportedDecoder,
+      ) !=
+      null;
 
   /// Returns the scan for album aggregation only after a verified save.
   static Future<ReplayGainResult?> scanAndApplyToFile(
     String filePath, {
     @visibleForTesting Future<ReplayGainResult?> Function(String)? scan,
+    void Function()? onUnsupportedDecoder,
   }) async {
     ReplayGainResult? scanned;
     final written = await _updateFile(filePath, (workingPath) async {
-      final rg = await (scan ?? FFmpegService.scanReplayGain)(workingPath);
+      final rg = scan != null
+          ? await scan(workingPath)
+          : await FFmpegService.scanReplayGain(
+              workingPath,
+              onUnsupportedDecoder: onUnsupportedDecoder,
+            );
       if (rg == null) {
         _log.w('ReplayGain scan returned no result for $workingPath');
         return false;
